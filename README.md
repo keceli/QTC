@@ -1,8 +1,10 @@
-Thermo package contains python modules that simplifies computing thermochemical parameters.
+# Quantum Thermo Chemistry (QTC) 
+
+QTC includes modules that integrates open babel with quantum chemistry calculations and generates NASA polynomials in different formats.
 
 It depends on:
-open-babel for cheminformatics (read/write chemical identifiers)
-NWChem, MOPAC, Gaussian for quantum chemistry calculations
-MESS for calculating partititon function
-RMG for generating a species list important for combustion chemistry
-PAC99, thermp for format conversions
+  * Open Babel for cheminformatics (read/write chemical identifiers)
+  * MOPAC, NWChem, Gaussian for quantum chemistry calculations
+  * MESS for calculating partititon function
+  * RMG for generating a species list important for combustion chemistry
+  * PAC99, thermp for format conversions
