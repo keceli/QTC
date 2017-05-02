@@ -17,7 +17,9 @@ Quantum chemistry code, NWChem, MOPAC, ...
 MESS partition function code
 PAC99 
 thermp
-"""      
+"""    
+__updated__ = "2017-04-27"
+  
 def get_stoichometry(formula,element):
     """
     Returns the stoichometry (count) of an element in a given formula
