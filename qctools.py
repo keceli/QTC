@@ -8,9 +8,10 @@ import obtools as ob
 import argparse
 import iotools as io
 import numpy as np
+from iotools import write_file
 
 
-__updated__ = "2017-05-02"
+__updated__ = "2017-05-03"
 
 
 def check_mopac():
@@ -29,6 +30,7 @@ def run_mopac(s, mopacexe='mopac', method='pm7', mopackeys='precise nosym thread
     prefix = ob.get_unique_key(mol, mult)
     inpfile = prefix + '.mop'
     outfile = prefix + '.out'
+    errcode = 0
 #     formula = ob.get_formula(mol)
 #     formula_noH = ob.get_formula(mol, stoichemetry=True, hydrogens=False)
 #     elements_noH = ob.get_formula(mol, stoichemetry=False, hydrogens=False)
@@ -51,20 +53,41 @@ def run_mopac(s, mopacexe='mopac', method='pm7', mopackeys='precise nosym thread
         if not io.check_file(inpfile, timeout=1):
             io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
-            execute_mopac(inpfile, mopacexe)
+            errcode = execute_mopac(inpfile, mopacexe)
         else:
-            return 'inp_failed_' + outfile
+            errcode = 3
         if not io.check_file(outfile, timeout=1):
-            return 'out_failed_' + outfile
-    return outfile
+            errcode += 10
+    return '{0} : {1}'.format(io.get_path(outfile), errcode)
 
 
 def execute_mopac(inp, mopacexe='mopac'):
     """
-    Runs mopac calculation
+    Runs mopac calculation.
+    Mopac is a fortran code that does not return an error code
+    but writes error to stderr.
+    If there is no error stderr = None
+    For some keyword errors, no stderr output is provided,
+    but still
+    it does not also write to stdout.
     """
-    subprocess.call([mopacexe, inp])
-    return
+    from subprocess import Popen, PIPE
+    import iotools as io
+#    subprocess.call([mopacexe, inp])
+    process = Popen([mopacexe, inp], stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    if err is None:
+        errcode = 0
+    elif err == '':
+        errcode = 1
+    else:
+        errcode = 2
+        errstr = """ERROR in {0}\n
+        STDOUT:\n{1}\n
+        STDERR:\n{2}""".format(inp, out, err)
+        errfile = inp + '.err'
+        io.write_file(errstr, errfile)
+    return errcode
 
 
 def run_qc(qcexe, inputfile, stdout=False):
