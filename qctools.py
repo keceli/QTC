@@ -66,22 +66,19 @@ def execute_mopac(inp, mopacexe='mopac'):
     Runs mopac calculation.
     Mopac is a fortran code that does not return an error code
     but writes error to stderr.
-    If there is no error stderr = None
-    For some keyword errors, no stderr output is provided,
-    but still
-    it does not also write to stdout.
+    If there is no error stderr = None or ''
+    For some keyword errors, still no stderr or stdout is provided,
+    so additional checks are required.
     """
     from subprocess import Popen, PIPE
     import iotools as io
 #    subprocess.call([mopacexe, inp])
     process = Popen([mopacexe, inp], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
-    if err is None:
+    if err is None or err == '':
         errcode = 0
-    elif err == '':
-        errcode = 1
     else:
-        errcode = 2
+        errcode = 1
         errstr = """ERROR in {0}\n
         STDOUT:\n{1}\n
         STDERR:\n{2}""".format(inp, out, err)
