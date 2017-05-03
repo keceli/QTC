@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-05-02"
+__updated__ = "2017-05-03"
 
 def mkdir(path):
     """
@@ -123,6 +123,14 @@ def cp(source, target):
     from shutil import copy
     copy(source, target)
     return
+
+
+def get_path(f):
+    """
+    Returns absolute path for a file or folder.
+    """
+    import os
+    return os.path.abspath(f)
 
 
 def get_line_number(keyword, lines=None, filename=None):
