@@ -11,8 +11,8 @@ import tctools as tc
 __updated__ = "2017-05-03"
 _mopacexe = 'mopac'
 _nwchemexe = 'nwchem'
-_gaussianexe = 'mopac'
-_messpexe = 'messpf'
+_gaussianexe = 'g09'
+_messpfexe = 'messpf'
 _thermpexe = 'thermp'
 _pac99exe = 'pac99'
 _qcmethod = 'pm3'
@@ -55,13 +55,13 @@ def get_args():
     parser.add_argument('--mopacexe', type=str, nargs=1,
                         default='mopac',
                         help='Path for mopac executable')
-    parser.add_argument('--messpf', type=str, nargs=1,
+    parser.add_argument('--messpfexe', type=str, nargs=1,
                         default='messpf',
                         help='Path for MESS partition function executable')
-    parser.add_argument('--thermp', type=str, nargs=1,
+    parser.add_argument('--thermpexe', type=str, nargs=1,
                         default='thermp',
                         help='Path for thermp executable')
-    parser.add_argument('--pac99', type=str, nargs=1,
+    parser.add_argument('--pac99exe', type=str, nargs=1,
                         default='pac99',
                         help='Path for pac99 executable')
     return parser.parse_args()
@@ -140,11 +140,18 @@ def run(s):
 if __name__ == "__main__":
     args = get_args()
     print args
-    global _runqc
+    global _runqc, _runthermo, _qcmethod, _qccode
+    global _mopacexe, _nwchemexe, _gaussianexe, _messpfexe, _thermpexe, _pac99exe
     _runqc = args.runqc
     _runthermo = args.runthermo
     _qcmethod = args.qcmethod
     _qccode = args.qccode
+    _mopacexe = args.mopacexe
+    _nwchemexe = args.nwchemexe
+    _gaussianexe = args.gaussianexe
+    _messpfexe = args.messpfexe
+    _thermpexe = args.thermpexe
+    _pac99exe = args.pac99exe
     nproc = args.nproc
     mylist = io.read_list('qc_list.txt')
     pool = multiprocessing.Pool(nproc)
