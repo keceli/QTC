@@ -9,16 +9,16 @@ import qctools as qc
 import tctools as tc
 
 __updated__ = "2017-05-03"
-_mopacexe = 'mopac'
-_nwchemexe = 'nwchem'
-_gaussianexe = 'g09'
-_messpfexe = 'messpf'
-_thermpexe = 'thermp'
-_pac99exe = 'pac99'
-_qcmethod = 'pm3'
-_qccode = 'mopac'
-_runqc = False
-_runthermo = False
+# _mopacexe = 'mopac'
+# _nwchemexe = 'nwchem'
+# _gaussianexe = 'g09'
+# _messpfexe = 'messpf'
+# _thermpexe = 'thermp'
+# _pac99exe = 'pac99'
+# _qcmethod = 'pm3'
+# _qccode = 'mopac'
+# _runqc = False
+# _runthermo = False
 
 
 def get_args():
@@ -39,29 +39,35 @@ def get_args():
     parser.add_argument('-n', '--nproc', type=int,
                         default=multiprocessing.cpu_count(),
                         help='Number of processors, default is all processors')
-    parser.add_argument('-i', '--input', type=argparse.FileType('r'), nargs=1,
+    parser.add_argument('-i', '--input', type=str,
                         default='qc_list.txt',
                         help='List of inchi or smiles for species to be calculated')
-    parser.add_argument('-m', '--qcmethod', type=str, nargs=1,
+    parser.add_argument('-m', '--qcmethod', type=str,
                         default='pm3',
                         help='Quantum chemistry method to be used')
-    parser.add_argument('-c', '--qccode', type=str, nargs=1,
+    parser.add_argument('-c', '--qccode', type=str,
                         default='mopac',
                         help='Quantum chemistry code to be used')
     parser.add_argument('-q', '--runqc', action='store_true',
                         help='Run quantum chemistry calculation')
     parser.add_argument('-t', '--runthermo', action='store_true',
                         help='Run thermochemistry calculations')
-    parser.add_argument('--mopacexe', type=str, nargs=1,
+    parser.add_argument('--mopacexe', type=str,
                         default='mopac',
                         help='Path for mopac executable')
-    parser.add_argument('--messpfexe', type=str, nargs=1,
+    parser.add_argument('--nwchemexe', type=str,
+                        default='nwchem',
+                        help='Path for nwchem executable')
+    parser.add_argument('--gaussianexe', type=str,
+                        default='g09',
+                        help='Path for gaussian executable')
+    parser.add_argument('--messpfexe', type=str,
                         default='messpf',
                         help='Path for MESS partition function executable')
-    parser.add_argument('--thermpexe', type=str, nargs=1,
+    parser.add_argument('--thermpexe', type=str,
                         default='thermp',
                         help='Path for thermp executable')
-    parser.add_argument('--pac99exe', type=str, nargs=1,
+    parser.add_argument('--pac99exe', type=str,
                         default='pac99',
                         help='Path for pac99 executable')
     return parser.parse_args()
@@ -139,7 +145,6 @@ def run(s):
 
 if __name__ == "__main__":
     args = get_args()
-    print args
     global _runqc, _runthermo, _qcmethod, _qccode
     global _mopacexe, _nwchemexe, _gaussianexe, _messpfexe, _thermpexe, _pac99exe
     _runqc = args.runqc
@@ -152,10 +157,13 @@ if __name__ == "__main__":
     _messpfexe = args.messpfexe
     _thermpexe = args.thermpexe
     _pac99exe = args.pac99exe
+    input = args.input
     nproc = args.nproc
-    mylist = io.read_list('qc_list.txt')
+    mylist = io.read_list(input)
+    print type(mylist), type(nproc), nproc
     pool = multiprocessing.Pool(nproc)
     results = pool.map(run, mylist)
+    print 'Given arguments : {0}'.format(args)
     print 'Output file : Error code'
     for result in results:
         print result
