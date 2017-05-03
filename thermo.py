@@ -1,20 +1,14 @@
 #!/usr/bin/env python
 import argparse
 import subprocess
+import multiprocessing
 
 import iotools as io
 import obtools as ob
 import qctools as qc
 import tctools as tc
-try:
-    runserial = False
-    from scoop import futures
-    from scoop import utils
-except:
-    runserial = True
-    print "No scoop, no concurency \n Running in serial mode..."
 
-__updated__ = "2017-05-02"
+__updated__ = "2017-05-03"
 _mopacexe = 'mopac'
 _nwchemexe = 'nwchem'
 _gaussianexe = 'mopac'
@@ -42,6 +36,9 @@ def get_args():
     Writes NASA polynomials in different formats.
     Uses different codes for these purposes
     """)
+    parser.add_argument('-n', '--nproc', type=int,
+                        default=multiprocessing.cpu_count(),
+                        help='Number of processors, default is all processors')
     parser.add_argument('-i', '--input', type=argparse.FileType('r'), nargs=1,
                         default='qc_list.txt',
                         help='List of inchi or smiles for species to be calculated')
@@ -55,8 +52,6 @@ def get_args():
                         help='Run quantum chemistry calculation')
     parser.add_argument('-t', '--runthermo', action='store_true',
                         help='Run thermochemistry calculations')
-    parser.add_argument('-r', '--runserial', action='store_true',
-                        help='Run serial')
     parser.add_argument('--mopacexe', type=str, nargs=1,
                         default='mopac',
                         help='Path for mopac executable')
@@ -108,9 +103,6 @@ def run(s):
     import tctools as tc
     import iotools as io
     mol = ob.get_mol(s)
-#    natom = ob.get_natom(mol)
-#     if natom > 4:
-#         return 0
     mult = ob.get_multiplicity(mol)
     dirpath = ob.get_unique_path(mol, method=_qcmethod, mult=mult)
     groupsfile = 'new.groups'
@@ -132,7 +124,8 @@ def run(s):
         return -1
     if _runqc:
         if _qccode == 'mopac':
-            outfile = qc.run_mopac(s, mopacexe=_mopacexe, method=_qcmethod, mult=mult)
+            outstr = qc.run_mopac(s, mopacexe=_mopacexe, method=_qcmethod, mult=mult)
+            outfile = outstr.split(' : ')[0]
             if _runthermo:
                 lines = io.read_file(outfile, aslines=True)
                 xyz = qc.get_mopac_xyz(lines)
@@ -141,7 +134,7 @@ def run(s):
                 deltaH = qc.get_mopac_deltaH(lines)
                 get_chemkin_polynomial(mol, _qcmethod, zpe, xyz, freqs, deltaH)
     io.cd(cwd)
-    return 0
+    return outstr
 
 
 if __name__ == "__main__":
@@ -152,9 +145,11 @@ if __name__ == "__main__":
     _runthermo = args.runthermo
     _qcmethod = args.qcmethod
     _qccode = args.qccode
+    nproc = args.nproc
     mylist = io.read_list('qc_list.txt')
-    if runserial:
-        returnValues = list(map(run, mylist))
-    else:
-        returnValues = list(futures.map(run, mylist))
+    pool = multiprocessing.Pool(nproc)
+    results = pool.map(run, mylist)
+    print 'Output file : Error code'
+    for result in results:
+        print result
 
