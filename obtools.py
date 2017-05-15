@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-05-02"
+__updated__ = "2017-05-15"
 
 def get_format(s):
     """
@@ -157,6 +157,14 @@ def get_natom(x):
     return len(mol.atoms)
 
 
+def get_charge(x):
+    """
+    Return charge.
+    TODO
+    """
+    return 0
+
+
 def get_xyz(x):
     """
     Returns coordinates as a string in xyz format.
@@ -196,7 +204,7 @@ def get_zmat(x):
         mol = get_mol(x)
     else:
         mol = x
-    return '\n'.join(mol.write('gzmat').splitlines()[5:-3])
+    return '\n'.join(mol.write('gzmat').splitlines()[5:])
 
 
 def get_mop(x, keys='pm3 precise nosym threads=1 opt'):
