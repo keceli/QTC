@@ -1,0 +1,9 @@
+%nproc=1
+%mem=10GB
+#P b3lyp/cc-pvdz opt=calcall int=ultrafine scf=verytight nosym Freq=Anharmonic Freq=Vibrot
+
+QTC(UNIQUEKEY)
+
+QTC(CHARGE) QTC(MULTIPLICITY)
+QTC(ZMAT)
+
