@@ -9,7 +9,6 @@ import argparse
 import iotools as io
 import numpy as np
 from iotools import write_file
-from gpaw.test.gllb.atomic import out
 
 
 __updated__ = "2017-05-15"
@@ -42,10 +41,31 @@ def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
     """
     from subprocess import Popen, PIPE
     process = Popen(['perl',qcscriptpath, inputpath, geopath, str(multiplicity)], stdout=PIPE, stderr=PIPE)
-    out, err = process.communicate()
+    msg, err = process.communicate()
     if err:
-        print('Error message: {0}'.format(err))
-    return out
+        msg = 'Failed {0}'.format(err)
+    return msg
+
+
+def execute(inp, exe):
+    """
+    Executes a calculation for a given input file inp and executable exe.
+    """
+    from subprocess import Popen, PIPE
+    process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    
+    if err is None or err == '':
+        msg = 'Run {0} {1}: Success.\n'.format(exe, inp)
+    else:
+        errstr = """ERROR in {0}\n
+        STDOUT:\n{1}\n
+        STDERR:\n{2}""".format(inp, out, err)
+        errfile = inp + '.err'
+        io.write_file(errstr, errfile)
+        msg = 'Run {0} {1}: Failed, see {2}.\n'.format(exe, inp, io.get_path(errfile))
+    return msg
+
 
 
 def execute_gaussian(inp, exe='g09'):
@@ -57,15 +77,15 @@ def execute_gaussian(inp, exe='g09'):
     out, err = process.communicate()
     
     if err is None or err == '':
-        errcode = 0
+        msg = 'Run {0} {1}: Success.'.format(exe, inp)
     else:
-        errcode = 1
         errstr = """ERROR in {0}\n
         STDOUT:\n{1}\n
         STDERR:\n{2}""".format(inp, out, err)
         errfile = inp + '.err'
         io.write_file(errstr, errfile)
-    return errcode
+        msg = 'Run {0} {1}: Failed, see {2}.'.format(exe, inp, io.get_path(errfile))
+    return msg
 
 
 def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False):
@@ -79,13 +99,12 @@ def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False)
     prefix = ob.get_unique_key(mol, mult)
     inpfile = prefix + '.g09'  
     outfile = prefix + '.log'
-    errcode = 0
     if io.check_file(outfile, timeout=1):
         if overwrite:
-            print "Overwriting previous calculation {0}".format(outfile)
+            print "Overwriting previous calculation {0}.\n".format(io.get_path(outfile))
             run = True
         else:
-            print 'Skipping calculation, found {0}'.format(outfile)
+            print 'Skipping calculation, found {0}.\n'.format(io.get_path(outfile))
             run = False
     else:
         run = True
@@ -93,12 +112,12 @@ def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False)
         if not io.check_file(inpfile, timeout=1):
             io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
-            errcode = execute_gaussian(inpfile, exe)
+            msg = execute(inpfile, exe)
+            if io.check_file(outfile, timeout=1):
+                msg += ' Output file: {0}.\n'.format(io.get_path(outfile))
         else:
-            errcode = 3
-        if not io.check_file(outfile, timeout=1):
-            errcode += 10
-    return '{0} : {1}'.format(io.get_path(outfile), errcode)
+            msg = 'Failed, cannot find input file {0}.\n'.format(io.get_path(inpfile))
+    return msg
 
 
 def run_mopac(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 opt', mult=0, overwrite=False):
@@ -113,13 +132,12 @@ def run_mopac(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 o
     prefix = ob.get_unique_key(mol, mult)
     inpfile = prefix + '.mop'
     outfile = prefix + '.out'
-    errcode = 0
     if io.check_file(outfile, timeout=1):
         if overwrite:
-            print "Overwriting previous calculation {0}".format(outfile)
+            msg = "Overwriting previous calculation {0}.\n".format(io.get_path(outfile))
             run = True
         else:
-            print 'Skipping calculation, found {0}'.format(outfile)
+            msg = 'Skipping calculation, found {0}.\n'.format(io.get_path(outfile))
             run = False
     else:
         run = True
@@ -127,15 +145,17 @@ def run_mopac(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 o
         if not io.check_file(inpfile, timeout=1):
             io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
-            errcode = execute_mopac(inpfile, exe)
+            msg = execute(inpfile, exe)
+            if io.check_file(outfile, timeout=1):
+                msg += ' Output file: {0}.\n'.format(io.get_path(outfile))
         else:
-            errcode = 3
+            msg = ''
         if not io.check_file(outfile, timeout=1):
-            errcode += 10
-    return '{0} : {1}'.format(io.get_path(outfile), errcode)
+            msg = 'Failed, can not find {0}.\n'.format(io.get_path(outfile))
+    return msg
 
 
-def execute_mopac(inp, mopacexe='mopac'):
+def execute_mopac(inp, exe='mopac'):
     """
     Runs mopac calculation.
     Mopac is a fortran code that does not return an error code
@@ -147,18 +167,18 @@ def execute_mopac(inp, mopacexe='mopac'):
     from subprocess import Popen, PIPE
     import iotools as io
 #    subprocess.call([mopacexe, inp])
-    process = Popen([mopacexe, inp], stdout=PIPE, stderr=PIPE)
+    process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
     if err is None or err == '':
-        errcode = 0
+        msg = 'Run {0} {1}: Success.'.format(exe, inp)
     else:
-        errcode = 1
         errstr = """ERROR in {0}\n
         STDOUT:\n{1}\n
         STDERR:\n{2}""".format(inp, out, err)
         errfile = inp + '.err'
         io.write_file(errstr, errfile)
-    return errcode
+        msg = 'Run {0} {1}: Failed, see {2}.'.format(exe, inp, errfile)
+    return msg
 
 
 def run_qc(qcexe, inputfile, stdout=False):
