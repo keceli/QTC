@@ -10,7 +10,27 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-05-03"
+__updated__ = "2017-05-15"
+
+def touch(fname, times=None):
+    """
+    Creates a file with the given fname, aka unix touch
+    See http://stackoverflow.com/questions/1158076/implement-touch-using-python
+    """
+    import os
+    with open(fname, 'a'):
+        os.utime(fname, times)
+    return
+
+
+def rm(fname):
+    """
+    Deletes a file with the given fname.
+    """
+    import os
+    os.remove(fname)
+    return
+
 
 def mkdir(path):
     """
