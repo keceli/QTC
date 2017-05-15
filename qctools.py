@@ -95,7 +95,8 @@ def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False)
     mol = ob.get_mol(s, make3D=True)
     if mult == 0:
         mult = ob.get_multiplicity(mol)
-    inptext = get_gaussian_input(mol, template, mult)
+    tmp = io.read_file(template)    
+    inptext = get_gaussian_input(mol, tmp, mult)
     prefix = ob.get_unique_key(mol, mult)
     inpfile = prefix + '.g09'  
     outfile = prefix + '.log'
