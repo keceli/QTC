@@ -1,0 +1,10 @@
+N#N 
+C 
+CC 
+[O][O] 
+[CH3] 
+[H] 
+[CH2] 
+[O]O 
+[CH2] 
+CO[O] 
