@@ -9,37 +9,77 @@ import argparse
 import iotools as io
 import numpy as np
 from iotools import write_file
+from gpaw.test.gllb.atomic import out
 
 
-__updated__ = "2017-05-03"
+__updated__ = "2017-05-15"
 
 
 def check_mopac():
         return True
 
 
-def run_mopac(s, mopacexe='mopac', method='pm7', mopackeys='precise nosym threads=1 opt', mult=0, overwrite=False):
+def get_symbol(atomno):
     """
-    Runs mopac calculation.
-    If overwrite=False, no calculation if output file already exists.
+    Returns the element symbol for a given atomic number.
+    Returns 'X' for atomno=0
+    >>>print get_symbol(1)
+    >>>H
+    """
+    syms = ['X',
+            'H', 'He'
+            'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne']
+    return syms[atomno]
+
+
+def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
+    """
+    Submit jobs using Ahren's script.
+     Usage: qcscript.pl input.qcscript initialgeometry.geo multiplicity
+     Sample geo file:
+     C          0.96737       -0.07578        0.02761
+     O          2.33437       -0.07578        0.02761
+    """
+    from subprocess import Popen, PIPE
+    process = Popen(['perl',qcscriptpath, inputpath, geopath, str(multiplicity)], stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    if err:
+        print('Error message: {0}'.format(err))
+    return out
+
+
+def execute_gaussian(inp, exe='g09'):
+    """
+    Runs gaussian calculation.
+    """
+    from subprocess import Popen, PIPE
+    process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    
+    if err is None or err == '':
+        errcode = 0
+    else:
+        errcode = 1
+        errstr = """ERROR in {0}\n
+        STDOUT:\n{1}\n
+        STDERR:\n{2}""".format(inp, out, err)
+        errfile = inp + '.err'
+        io.write_file(errstr, errfile)
+    return errcode
+
+
+def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False):
+    """
+    Runs gaussian calculation
     """
     mol = ob.get_mol(s, make3D=True)
     if mult == 0:
         mult = ob.get_multiplicity(mol)
-    inptext = get_mopac_input(mol, method=method, keys=mopackeys, mult=mult, dothermo=True)
+    inptext = get_gaussian_input(mol, template, mult)
     prefix = ob.get_unique_key(mol, mult)
-    inpfile = prefix + '.mop'
-    outfile = prefix + '.out'
+    inpfile = prefix + '.g09'  
+    outfile = prefix + '.log'
     errcode = 0
-#     formula = ob.get_formula(mol)
-#     formula_noH = ob.get_formula(mol, stoichemetry=True, hydrogens=False)
-#     elements_noH = ob.get_formula(mol, stoichemetry=False, hydrogens=False)
-#     uniquekey = ob.get_unique_key(mol, mult)
-#     dirs = 'database', elements_noH, formula_noH, formula, uniquekey, method
-#     dirpath = io.join_path(*dirs)
-#     io.mkdir(dirpath)
-#     cwd = io.pwd()
-#     io.cd(dirpath)
     if io.check_file(outfile, timeout=1):
         if overwrite:
             print "Overwriting previous calculation {0}".format(outfile)
@@ -53,7 +93,41 @@ def run_mopac(s, mopacexe='mopac', method='pm7', mopackeys='precise nosym thread
         if not io.check_file(inpfile, timeout=1):
             io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
-            errcode = execute_mopac(inpfile, mopacexe)
+            errcode = execute_gaussian(inpfile, exe)
+        else:
+            errcode = 3
+        if not io.check_file(outfile, timeout=1):
+            errcode += 10
+    return '{0} : {1}'.format(io.get_path(outfile), errcode)
+
+
+def run_mopac(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 opt', mult=0, overwrite=False):
+    """
+    Runs mopac calculation.
+    If overwrite=False, no calculation if output file already exists.
+    """
+    mol = ob.get_mol(s, make3D=True)
+    if mult == 0:
+        mult = ob.get_multiplicity(mol)
+    inptext = get_mopac_input(mol, method=method, keys=mopackeys, mult=mult, dothermo=True)
+    prefix = ob.get_unique_key(mol, mult)
+    inpfile = prefix + '.mop'
+    outfile = prefix + '.out'
+    errcode = 0
+    if io.check_file(outfile, timeout=1):
+        if overwrite:
+            print "Overwriting previous calculation {0}".format(outfile)
+            run = True
+        else:
+            print 'Skipping calculation, found {0}'.format(outfile)
+            run = False
+    else:
+        run = True
+    if run:
+        if not io.check_file(inpfile, timeout=1):
+            io.write_file(inptext, inpfile)
+        if io.check_file(inpfile, timeout=1):
+            errcode = execute_mopac(inpfile, exe)
         else:
             errcode = 3
         if not io.check_file(outfile, timeout=1):
@@ -142,6 +216,104 @@ def get_input_text(mol=None, s=None, template='qc_template.txt'):
         tmp = tmp.replace('QCPUT(MULTIPLICITY_WORD)', 'triplet')
         tmp = tmp.replace('QCPUT(SCFTYPE)', 'uhf')
     return tmp
+
+
+def get_gaussian_input(x, template, mult=0):
+    """
+    Returns Gaussian input file based on a given template.
+    """
+    if type(x) is str:
+        mol = ob.get_mol(x)
+    else:
+        mol = x
+    zmat = ob.get_zmat(mol)
+    if mult == 0:
+        mult = ob.get_multiplicity(mol)
+    charge = ob.get_charge(mol)
+    uniquekey = ob.get_unique_key(mol, mult)
+    inp = template.replace("QTC(CHARGE)", str(charge))
+    inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
+    inp = inp.replace("QTC(UNIQUEKEY)", uniquekey)
+    inp = inp.replace("QTC(ZMAT)", zmat)
+    if "QTC(" in inp:
+        print("Error in template file:\n" + inp)
+        return
+    return inp
+
+
+def get_gaussian_natom(lines):
+    """
+    NAtoms=     30 NQM=       30 NQMF=       0 NMMI=      0 NMMIF=      0
+    """
+    import iotools as io
+    if type(lines) == str:
+        lines = lines.splitlines()
+    keyword = 'NAtoms='
+    n = io.get_line_number(keyword, lines=lines)
+    return int(lines[n].split()[1])
+
+
+def get_gaussian_xyz(lines):
+    """
+    TODO
+                             Ref.Geom.
+ ---------------------------------------------------------------------
+ Center     Atomic                     Coordinates (Angstroms)
+ Number     Number                        X           Y           Z
+ ---------------------------------------------------------------------
+      1          6                    0.639026    0.420560    0.000000
+      2          1                    0.639026    1.074418    0.870857
+      3          1                    0.639026    1.074418   -0.870857
+      4          6                   -0.639026   -0.420560    0.000000
+      5          1                   -0.639026   -1.074418    0.870857
+      6          1                   -0.639026   -1.074418   -0.870857
+    """
+    import iotools as io
+    if type(lines) == str:
+        lines = lines.splitlines()
+    natom = get_gaussian_natom(lines)
+    keyword = 'Input orientation:'
+    n = io.get_line_number(keyword, lines=lines)
+    
+    return 
+
+
+def get_gaussian_xmatrix(lines):
+    """
+    TODO
+    Return anharmonic X matrix from Gaussian log file.
+     X matrix of Anharmonic Constants (cm-1)
+                1             2             3             4             5
+      1       -16.516
+      2       -66.957       -16.697
+      3       -58.351       -61.032       -14.183
+      4       -59.910       -58.652       -56.823       -14.169
+      5         0.070         7.271       -12.551        -5.852        -3.033
+      6        -6.314       -10.945        -3.626       -10.897        -1.176
+      7        -8.142        -6.253        -4.086        -4.940        -9.433
+      8        -6.350        -0.155        -3.440        -5.016       -15.112
+      9        -5.865        -5.516        -6.812        -9.987        -3.641
+     10       -11.927        -8.007        -4.714        -4.513        -5.103
+     11        -9.270       -13.121        -6.251        -5.246        -6.107
+     12        -2.600        -5.099        -2.873         1.830        -0.766
+                6             7             8             9            10
+      6        -2.352
+      7        -4.938        -0.630
+      8        -5.973        -2.335        -0.776
+      9         0.893        -2.619         0.133        -1.539
+     10        -2.750        -1.897         1.474        -8.260         0.565
+     11        -1.733        -1.237         3.059        -6.832        -2.110
+     12        -2.883        -0.846        -5.684         1.507         5.788
+               11            12
+     11         0.933
+     12         1.571         1.650
+     
+     Alternative:
+     
+     No anharmonic for linear molecules
+     NO Anharmonic anal. for Linear Molecules
+    """
+    return
 
 
 def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1, dothermo=False):
