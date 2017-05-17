@@ -11,7 +11,7 @@ import numpy as np
 from iotools import write_file
 
 
-__updated__ = "2017-05-15"
+__updated__ = "2017-05-17"
 
 
 def check_mopac():
@@ -102,10 +102,10 @@ def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False)
     outfile = prefix + '.log'
     if io.check_file(outfile, timeout=1):
         if overwrite:
-            print "Overwriting previous calculation {0}.\n".format(io.get_path(outfile))
+            msg = "Overwriting previous calculation {0}\n".format(io.get_path(outfile))
             run = True
         else:
-            print 'Skipping calculation, found {0}.\n'.format(io.get_path(outfile))
+            msg = 'Skipping calculation, found {0}\n'.format(io.get_path(outfile))
             run = False
     else:
         run = True
@@ -115,9 +115,9 @@ def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False)
         if io.check_file(inpfile, timeout=1):
             msg = execute(inpfile, exe)
             if io.check_file(outfile, timeout=1):
-                msg += ' Output file: {0}.\n'.format(io.get_path(outfile))
+                msg += ' Output file: {0}\n'.format(io.get_path(outfile))
         else:
-            msg = 'Failed, cannot find input file {0}.\n'.format(io.get_path(inpfile))
+            msg = 'Failed, cannot find input file {0}\n'.format(io.get_path(inpfile))
     return msg
 
 
@@ -135,10 +135,10 @@ def run_mopac(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 o
     outfile = prefix + '.out'
     if io.check_file(outfile, timeout=1):
         if overwrite:
-            msg = "Overwriting previous calculation {0}.\n".format(io.get_path(outfile))
+            msg = "Overwriting previous calculation {0}\n".format(io.get_path(outfile))
             run = True
         else:
-            msg = 'Skipping calculation, found {0}.\n'.format(io.get_path(outfile))
+            msg = 'Skipping calculation, found {0}\n'.format(io.get_path(outfile))
             run = False
     else:
         run = True
@@ -178,25 +178,8 @@ def execute_mopac(inp, exe='mopac'):
         STDERR:\n{2}""".format(inp, out, err)
         errfile = inp + '.err'
         io.write_file(errstr, errfile)
-        msg = 'Run {0} {1}: Failed, see {2}.'.format(exe, inp, errfile)
+        msg = 'Run {0} {1}: Failed, see {2}\n'.format(exe, inp, errfile)
     return msg
-
-
-def run_qc(qcexe, inputfile, stdout=False):
-    import subprocess
-    #          opt={'k': 'pm3  precise nosym THREADS=1 opt tctools'})
-    outputfile = inputfile + '.out'
-    if stdout:
-        cmd = [qcexe, inputfile, outputfile]
-    else:
-        cmd = [qcexe, inputfile]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    out, err = proc.communicate()
-    if err is None:
-        io.write_file(out, outputfile)
-    else:
-        print err
-    return
 
 
 def run_nwchem(s, nwchem='nwchem'):
