@@ -8,8 +8,24 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 
-__updated__ = "2017-05-15"
+__updated__ = "2017-05-17"
 __author__ = "Murat Keceli"
+__logo__ = """
+***************************************
+
+     <===>   <=============>   <=>    
+  <=>     <=>      <=>      <=>   <=> 
+<=>        <=>     <=>     <=>        
+<=>        <=>     <=>     <=>        
+<=>        <=>     <=>     <=>        
+  <=>     <=>      <=>      <=>   <=> 
+     <===><>       <=>         <=>   
+         <<>>                           
+                                      
+***************************************
+For computation of accurate thermochemistry
+By ECP-PACC team                                  
+"""
 # _mopacexe = 'mopac'
 # _nwchemexe = 'nwchem'
 # _gaussianexe = 'g09'
@@ -35,11 +51,16 @@ def get_args():
 
     Performs quantum chemistry calculations to calculate thermochemical parameters.
     Writes NASA polynomials in different formats.
-    Integrates different codes for these purposes.
+    Provides a unified interface for different codes.
     """)
     parser.add_argument('-i', '--input', type=str,
                         default='qclist.txt',
                         help='List of inchi or smiles for species to be calculated')
+    parser.add_argument('-b', '--beginlist', type=int,
+                        default=0,
+                        help='Beginning index of the species list')
+    parser.add_argument('-e', '--endlist', type=int,
+                        help='Ending index of the species list')
     parser.add_argument('-n', '--nproc', type=int,
                         default=multiprocessing.cpu_count(),
                         help='Number of processors, default is all processors')
@@ -60,25 +81,27 @@ def get_args():
                         help='Run thermochemistry calculations')
     parser.add_argument('-I', '--runinteractive', action='store_true',
                         help='Interactive mode for QTC')
-    parser.add_argument('--mopacpath', type=str,
+    parser.add_argument('-O', '--overwrite', action='store_true',
+                        help='Overwrite existing calculations. Be careful, data will be lost.')
+    parser.add_argument('--mopac', type=str,
                         default='mopac',
                         help='Path for mopac executable')
-    parser.add_argument('--nwchempath', type=str,
+    parser.add_argument('--nwchem', type=str,
                         default='nwchem',
                         help='Path for nwchem executable')
-    parser.add_argument('--gaussianpath', type=str,
+    parser.add_argument('--gaussian', type=str,
                         default='g09',
                         help='Path for gaussian executable')
-    parser.add_argument('--messpfpath', type=str,
+    parser.add_argument('--messpf', type=str,
                         default='messpf',
                         help='Path for MESS partition function executable')
-    parser.add_argument('--thermppath', type=str,
+    parser.add_argument('--thermp', type=str,
                         default='thermp',
                         help='Path for thermp executable')
-    parser.add_argument('--pac99path', type=str,
+    parser.add_argument('--pac99', type=str,
                         default='pac99',
                         help='Path for pac99 executable')
-    parser.add_argument('--qcscriptpath', type=str,
+    parser.add_argument('--qcscript', type=str,
                         default='/lcrc/project/PACC/test-awj/builddb/bin/qcscript.pl',
                         help='Path for qcscript perl script')
     return parser.parse_args()
@@ -119,24 +142,20 @@ def run(s):
     import qctools as qc
     import obtools as ob
     import iotools as io
+    mult = 0
     msg = "{0}\n".format(s)
+    if '-m' in s:
+        s, m = s.split('-m')
+        mult = int(m.strip())
     mol = ob.get_mol(s)
-    mult = ob.get_multiplicity(mol)
+    if mult < 1:
+        mult = ob.get_multiplicity(mol)
     uniquekey = ob.get_unique_key(mol,mult,extra=_qcmethod)
-    dirpath = ob.get_unique_path(mol, method=_qcmethod, mult=mult)
-    groupsfile = 'new.groups'
+#    dirpath = ob.get_unique_path(mol, method=_qcmethod, mult=mult)
+    dirpath = ob.get_smiles_path(mol, mult, method=_qcmethod)
     runfile = uniquekey + '.run'
     io.mkdir(dirpath)
     cwd = io.pwd()
-    if _runthermo:
-        if io.check_file(groupsfile):
-            io.cp(groupsfile, dirpath)
-            if not io.check_file(groupsfile, 1):
-                msg += ('Could not copy new.groups file to target directory {0}.\n'.format(dirpath))
-                return -1
-        else:
-            msg += ('new.groups file required in working directory.\n')
-            return -1
     if io.check_dir(dirpath, 1):
         io.cd(dirpath)
     else:
@@ -144,29 +163,32 @@ def run(s):
         return -1
     if _runqc:
         if io.check_file(runfile):
-            msg += ('Skipping {0}.\n'.format(uniquekey))
+            msg += ('Skipping {0}\n'.format(uniquekey))
         else:
             io.touch(runfile)
         if _qctype == 'mopac':
             msg += "Running mopac...\n"
-            msg += qc.run_mopac(s, exe=_mopacpath, method=_qcmethod, mult=mult)
+            msg += qc.run_mopac(s, exe=_mopac, method=_qcmethod, mult=mult)
             outfile = msg.split(' : ')[0]
         elif _qctype == 'gaussian':
             msg += "Running gaussian...\n"
-            msg += qc.run_gaussian(s, exe=_gaussianpath, template=_qctemplate, mult=mult,overwrite=False)
+            msg += qc.run_gaussian(s, exe=_gaussian, template=_qctemplate, mult=mult,overwrite=False)
             outfile = msg.split(' : ')[0]                
         elif _qctype == 'qcscript':
             msg += "Running qcscript...\n"
             geofile = uniquekey + '.geo'
             xyzlines = ob.get_xyz(mol).splitlines()
-            geo = ''.join(xyzlines[2:])
+            natom = int(xyzlines[0].strip())
+            geo = ob.get_geo(mol)
             io.write_file(geo, geofile)
             if io.check_file(geofile, 1):
-                msg += qc.run_qcscript(_qcscriptpath, _qctemplate, geofile, mult)
+                msg += qc.run_qcscript(_qcscript, _qctemplate, geofile, mult)
         elif _qctype == 'submit':
             print(s)        
                 
     if _runthermo:
+        groupstext = tc.get_new_groups()
+        io.write_file(groupstext, 'new.groups')
         msg += "Parsing qc output...\n"
         lines = io.read_file(outfile, aslines=True)
         xyz = qc.get_mopac_xyz(lines)
@@ -180,32 +202,54 @@ def run(s):
 
 if __name__ == "__main__":
     import socket
+    import iotools as io
+    from timeit import default_timer as timer
+    start  = timer()
     args = get_args()
-    global _runqc, _runthermo, _qcmethod, _qctype,_qctemplate,_qcscriptpath
-    global _mopacpath, _nwchempath, _gaussianpath, _messpfpath, _thermppath, _pac99path
+    global _runqc, _runthermo, _qcmethod, _qctype,_qctemplate,_qcscript
+    global _mopac, _nwchem, _gaussian, _messpf, _thermp, _pac99
+    _runinteractive = args.runinteractive
     _runqc = args.runqc
     _runthermo = args.runthermo
     _qcmethod = args.qcmethod
     _qctype = args.qctype
-    _qctemplate = args.qctemplate
-    _qcscriptpath = args.qcscriptpath
-    _mopacpath = args.mopacpath
-    _nwchempath = args.nwchempath
-    _gaussianpath = args.gaussianpath
-    _messpfpath = args.messpfpath
-    _thermppath = args.thermppath
-    _pac99path = args.pac99path
-    _runinteractive = args.runinteractive
+    _qctemplate = io.get_path(args.qctemplate)
+    _qcscript = io.get_path(args.qcscript,executable=True)
+    _mopac = io.get_path(args.mopac,executable=True)
+    _nwchem = io.get_path(args.nwchem,executable=True)
+    _gaussian = io.get_path(args.gaussian,executable=True)
+    _messpf = io.get_path(args.messpf,executable=True)
+    _thermp = io.get_path(args.thermp,executable=True)
+    _pac99 = io.get_path(args.pac99,executable=True)
+    beginindex = args.beginlist
+    endindex = args.endlist
     inp = args.input
     nproc = args.nproc
-    mylist = io.read_list(inp)
-    print('Given arguments')
-    print(args)
-    print("Input file {0} has {1} species".format(inp,len(mylist)))
-    print("QTC running with {0} processes on host {1}.\n".format(nproc, socket.gethostname()))
+    if io.check_file(inp):
+        mylist = io.read_list(inp)
+    else:
+        mylist = inp.split(',')
+    if endindex:
+        mylist = mylist[beginindex:endindex]
+    else:
+        mylist = mylist[beginindex:]        
+    print(__logo__)
+    print("QTC: Date and time           = {0}".format(io.get_date()))
+    print("QTC: Last update             = {0}".format(__updated__))
+    print("QTC: Number of processes     = {0}".format(nproc))
+    print("QTC: Hostname                = {0}".format(socket.gethostname()))
+    print('QTC: Given arguments         =')
+    for arg in vars(args):
+        print('                             --{0:20s}\t{1}'.format(arg, getattr(args, arg)))
+    print("QTC: Number of species       = {0}".format(len(mylist)))
+    inittime = timer()
+    print("QTC: Initialization time (s) = {0:.2f}".format(inittime-start))
+    print("QTC: Calculations started...")
     pool = multiprocessing.Pool(nproc)
     results = pool.map(run, mylist)
-
+    end = timer()
+    print("QTC: Total time (s)          = {0:.2f}".format(end-start))
+    print("QTC: Printing logs for the calculations...")
     for result in results:
         print result
 
