@@ -242,14 +242,16 @@ if __name__ == "__main__":
     for arg in vars(args):
         print('                             --{0:20s}\t{1}'.format(arg, getattr(args, arg)))
     print("QTC: Number of species       = {0}".format(len(mylist)))
-    inittime = timer()
-    print("QTC: Initialization time (s) = {0:.2f}".format(inittime-start))
+    init = timer()
+    print("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     print("QTC: Calculations started...")
     pool = multiprocessing.Pool(nproc)
     results = pool.map(run, mylist)
     end = timer()
-    print("QTC: Total time (s)          = {0:.2f}".format(end-start))
+    print("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     print("QTC: Printing logs for the calculations...")
     for result in results:
-        print result
+        print(result)
+    print("QTC: Total time (s)          = {0:.2f}".format(end-start))
+    print("QTC: Date and time           = {0}".format(io.get_date()))
 
