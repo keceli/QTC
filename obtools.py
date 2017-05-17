@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-05-15"
+__updated__ = "2017-05-17"
 
 def get_format(s):
     """
@@ -63,10 +63,13 @@ def get_mol(s, make3D=True):
     1
     """
     import pybel
-    frm = get_format(s)
-    mol = pybel.readstring(frm, s)
-    if make3D and not frm == 'xyz':
-        mol.make3D()
+    if type(s) is pybel.Molecule:
+        mol = s
+    elif type(s) is str:    
+        frm = get_format(s)
+        mol = pybel.readstring(frm, s)
+        if make3D and not frm == 'xyz':
+            mol.make3D()
     return mol
 
 def get_multiplicity(x):
@@ -81,10 +84,7 @@ def get_multiplicity(x):
     >>> [get_multiplicity(mol) for mol in mols]
     [2, 1, 3, 1]
     """
-    if type(x) is str:
-        mol = get_mol(x)
-    else:
-        mol = x
+    mol = get_mol(x)
     return mol.spin
 
 
@@ -106,11 +106,7 @@ def get_formula(x, hydrogens=True, stoichemetry=True):
     >>> get_formula('CCC',hydrogens=True,stoichemetry=False)
     'CH'
     """
-    if type(x) is str:
-        mol = get_mol(x)
-    else:
-        mol = x
-
+    mol = get_mol(x)
     formula = mol.formula
     if stoichemetry:
         if hydrogens:
@@ -150,10 +146,7 @@ def get_natom(x):
     >>> [get_natom(mol) for mol in mols]
     [4, 9, 2, 3]
     """
-    if type(x) is str:
-        mol = get_mol(x)
-    else:
-        mol = x
+    mol = get_mol(x)
     return len(mol.atoms)
 
 
@@ -174,11 +167,20 @@ def get_xyz(x):
     >>> print get_xyz(mol).splitlines()[0]
     14
     """
-    if type(x) is str:
-        mol = get_mol(x)
-    else:
-        mol = x
+    mol = get_mol(x)
     return mol.write(format='xyz')
+
+
+def get_geo(x):
+    """
+    Returns coordinates-only as a string.
+    Note: coordinates are not deterministic.
+    Each run gives a different set of coordinates.
+    """
+    mol = get_mol(x)
+    xyz = mol.write(format='xyz').splitlines(True)
+    natom = int(xyz[0].strip())
+    return ''.join(xyz[2:natom+2])
 
 
 def get_zmat(x):
@@ -200,10 +202,7 @@ def get_zmat(x):
     d4= 240.00
     r5= 1.0922
     """
-    if type(x) is str:
-        mol = get_mol(x)
-    else:
-        mol = x
+    mol = get_mol(x)
     return '\n'.join(mol.write('gzmat').splitlines()[5:])
 
 
@@ -221,10 +220,7 @@ def get_mop(x, keys='pm3 precise nosym threads=1 opt'):
     H   0.00000 1  0.00000 1  0.90000 1
     <BLANKLINE>
     """
-    if type(x) is str:
-        mol = get_mol(x)
-    else:
-        mol = x
+    mol = get_mol(x)
     return mol.write(format='mop', opt={'k': keys})
 
 
@@ -235,27 +231,21 @@ def get_unique_key(x, mult=0, extra=''):
     >>> get_unique_key(mol)
     'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
     """
-    if type(x) is str:
-        mol = get_mol(x)
-    else:
-        mol = x
+    mol = get_mol(x)
     if mult == 0:
         mult = mol.spin
     return mol.write("inchikey").strip() + str(mult) + extra
 
 
-def get_unique_path(x, method='', mult=0):
+def get_unique_path(x, mult=0, method=''):
     """
-    Returns a portable unique path for database directory.
+    Returns a portable unique path based on inchikey for database directory.
     >>> import os
     >>> if os.path.sep == '/': print get_unique_path('C',method='pm6')
     database/C/C/CH4/VNWKTOKETHGBQD-UHFFFAOYSA-N1/pm6
     """
     import iotools as io
-    if type(x) is str:
-        mol = get_mol(x)
-    else:
-        mol = x
+    mol = get_mol(x)
     if mult == 0:
         mult = mol.spin
     formula = get_formula(mol)
@@ -263,6 +253,27 @@ def get_unique_path(x, method='', mult=0):
     elements_noH = get_formula(mol, stoichemetry=False, hydrogens=False)
     uniquekey = get_unique_key(mol, mult)
     dirs = 'database', elements_noH, formula_noH, formula, uniquekey, method
+    return io.join_path(*dirs)
+
+
+def get_smiles_path(x, mult=0, method=''):
+    """
+    Returns a smiles based path for database directory.
+    Note that smiles strings are not unique. Even the 
+    canonical smiles strings are unique only for the same
+    code that generates the smiles string.
+    """
+    import iotools as io
+    mol = get_mol(x)
+    if mult == 0:
+        mult = mol.spin
+    s = get_smiles_filename(mol)    
+    if mult > 1:
+        s = s + "-m{0}".format(mult)
+    formula = get_formula(mol)
+    formula_noH = get_formula(mol, stoichemetry=True, hydrogens=False)
+    elements_noH = get_formula(mol, stoichemetry=False, hydrogens=False)
+    dirs = 'database', elements_noH, formula_noH, formula, s, method
     return io.join_path(*dirs)
 
 
@@ -280,6 +291,30 @@ def get_formats():
     return pybel.outformats
 
 
+def get_smiles_filename(x):
+    """
+    Returns a suitable filename for a given pybel.Molecule object or a string.
+    Smiles strings may contain characthers not suitable for file names,
+    such as \/:*?"<>|. Not sure if all these characters appear, but here
+    they are replaced by abdeqtrl.
+    """
+    if type(x) is pybel.Molecule:
+        s = x.write(format='can').strip()
+    elif type(x) is str:
+        s = x.strip()
+    else:
+        return 'filename'           
+    s = s.replace('\\','a')
+    s = s.replace('/','b')
+    s = s.replace(':','d')
+    s = s.replace('*','e')
+    s = s.replace('?','q')
+    s = s.replace('<','t')
+    s = s.replace('>','r')
+    s = s.replace('|','l')
+    return s
+
+    
 if __name__ == "__main__":
     import doctest
     doctest.testmod(verbose=True)
