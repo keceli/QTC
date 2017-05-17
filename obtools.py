@@ -295,7 +295,7 @@ def get_smiles_filename(x):
     """
     Returns a suitable filename for a given pybel.Molecule object or a string.
     Smiles strings may contain characthers not suitable for file names,
-    such as \/:*?"<>|. Not sure if all these characters appear, but here
+    such as \/:*?"<>|(). Not sure if all these characters appear, but here
     they are replaced by abdeqtrl.
     """
     if type(x) is pybel.Molecule:
@@ -307,11 +307,13 @@ def get_smiles_filename(x):
     s = s.replace('\\','a')
     s = s.replace('/','b')
     s = s.replace(':','d')
-    s = s.replace('*','e')
+    s = s.replace('*','z')
     s = s.replace('?','q')
     s = s.replace('<','t')
     s = s.replace('>','r')
     s = s.replace('|','l')
+    s = s.replace('(','x')
+    s = s.replace(')','y')
     return s
 
     
