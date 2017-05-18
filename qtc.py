@@ -8,7 +8,7 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 
-__updated__ = "2017-05-17"
+__updated__ = "2017-05-18"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -144,16 +144,12 @@ def run(s):
     import iotools as io
     mult = 0
     msg = "{0}\n".format(s)
-    if '-m' in s:
-        s, m = s.split('-m')
-        mult = int(m.strip())
+    mult = ob.get_mult(s)
     mol = ob.get_mol(s)
-    if mult < 1:
-        mult = ob.get_multiplicity(mol)
-    uniquekey = ob.get_unique_key(mol,mult,extra=_qcmethod)
+    smilesname = ob.get_smiles_filename(s)
 #    dirpath = ob.get_unique_path(mol, method=_qcmethod, mult=mult)
     dirpath = ob.get_smiles_path(mol, mult, method=_qcmethod)
-    runfile = uniquekey + '.run'
+    runfile = smilesname + '.run'
     io.mkdir(dirpath)
     cwd = io.pwd()
     if io.check_dir(dirpath, 1):
@@ -161,22 +157,27 @@ def run(s):
     else:
         msg += ('I/O error, {0} directory not found.\n'.format(dirpath))
         return -1
+    if _qctype == 'mopac':
+        qclog = smilesname + '.out'
+    elif _qctype == 'gaussian'  :
+        qclog = smilesname + '.log'
+    else:
+        qclog = smilesname + '.qclog'
+              
     if _runqc:
         if io.check_file(runfile):
-            msg += ('Skipping {0}\n'.format(uniquekey))
+            msg += ('Skipping {0}\n'.format(smilesname))
         else:
             io.touch(runfile)
         if _qctype == 'mopac':
             msg += "Running mopac...\n"
             msg += qc.run_mopac(s, exe=_mopac, method=_qcmethod, mult=mult)
-            outfile = msg.split(' : ')[0]
         elif _qctype == 'gaussian':
             msg += "Running gaussian...\n"
             msg += qc.run_gaussian(s, exe=_gaussian, template=_qctemplate, mult=mult,overwrite=False)
-            outfile = msg.split(' : ')[0]                
         elif _qctype == 'qcscript':
             msg += "Running qcscript...\n"
-            geofile = uniquekey + '.geo'
+            geofile = smilesname + '.geo'
             xyzlines = ob.get_xyz(mol).splitlines()
             natom = int(xyzlines[0].strip())
             geo = ob.get_geo(mol)
@@ -187,15 +188,18 @@ def run(s):
             print(s)        
                 
     if _runthermo:
+
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
         msg += "Parsing qc output...\n"
-        lines = io.read_file(outfile, aslines=True)
+        lines = io.read_file(qclog, aslines=True)
         xyz = qc.get_mopac_xyz(lines)
+        msg += "Optimized xyz:\n{0}".format(xyz)
         freqs = qc.get_mopac_freq(lines)
+        msg += "Harmonic frequencies:\n"
         zpe = qc.get_mopac_zpe(lines)
         deltaH = qc.get_mopac_deltaH(lines)
-        msg += write_chemkin_polynomial(mol, _qcmethod, zpe, xyz, freqs, deltaH)
+        #msg += write_chemkin_polynomial(mol, _qcmethod, zpe, xyz, freqs, deltaH)
     io.cd(cwd)
     return msg
 

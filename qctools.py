@@ -11,7 +11,7 @@ import numpy as np
 from iotools import write_file
 
 
-__updated__ = "2017-05-17"
+__updated__ = "2017-05-18"
 
 
 def check_mopac():
@@ -58,12 +58,12 @@ def execute(inp, exe):
     if err is None or err == '':
         msg = 'Run {0} {1}: Success.\n'.format(exe, inp)
     else:
-        errstr = """ERROR in {0}\n
+        errstr = """ERROR in "{0}"\n
         STDOUT:\n{1}\n
         STDERR:\n{2}""".format(inp, out, err)
         errfile = inp + '.err'
         io.write_file(errstr, errfile)
-        msg = 'Run {0} {1}: Failed, see {2}.\n'.format(exe, inp, io.get_path(errfile))
+        msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, io.get_path(errfile))
     return msg
 
 
@@ -79,12 +79,12 @@ def execute_gaussian(inp, exe='g09'):
     if err is None or err == '':
         msg = 'Run {0} {1}: Success.'.format(exe, inp)
     else:
-        errstr = """ERROR in {0}\n
+        errstr = """ERROR in "{0}"\n
         STDOUT:\n{1}\n
         STDERR:\n{2}""".format(inp, out, err)
         errfile = inp + '.err'
         io.write_file(errstr, errfile)
-        msg = 'Run {0} {1}: Failed, see {2}.'.format(exe, inp, io.get_path(errfile))
+        msg = 'Run {0} {1}: Failed, see "{2}"'.format(exe, inp, io.get_path(errfile))
     return msg
 
 
@@ -97,15 +97,15 @@ def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False)
         mult = ob.get_multiplicity(mol)
     tmp = io.read_file(template)    
     inptext = get_gaussian_input(mol, tmp, mult)
-    prefix = ob.get_unique_key(mol, mult)
+    prefix = ob.get_smiles_filename(s)
     inpfile = prefix + '.g09'  
     outfile = prefix + '.log'
     if io.check_file(outfile, timeout=1):
         if overwrite:
-            msg = "Overwriting previous calculation {0}\n".format(io.get_path(outfile))
+            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
             run = True
         else:
-            msg = 'Skipping calculation, found {0}\n'.format(io.get_path(outfile))
+            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
             run = False
     else:
         run = True
@@ -115,9 +115,9 @@ def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False)
         if io.check_file(inpfile, timeout=1):
             msg = execute(inpfile, exe)
             if io.check_file(outfile, timeout=1):
-                msg += ' Output file: {0}\n'.format(io.get_path(outfile))
+                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
         else:
-            msg = 'Failed, cannot find input file {0}\n'.format(io.get_path(inpfile))
+            msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
     return msg
 
 
@@ -130,15 +130,15 @@ def run_mopac(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 o
     if mult == 0:
         mult = ob.get_multiplicity(mol)
     inptext = get_mopac_input(mol, method=method, keys=mopackeys, mult=mult, dothermo=True)
-    prefix = ob.get_unique_key(mol, mult)
+    prefix = ob.get_smiles_filename(s)
     inpfile = prefix + '.mop'
     outfile = prefix + '.out'
     if io.check_file(outfile, timeout=1):
         if overwrite:
-            msg = "Overwriting previous calculation {0}\n".format(io.get_path(outfile))
+            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
             run = True
         else:
-            msg = 'Skipping calculation, found {0}\n'.format(io.get_path(outfile))
+            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
             run = False
     else:
         run = True
@@ -148,11 +148,11 @@ def run_mopac(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 o
         if io.check_file(inpfile, timeout=1):
             msg = execute(inpfile, exe)
             if io.check_file(outfile, timeout=1):
-                msg += ' Output file: {0}.\n'.format(io.get_path(outfile))
+                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
         else:
             msg = ''
         if not io.check_file(outfile, timeout=1):
-            msg = 'Failed, can not find {0}.\n'.format(io.get_path(outfile))
+            msg = 'Failed, can not find "{0}"\n'.format(io.get_path(outfile))
     return msg
 
 
@@ -191,7 +191,7 @@ def run_nwchem(s, nwchem='nwchem'):
     inchikey = mol.write(format='inchikey').replace('\n', '')
     inputfile = inchikey + 'nw'
     io.write_file(input, filename=inputfile)
-    run_qc('nwchem', inputfile, stdout=True)
+    execute('nwchem', inputfile, stdout=True)
     return s
 
 

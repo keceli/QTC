@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-05-17"
+__updated__ = "2017-05-18"
 
 def get_format(s):
     """
@@ -87,6 +87,18 @@ def get_multiplicity(x):
     mol = get_mol(x)
     return mol.spin
 
+
+def get_mult(s):
+    """
+    Returns spin multiplicity for a given smiles or inchi string
+    """
+    if '-m' in s:
+        s, m = s.split('-m')
+        mult = int(m.strip())
+    else:
+        mol = get_mol(s,make3D=False)
+        mult = mol.spin
+    return mult
 
 def get_formula(x, hydrogens=True, stoichemetry=True):
     """
@@ -309,11 +321,11 @@ def get_smiles_filename(x):
     s = s.replace(':','d')
     s = s.replace('*','z')
     s = s.replace('?','q')
-    s = s.replace('<','t')
-    s = s.replace('>','r')
+    s = s.replace('<','x')
+    s = s.replace('>','y')
     s = s.replace('|','l')
-    s = s.replace('(','x')
-    s = s.replace(')','y')
+    s = s.replace('(','p')
+    s = s.replace(')','r')
     return s
 
     
