@@ -18,7 +18,7 @@ MESS partition function code
 PAC99 
 thermp
 """    
-__updated__ = "2017-05-17"
+__updated__ = "2017-05-18"
 
 
   
@@ -282,6 +282,25 @@ def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp
 def get_pf_input(mol,method,zpe,xyz,freqs):
     """
     Write input file for mess partition function program
+    Temperature(step[K],size)        100.   30
+    RelativeTemperatureIncrement            0.001
+    Species CH4
+    RRHO
+    Geometry[angstrom] 5 !pm3
+    C -0.0000 0.0000 0.0000
+    H 1.0870 0.0000 0.0000
+    H -0.3623 1.0249 0.0000
+    H -0.3623 -0.5124 0.8876
+    H -0.3623 -0.5124 -0.8876
+    Core RigidRotor
+    SymmetryFactor 1
+    End
+    Frequencies[1/cm] 9 !pm3
+    1362.16 1362.39 1362.48 1451.03 1451.06 3207.47 3207.48 3207.50 3311.01
+    ZeroEnergy[kcal/mol] 28.481 ! pm3
+    ElectronicLevels[1/cm]  1
+    0 1
+    End
     """
     import iotools as io
     optmethod  = method
