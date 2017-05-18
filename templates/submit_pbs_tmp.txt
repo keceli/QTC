@@ -1,0 +1,20 @@
+#!/bin/sh
+#PBS -N qtc
+#PBS -l nodes=1:ppn=16
+#PBS -l walltime=0:50:00
+#PBS -j oe
+
+cd $PBS_O_WORKDIR
+LOGFILE=log_qtc_$(date "+%y%m%d")
+if [[ -e $LOGFILE ]] ; then
+    i=2
+    while [[ -e ${LOGFILE}_${i} ]] ; do
+        let i++
+    done
+    LOGFILE=${LOGFILE}_${i}
+fi
+mkdir -p /scratch/$USER
+export PYTHONPATH=/home/keceli/openbabel-2.4.1/install/lib/python2.7/site-packages
+#python qtc.py -i qc_list.txt -b 0 -m b3lyp -n 4 -t gaussian -p qctemplate.txt  -Q > $LOGFILE
+#/home/keceli/anaconda2/bin/python qtc.py -i 'C' -b 500 -m b3lyp -n 4 -t gaussian -p qctemplate.txt  -Q > $LOGFILE
+/home/keceli/anaconda2/bin/python qtc.py -i qc_list.txt -b 7500 -m b3lyp -n 4 -t gaussian -p qctemplate.txt  -Q > $LOGFILE
