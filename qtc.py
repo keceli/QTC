@@ -26,6 +26,7 @@ __logo__ = """
 For computation of accurate thermochemistry
 By ECP-PACC team                                  
 """
+
 # _mopacexe = 'mopac'
 # _nwchemexe = 'nwchem'
 # _gaussianexe = 'g09'
@@ -146,7 +147,8 @@ def run(s):
     import obtools as ob
     import iotools as io
     mult = 0
-    msg = "{0}\n".format(s)
+    msg = "***************************************\n"
+    msg += "{0}\n".format(s)
     mult = ob.get_mult(s)
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
@@ -193,8 +195,9 @@ def run(s):
     if _runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
-        msg += "Parsing qc output...\n"
-        xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, _qccode, anharmonic=False)
+        msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qclog))
+        newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, _qccode, anharmonic=False)
+        msg += newmsg
         if xyz is not None:
             msg += "Optimized xyz in Angstroms:\n{0} \n".format(xyz)
         if freqs is not None:

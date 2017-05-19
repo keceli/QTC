@@ -16,10 +16,6 @@ except:
 __updated__ = "2017-05-19"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
-def check_mopac():
-        return True
-
-
 def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
     s = io.read_file(qclog, aslines=False)
     lines = s.splitlines()
@@ -29,29 +25,34 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
     deltaH = None
     xmat = None
     anharmfreqs = None
-    try:
-        if qccode == 'gaussian':
-            mol = ob.get_gaussian_mol(qclog)
-            zpe = mol.energy
-            if cclib:
-                ccdata = parse_cclib(qclog)
-                xyz = ccdata.writexyz()
-                freqs = ccdata.vibfreqs
-                nfreq = len(freqs)
-                deltaH = ccdata.enthalpy
-                if anharmonic:
-                    xmat = ccdata.vibanharms
-                    anharmfreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
-        elif qccode == 'mopac':
-            xyz = get_mopac_xyz(lines)
-            freqs = get_mopac_freq(lines)
-            zpe = get_mopac_zpe(lines)
-            deltaH = get_mopac_deltaH(lines)
-    except:
-        print('Parsing failed for {0}\n'.format(io.get_path(qclog)))
-        return xyz,freqs,zpe,deltaH,anharmfreqs,xmat
+    msg =''
+    if check_logfile(s):
+        try:
+            if qccode == 'gaussian':
+                mol = ob.get_gaussian_mol(qclog)
+                zpe = mol.energy
+                if cclib:
+                    ccdata = parse_cclib(qclog)
+                    xyz = ccdata.writexyz()
+                    freqs = ccdata.vibfreqs
+                    nfreq = len(freqs)
+                    deltaH = ccdata.enthalpy
+                    if anharmonic:
+                        xmat = ccdata.vibanharms
+                        anharmfreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
+             
+            elif qccode == 'mopac':
+                xyz = get_mopac_xyz(lines)
+                freqs = get_mopac_freq(lines)
+                zpe = get_mopac_zpe(lines)
+                deltaH = get_mopac_deltaH(lines)
+        except:
+            msg = 'Parsing failed for {0}\n'.format(io.get_path(qclog))
+            return msg,xyz,freqs,zpe,deltaH,anharmfreqs,xmat
+    else:
+        msg = 'Failed job: {0}\n'.format(io.get_path(qclog))
                 
-    return xyz,freqs,zpe,deltaH,anharmfreqs,xmat
+    return msg,xyz,freqs,zpe,deltaH,anharmfreqs,xmat
 
 
 def parse_cclib(out):
@@ -291,6 +292,17 @@ def get_input_text(mol=None, s=None, template='qc_template.txt'):
         tmp = tmp.replace('QCPUT(SCFTYPE)', 'uhf')
     return tmp
 
+
+def check_logfile(s):
+    """
+    Returns true if gaussian calculation completed succesfully
+    """
+    if "Normal termination of Gaussian" in s:
+        return True
+    elif "== MOPAC DONE ==" in s:
+        return True
+    else:
+        return False
 
 def get_gaussian_input(x, template, mult=0):
     """
