@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-05-17"
+__updated__ = "2017-05-19"
 
 
 def get_date():
@@ -140,7 +140,9 @@ def check_exe(exename):
     Check if an executable is available.
     TODO:
     """
-    return True
+    import distutils.spawn as ds
+
+    return ds.find_executable(exename)
 
 
 def cp(source, target):

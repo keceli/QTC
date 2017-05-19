@@ -167,7 +167,7 @@ def run(s):
     cwd = io.pwd()
     if io.check_dir(dirpath, 1):
         io.cd(dirpath)
-        msg += "cd '{0}'\n"
+        msg += "cd '{0}'\n".format(dirpath)
     else:
         msg += ('I/O error, {0} directory not found.\n'.format(dirpath))
         return -1
