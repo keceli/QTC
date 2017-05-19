@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-05-18"
+__updated__ = "2017-05-19"
 
 def get_format(s):
     """
@@ -183,6 +183,14 @@ def get_xyz(x):
     return mol.write(format='xyz')
 
 
+def get_gaussian_mol(logfile):
+    """
+    Returns mol file from gaussian logfile.
+    """
+    import pybel
+    return pybel.readfile('g09',logfile).next()
+
+
 def get_geo(x):
     """
     Returns coordinates-only as a string.
@@ -327,6 +335,15 @@ def get_smiles_filename(x):
     s = s.replace('(','p')
     s = s.replace(')','r')
     return s
+
+
+def set_mult(x,mult):
+    """
+    Sets the total spin multiplicity.
+    """
+    mol = get_mol(x)
+    mol.OBMol.SetTotalSpinMultiplicity(mult)
+    return mol
 
     
 if __name__ == "__main__":
