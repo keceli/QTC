@@ -56,10 +56,10 @@ def get_args():
     parser.add_argument('-i', '--input', type=str,
                         default='qclist.txt',
                         help='List of inchi or smiles for species to be calculated')
-    parser.add_argument('-b', '--beginlist', type=int,
+    parser.add_argument('-f', '--first', type=int,
                         default=0,
                         help='Beginning index of the species list')
-    parser.add_argument('-e', '--endlist', type=int,
+    parser.add_argument('-l', '--last', type=int,
                         help='Ending index of the species list')
     parser.add_argument('-n', '--nproc', type=int,
                         default=multiprocessing.cpu_count(),
@@ -67,6 +67,9 @@ def get_args():
     parser.add_argument('-m', '--qcmethod', type=str,
                         default='pm3',
                         help='Quantum chemistry method to be used')
+    parser.add_argument('-s', '--qcbasis', type=str,
+                        default='cc-pvdz',
+                        help='Basis-set level in quantum chemistry calculations')
     parser.add_argument('-t', '--qctype', type=str,
                         default='mopac',
                         help='Quantum chemistry calculation type ("gausian","mopac","qcscript") to be used')
@@ -148,7 +151,7 @@ def run(s):
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
 #    dirpath = ob.get_unique_path(mol, method=_qcmethod, mult=mult)
-    dirpath = ob.get_smiles_path(mol, mult, method=_qcmethod)
+    dirpath = ob.get_smiles_path(mol, mult, method=_qcmethod, basis=_qcbasis)
     runfile = smilesname + '.run'
     io.mkdir(dirpath)
     cwd = io.pwd()
@@ -216,6 +219,7 @@ if __name__ == "__main__":
     _runqc = args.runqc
     _runthermo = args.runthermo
     _qcmethod = args.qcmethod
+    _qcbasis = args.qcbasis
     _qctype = args.qctype
     _qctemplate = io.get_path(args.qctemplate)
     _qcscript = io.get_path(args.qcscript,executable=True)

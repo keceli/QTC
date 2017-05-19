@@ -268,7 +268,7 @@ def get_unique_path(x, mult=0, method=''):
     return io.join_path(*dirs)
 
 
-def get_smiles_path(x, mult=0, method=''):
+def get_smiles_path(x, mult=0, method='',basis=''):
     """
     Returns a smiles based path for database directory.
     Note that smiles strings are not unique. Even the 
@@ -285,7 +285,7 @@ def get_smiles_path(x, mult=0, method=''):
     formula = get_formula(mol)
     formula_noH = get_formula(mol, stoichemetry=True, hydrogens=False)
     elements_noH = get_formula(mol, stoichemetry=False, hydrogens=False)
-    dirs = 'database', elements_noH, formula_noH, formula, s, method
+    dirs = 'database', elements_noH, formula_noH, formula, s, method, basis
     return io.join_path(*dirs)
 
 
