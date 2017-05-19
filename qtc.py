@@ -8,16 +8,16 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 
-__updated__ = "2017-05-18"
+__updated__ = "2017-05-19"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
 
      <===>   <=============>   <=>    
   <=>     <=>      <=>      <=>   <=> 
-<=>        <=>     <=>     <=>        
-<=>        <=>     <=>     <=>        
-<=>        <=>     <=>     <=>        
+<=>         <=>    <=>     <=>        
+<=>         <=>    <=>     <=>        
+<=>         <=>    <=>     <=>        
   <=>     <=>      <=>      <=>   <=> 
      <===><>       <=>         <=>   
          <<>>                           
@@ -191,17 +191,23 @@ def run(s):
             print(s)        
                 
     if _runthermo:
-
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
         msg += "Parsing qc output...\n"
-        lines = io.read_file(qclog, aslines=True)
-        xyz = qc.get_mopac_xyz(lines)
-        msg += "Optimized xyz:\n{0}".format(xyz)
-        freqs = qc.get_mopac_freq(lines)
-        msg += "Harmonic frequencies:\n"
-        zpe = qc.get_mopac_zpe(lines)
-        deltaH = qc.get_mopac_deltaH(lines)
+        xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, _qccode, anharmonic=False)
+        if xyz is not None:
+            msg += "Optimized xyz in Angstroms:\n{0} \n".format(xyz)
+        if freqs is not None:
+            msg += "Harmonic frequencies in cm-1:\n {0} \n".format(freqs)
+        if afreqs is not None:
+            msg += "Anharmonic frequencies in cm-1:\n {0}\n".format(afreqs)
+        if zpe is not None:
+            msg += 'ZPE = {0} kcal/mol\n'.format(zpe)
+        if deltaH is not None:
+            msg += 'deltaH = {0} kcal/mol\n'.format(deltaH)
+        if xmat is not None:
+            msg += 'Xmat = {0} kcal/mol\n'.format(xmat)   
+
         #msg += write_chemkin_polynomial(mol, _qcmethod, zpe, xyz, freqs, deltaH)
     io.cd(cwd)
     return msg
@@ -253,8 +259,11 @@ if __name__ == "__main__":
     init = timer()
     print("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     print("QTC: Calculations started...")
-    pool = multiprocessing.Pool(nproc)
-    results = pool.map(run, mylist)
+    if nproc > 1:
+        pool = multiprocessing.Pool(nproc)
+        results = pool.map(run, mylist)
+    else:
+        results = map(run, mylist)
     end = timer()
     print("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     print("QTC: Printing logs for the calculations...")

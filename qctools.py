@@ -8,16 +8,86 @@ import obtools as ob
 import argparse
 import iotools as io
 import numpy as np
-from iotools import write_file
+try:
+    import cclib
+except:
+    pass
 
-
-__updated__ = "2017-05-18"
-
+__updated__ = "2017-05-19"
+_hartree2kcalmol = 627.509 #kcal mol-1
 
 def check_mopac():
         return True
 
 
+def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
+    s = io.read_file(qclog, aslines=False)
+    lines = s.splitlines()
+    xyz = None
+    freqs = None
+    zpe = None
+    deltaH = None
+    xmat = None
+    anharmfreqs = None
+    try:
+        if qccode == 'gaussian':
+            mol = ob.get_gaussian_mol(qclog)
+            zpe = mol.energy
+            if cclib:
+                ccdata = parse_cclib(qclog)
+                xyz = ccdata.writexyz()
+                freqs = ccdata.vibfreqs
+                nfreq = len(freqs)
+                deltaH = ccdata.enthalpy
+                if anharmonic:
+                    xmat = ccdata.vibanharms
+                    anharmfreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
+        elif qccode == 'mopac':
+            xyz = get_mopac_xyz(lines)
+            freqs = get_mopac_freq(lines)
+            zpe = get_mopac_zpe(lines)
+            deltaH = get_mopac_deltaH(lines)
+    except:
+        print('Parsing failed for {0}\n'.format(io.get_path(qclog)))
+        return xyz,freqs,zpe,deltaH,anharmfreqs,xmat
+                
+    return xyz,freqs,zpe,deltaH,anharmfreqs,xmat
+
+
+def parse_cclib(out):
+    """
+    Returns ccdata object that contains data extracted from
+    the 'out' file.
+    """
+    import cclib
+    return cclib.io.ccread(out)
+
+
+def getcc_enthalpy(ccdata):
+    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
+        return ccdata.enthalpy  
+
+
+def getcc_entropy(ccdata):
+    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
+        return ccdata.entropy  
+
+
+def getcc_freeenergy(ccdata):
+    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
+        return ccdata.freeenergy  
+
+
+def getcc_frequencies(ccdata):
+    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
+        return ccdata.vibfreqs
+    
+    
+def getcc_xyz(ccdata):     
+    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
+        return ccdata.writexyz()
+    
+    
 def get_symbol(atomno):
     """
     Returns the element symbol for a given atomic number.
@@ -278,48 +348,170 @@ def get_gaussian_xyz(lines):
     natom = get_gaussian_natom(lines)
     keyword = 'Input orientation:'
     n = io.get_line_number(keyword, lines=lines)
-    
     return 
 
 
-def get_gaussian_xmatrix(lines):
+def get_gaussian_zpve(s):
     """
-    TODO
-    Return anharmonic X matrix from Gaussian log file.
-     X matrix of Anharmonic Constants (cm-1)
+    Parses zero-point vibrational energy from gaussian 
+    log file.
+    Input:
+    s: String containing the log file output.
+    Returns:
+    If successful:
+        Float, zpve in kcal/mol
+    else:
+        A string showing the error.
+    Portion of the relevant output:
+    Zero-point vibrational energy     194497.1 (Joules/Mol)
+                                   46.48591 (Kcal/Mol)    
+    """
+    key = "Zero-point vibrational energy"
+    lines = s.splitlines()
+    iline = io.get_line_number(key,lines=lines) 
+    if iline < 0:
+        return 'Not found: {0}'.format(key)
+    iline += 1
+    line = lines[iline]     
+    return float(line.split()[0])
+
+
+def get_gaussian_xmatrix(s,nfreq):
+    """
+    Parses  X matrix from Gaussian log file.
+    Input:
+    s: String containing the log file output.
+    nfreq : number of vibrational frequencies
+    Returns:
+    If successful:
+        Numpy 2D array of size: nfreq x nfreq
+        Only lower half triangle is filled.
+        Unit of the elements is cm-1.
+    else:
+        A string showing the error.
+    Portion of the relevant output:
+ X matrix of Anharmonic Constants (cm-1)
                 1             2             3             4             5
-      1       -16.516
-      2       -66.957       -16.697
-      3       -58.351       -61.032       -14.183
-      4       -59.910       -58.652       -56.823       -14.169
-      5         0.070         7.271       -12.551        -5.852        -3.033
-      6        -6.314       -10.945        -3.626       -10.897        -1.176
-      7        -8.142        -6.253        -4.086        -4.940        -9.433
-      8        -6.350        -0.155        -3.440        -5.016       -15.112
-      9        -5.865        -5.516        -6.812        -9.987        -3.641
-     10       -11.927        -8.007        -4.714        -4.513        -5.103
-     11        -9.270       -13.121        -6.251        -5.246        -6.107
-     12        -2.600        -5.099        -2.873         1.830        -0.766
+      1       -16.952
+      2       -20.275       -16.791
+      3       -68.264       -19.750       -17.403
+      4       -19.762       -67.602       -20.866       -17.232
+      5       -39.101       -38.921       -40.903       -40.724        -9.467
+      6       -40.164       -39.960       -39.582       -39.374       -37.734
+      7        -3.979        -8.048        -3.791        -7.530         4.360
+      8        -8.117        -3.911        -7.606        -3.720         4.345
+      9        -5.530        -9.506        -4.745        -9.316        -0.471
+     10        -9.552        -5.430        -9.359        -4.641        -0.441
+     11        -3.195        -3.073        -0.553        -0.426        11.081
+     12        -3.864        -3.746        -5.117        -4.998         2.696
+     13        -1.869        -3.005        -1.758        -1.604        -1.937
+     14        -3.070        -1.768        -1.671        -1.662        -1.899
+     15         1.427         1.429         1.853         1.856         0.340
+     16        -2.443        -2.611        -2.489        -3.468        -2.054
+     17        -2.798        -2.340        -3.661        -2.385        -2.062
+     18         0.189         0.483         1.107         1.390         1.489
                 6             7             8             9            10
-      6        -2.352
-      7        -4.938        -0.630
-      8        -5.973        -2.335        -0.776
-      9         0.893        -2.619         0.133        -1.539
-     10        -2.750        -1.897         1.474        -8.260         0.565
-     11        -1.733        -1.237         3.059        -6.832        -2.110
-     12        -2.883        -0.846        -5.684         1.507         5.788
-               11            12
-     11         0.933
-     12         1.571         1.650
-     
-     Alternative:
-     
-     No anharmonic for linear molecules
-     NO Anharmonic anal. for Linear Molecules
+      6        -9.394
+      7        -9.658        -4.966
+      8        -9.649        -3.176        -4.942
+      9       -10.774        -2.897        -2.061        -3.149
+     10       -10.737        -2.054        -2.842        -0.368        -3.127
+     11         7.094        -2.539        -2.509        -2.613        -2.570
+     12         6.172        -0.754        -0.714        -2.250        -2.202
+     13        -1.744        -4.336        -4.722        -3.153        -3.462
+     14        -1.707        -4.716        -4.248        -3.466        -3.078
+     15         0.219        -1.347        -1.343        -1.539        -1.537
+     16        -1.895        -1.989        -2.795        -5.621        -6.255
+     17        -1.915        -2.837        -1.935        -6.357        -5.550
+     18         0.433        -1.192        -1.110        -0.335        -0.089
+               11            12            13            14            15
+     11        -7.155
+     12       -18.994        -3.594
+     13        -5.621        -3.171        -1.575
+     14        -5.555        -3.100         0.450        -1.551
+     15        -7.109        -4.660        -4.614        -4.605        -5.489
+     16        -1.602        -0.998        -4.504         1.095        -2.827
+     17        -1.560        -0.941         1.012        -4.392        -2.819
+     18         1.778        -0.412        -5.035        -4.808         1.097
+               16            17            18
+     16         2.460
+     17         7.634         2.481
+     18         8.273         8.287       -13.180
+
+ Resonance Analysis
     """
-    return
+    xmat = np.zeros((nfreq,nfreq)) 
+    lines = s.splitlines()
+    key = 'X matrix of Anharmonic Constants (cm-1)'
+    iline = io.get_line_number(key,lines=lines)
+    iline += 1
+    line = lines[iline]
+    if iline < 0:
+        return 'Not found: {0}'.format(key)
+    while line.strip():
+        cols = line.split()
+        icol = int(cols[0])-1 
+        for irow in range(icol,nfreq):
+            iline += 1
+            line = lines[iline] 
+            cols = line.split()
+            ncol = len(cols) - 1 
+            xmat[irow,icol:icol+ncol] = [float(num) for num in cols[1:]]  
+        iline += 1
+        line = lines[iline]          
+    return xmat
 
 
+def get_gaussian_fundamentals(s,nfreq):
+    """
+    Parses harmonic and anharmonic frequencies from gaussian
+    log file.
+    Input:
+    s: String containing the log file output.
+    nfreq : number of vibrational frequencies
+    Returns:
+    If successful:
+        Numpy 2D array of size: nfreq x 2
+        1st column for harmonic frequencies in cm-1
+        2nd column for anharmonic frequencies in cm-1
+    else:
+        A string showing the error.
+    Portion of the relevant output:   
+  Fundamental Bands (DE w.r.t. Ground State)
+  1(1)           3106.899     2957.812   -0.042978   -0.008787   -0.008920
+  2(1)           3106.845     2959.244   -0.042969   -0.008924   -0.008782
+  3(1)           3082.636     2934.252   -0.043109   -0.008543   -0.008705
+  4(1)           3082.581     2935.702   -0.043101   -0.008709   -0.008539
+  5(1)           3028.430     2918.529   -0.048859   -0.008796   -0.008794
+  6(1)           3026.064     2926.301   -0.048438   -0.008788   -0.008785
+  7(1)           1477.085     1438.911   -0.044573   -0.001097   -0.007855
+  8(1)           1477.063     1439.122   -0.044576   -0.007858   -0.001089
+  9(1)           1474.346     1432.546   -0.043241    0.000678   -0.007062
+ 10(1)           1474.318     1432.981   -0.043245   -0.007065    0.000691
+ 11(1)           1410.843     1377.548   -0.028060   -0.016937   -0.016944
+ 12(1)           1387.532     1356.818   -0.027083   -0.016001   -0.016001
+ 13(1)           1205.022     1177.335   -0.029813   -0.010333   -0.011188
+ 14(1)           1204.977     1177.775   -0.029806   -0.011191   -0.010328
+ 15(1)           1011.453      988.386   -0.037241   -0.014274   -0.014270
+ 16(1)            821.858      814.503   -0.025712   -0.008603   -0.010446
+ 17(1)            821.847      814.500   -0.025693   -0.010449   -0.008599
+ 18(1)            317.554      296.967   -0.035184   -0.010866   -0.010861
+Overtones (DE w.r.t. Ground State) 
+    """
+    freqs = np.zeros((nfreq,2)) 
+    lines = s.splitlines()
+    key = 'Fundamental Bands (DE w.r.t. Ground State)'
+    iline = io.get_line_number(key,lines=lines)
+    if iline < 0:
+        return 'Not found: {0}'.format(key)
+    for i in range(nfreq):
+        iline += 1
+        line = lines[iline]
+        cols = line.split()
+        freqs[i,:] = [float(cols[1]),float(cols[2])]        
+    return freqs
+
+    
 def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1, dothermo=False):
     """
     Returns mopac input as a string.
@@ -416,7 +608,7 @@ def get_mopac_freq(lines):
         lines = lines.splitlines()
     keyword = 'FREQ.'
     natom = get_mopac_natom(lines)
-    freqs = np.zeros(3 * natom - 5)
+    freqs = np.zeros(3 * natom)
     i = 0
     for line in lines:
         if keyword in line:
