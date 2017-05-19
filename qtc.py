@@ -122,7 +122,7 @@ def write_chemkin_polynomial(mol, method, zpe, xyz, freqs, deltaH):
     name = mol.formula
     tag = method
     inp = tc.get_pf_input(mol, method, zpe, xyz, freqs)
-
+    io.write_file(inp, inputfile)
     msg = 'Running mess partition function.\n'
     msg += tc.run_pf()
     msg += 'Generating thermp input.\n'
@@ -167,6 +167,7 @@ def run(s):
     cwd = io.pwd()
     if io.check_dir(dirpath, 1):
         io.cd(dirpath)
+        msg += "cd '{0}'\n"
     else:
         msg += ('I/O error, {0} directory not found.\n'.format(dirpath))
         return -1
@@ -282,7 +283,7 @@ if __name__ == "__main__":
     print("QTC: Number of species       = {0}".format(len(mylist)))
     init = timer()
     print("QTC: Initialization time (s) = {0:.2f}".format(init-start))
-    print("QTC: Calculations started...")
+#    print("QTC: Calculations started...")
     if nproc > 1:
         pool = multiprocessing.Pool(nproc)
         results = pool.map(run, mylist)

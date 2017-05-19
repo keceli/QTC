@@ -277,9 +277,9 @@ def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp
         f.write('**\n')
         f.write('{0}'.format(breakT))
     if io.check_file(filename, 1):
-        msg = 'Thermp input file "{0}" written'.format(filename)
+        msg = 'Thermp input file "{0}" written.\n'.format(filename)
     else:
-        msg = 'Failed writing thermp input file "{0}"'.format(filename)
+        msg = 'Failed writing thermp input file "{0}".\n'.format(filename)
     return msg
 
 
@@ -385,7 +385,7 @@ def run_thermp(thermp='thermp',thermpfile='thermp.dat',pffile='pf.dat'):
     import iotools as io
     msg = ''
     if not io.check_exe(thermp):
-        msg += "{0} thermp executable does not exist\n".format(thermp)
+        msg += "{0} thermp executable does not exist.\n".format(thermp)
         return
     pflog = pffile.replace('dat','log')
     if io.check_file(pflog) and not io.check_file(pffile):
