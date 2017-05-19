@@ -17,8 +17,7 @@ __updated__ = "2017-05-19"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
-    s = io.read_file(qclog, aslines=False)
-    lines = s.splitlines()
+
     xyz = None
     freqs = None
     zpe = None
@@ -26,6 +25,12 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
     xmat = None
     anharmfreqs = None
     msg =''
+    if io.check_file(qclog, 1):
+        s = io.read_file(qclog, aslines=False)
+    else:
+        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog)) 
+        return msg,xyz,freqs,zpe,deltaH,anharmfreqs,xmat   
+    lines = s.splitlines()
     if check_logfile(s):
         try:
             if qccode == 'gaussian':
@@ -47,10 +52,10 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
                 zpe = get_mopac_zpe(lines)
                 deltaH = get_mopac_deltaH(lines)
         except:
-            msg = 'Parsing failed for {0}\n'.format(io.get_path(qclog))
+            msg = 'Parsing failed for "{0}"\n'.format(io.get_path(qclog))
             return msg,xyz,freqs,zpe,deltaH,anharmfreqs,xmat
     else:
-        msg = 'Failed job: {0}\n'.format(io.get_path(qclog))
+        msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
                 
     return msg,xyz,freqs,zpe,deltaH,anharmfreqs,xmat
 
