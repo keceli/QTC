@@ -229,8 +229,8 @@ if __name__ == "__main__":
     _messpf = io.get_path(args.messpf,executable=True)
     _thermp = io.get_path(args.thermp,executable=True)
     _pac99 = io.get_path(args.pac99,executable=True)
-    beginindex = args.beginlist
-    endindex = args.endlist
+    beginindex = args.first
+    endindex = args.last
     inp = args.input
     nproc = args.nproc
     if io.check_file(inp):
