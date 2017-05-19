@@ -22,9 +22,9 @@ def get_listofstrings(array):
     Return a list of strings from a given array
     """
     n = len(array)
-    s = ''
+    s = ['']*n
     for i in range(n):
-        s += '{0}\n'.format(array[i]) 
+        s [i] = '{0}\n'.format(array[i]) 
     return s
 
 
