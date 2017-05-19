@@ -33,7 +33,7 @@ By ECP-PACC team
 # _thermpexe = 'thermp'
 # _pac99exe = 'pac99'
 # _qcmethod = 'pm3'
-# _qctype = 'mopac'
+# _qccode = 'mopac'
 # _runqc = False
 # _runthermo = False
 
@@ -160,9 +160,9 @@ def run(s):
     else:
         msg += ('I/O error, {0} directory not found.\n'.format(dirpath))
         return -1
-    if _qctype == 'mopac':
+    if _qccode == 'mopac':
         qclog = smilesname + '.out'
-    elif _qctype == 'gaussian'  :
+    elif _qccode == 'gaussian'  :
         qclog = smilesname + '.log'
     else:
         qclog = smilesname + '.qclog'
@@ -172,13 +172,13 @@ def run(s):
             msg += ('Skipping {0}\n'.format(smilesname))
         else:
             io.touch(runfile)
-        if _qctype == 'mopac':
+        if _qccode == 'mopac':
             msg += "Running mopac...\n"
             msg += qc.run_mopac(s, exe=_mopac, method=_qcmethod, mult=mult)
-        elif _qctype == 'gaussian':
+        elif _qccode == 'gaussian':
             msg += "Running gaussian...\n"
             msg += qc.run_gaussian(s, exe=_gaussian, template=_qctemplate, mult=mult,overwrite=False)
-        elif _qctype == 'qcscript':
+        elif _qccode == 'qcscript':
             msg += "Running qcscript...\n"
             geofile = smilesname + '.geo'
             xyzlines = ob.get_xyz(mol).splitlines()
@@ -187,7 +187,7 @@ def run(s):
             io.write_file(geo, geofile)
             if io.check_file(geofile, 1):
                 msg += qc.run_qcscript(_qcscript, _qctemplate, geofile, mult)
-        elif _qctype == 'submit':
+        elif _qccode == 'submit':
             print(s)        
                 
     if _runthermo:
@@ -213,14 +213,14 @@ if __name__ == "__main__":
     from timeit import default_timer as timer
     start  = timer()
     args = get_args()
-    global _runqc, _runthermo, _qcmethod, _qctype,_qctemplate,_qcscript
+    global _runqc, _runthermo, _qcmethod, _qccode,_qctemplate,_qcscript
     global _mopac, _nwchem, _gaussian, _messpf, _thermp, _pac99
     _runinteractive = args.runinteractive
     _runqc = args.runqc
     _runthermo = args.runthermo
     _qcmethod = args.qcmethod
     _qcbasis = args.qcbasis
-    _qctype = args.qctype
+    _qccode = args.qccode
     _qctemplate = io.get_path(args.qctemplate)
     _qcscript = io.get_path(args.qcscript,executable=True)
     _mopac = io.get_path(args.mopac,executable=True)
