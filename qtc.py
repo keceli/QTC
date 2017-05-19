@@ -87,6 +87,8 @@ def get_args():
                         help='Interactive mode for QTC')
     parser.add_argument('-O', '--overwrite', action='store_true',
                         help='Overwrite existing calculations. Be careful, data will be lost.')
+    parser.add_argument('-A', '--anharmonic', action='store_true',
+                        help='Anharmonic corrections')
     parser.add_argument('--mopac', type=str,
                         default='mopac',
                         help='Path for mopac executable')
@@ -122,17 +124,20 @@ def write_chemkin_polynomial(mol, method, zpe, xyz, freqs, deltaH):
     inp = tc.get_pf_input(mol, method, zpe, xyz, freqs)
 
     msg = 'Running mess partition function.\n'
-    tc.run_pf()
+    msg += tc.run_pf()
     msg += 'Generating thermp input.\n'
-    tc.write_thermp_input(mol.formula, deltaH)
+    msg += tc.write_thermp_input(mol.formula, deltaH)
     msg += 'Running thermp.\n'
-    tc.run_thermp()
+    msg += tc.run_thermp()
     msg += 'Running pac99.\n'
-    tc.run_pac99(name)
+    msg += tc.run_pac99(name)
     msg += 'Converting to chemkin format.\n'
     chemkinfile = name + '.ckin'
     msg += 'Writing chemking file {0}.\n'.format(chemkinfile)
-    tc.write_chemkin_file(deltaH, tag, name, chemkinfile)
+    try:
+        msg += tc.write_chemkin_file(deltaH, tag, name, chemkinfile)
+    except:
+        "Failed to write polynomials"
     return msg
 
 
@@ -155,6 +160,9 @@ def run(s):
 #    dirpath = ob.get_unique_path(mol, method=_qcmethod, mult=mult)
     dirpath = ob.get_smiles_path(mol, mult, method=_qcmethod, basis=_qcbasis)
     runfile = smilesname + '.run'
+    runqc = _runqc
+    runthermo = _runthermo
+    runanharmonic = _anharmonic
     io.mkdir(dirpath)
     cwd = io.pwd()
     if io.check_dir(dirpath, 1):
@@ -169,7 +177,7 @@ def run(s):
     else:
         qclog = smilesname + '.qclog'
               
-    if _runqc:
+    if runqc:
         if io.check_file(runfile):
             msg += ('Skipping {0}\n'.format(smilesname))
         else:
@@ -192,26 +200,38 @@ def run(s):
         elif _qccode == 'submit':
             print(s)        
                 
-    if _runthermo:
+    if runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
         msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qclog))
-        newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, _qccode, anharmonic=False)
+        newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, _qccode, anharmonic=runanharmonic)
         msg += newmsg
         if xyz is not None:
             msg += "Optimized xyz in Angstroms:\n{0} \n".format(xyz)
+        else:
+            runthermo = False
         if freqs is not None:
             msg += "Harmonic frequencies in cm-1:\n {0} \n".format(freqs)
+        else:
+            runthermo = False        
         if afreqs is not None:
             msg += "Anharmonic frequencies in cm-1:\n {0}\n".format(afreqs)
+        else:
+            runanharmonic = False        
         if zpe is not None:
             msg += 'ZPE = {0} kcal/mol\n'.format(zpe)
+        else:
+            runthermo = False        
         if deltaH is not None:
             msg += 'deltaH = {0} kcal/mol\n'.format(deltaH)
+        else:
+            runthermo = False        
         if xmat is not None:
             msg += 'Xmat = {0} kcal/mol\n'.format(xmat)   
-
-        #msg += write_chemkin_polynomial(mol, _qcmethod, zpe, xyz, freqs, deltaH)
+        else:
+            runanharmonic = False        
+        if runthermo:    
+            msg += write_chemkin_polynomial(mol, _qcmethod, zpe, xyz, freqs, deltaH)
     io.cd(cwd)
     return msg
 
@@ -223,13 +243,14 @@ if __name__ == "__main__":
     start  = timer()
     args = get_args()
     global _runqc, _runthermo, _qcmethod, _qccode,_qctemplate,_qcscript
-    global _mopac, _nwchem, _gaussian, _messpf, _thermp, _pac99
+    global _mopac, _nwchem, _gaussian, _messpf, _thermp, _pac99,_anharmonic
     _runinteractive = args.runinteractive
     _runqc = args.runqc
     _runthermo = args.runthermo
     _qcmethod = args.qcmethod
     _qcbasis = args.qcbasis
     _qccode = args.qccode
+    _anharmonic = args.anharmonic
     _qctemplate = io.get_path(args.qctemplate)
     _qcscript = io.get_path(args.qcscript,executable=True)
     _mopac = io.get_path(args.mopac,executable=True)

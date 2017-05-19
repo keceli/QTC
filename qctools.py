@@ -16,6 +16,18 @@ except:
 __updated__ = "2017-05-19"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
+
+def get_listofstrings(array):
+    """
+    Return a list of strings from a given array
+    """
+    n = len(array)
+    s = ''
+    for i in range(n):
+        s += '{0}\n'.format(array[i]) 
+    return s
+
+
 def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
 
     xyz = None
@@ -23,13 +35,13 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
     zpe = None
     deltaH = None
     xmat = None
-    anharmfreqs = None
+    afreqs = None
     msg =''
     if io.check_file(qclog, 1):
         s = io.read_file(qclog, aslines=False)
     else:
         msg = 'File not found: "{0}"\n'.format(io.get_path(qclog)) 
-        return msg,xyz,freqs,zpe,deltaH,anharmfreqs,xmat   
+        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat   
     lines = s.splitlines()
     if check_logfile(s):
         try:
@@ -40,24 +52,27 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
                     ccdata = parse_cclib(qclog)
                     xyz = ccdata.writexyz()
                     freqs = ccdata.vibfreqs
+                    freqs = get_listofstrings(freqs)
                     nfreq = len(freqs)
                     deltaH = ccdata.enthalpy
                     if anharmonic:
                         xmat = ccdata.vibanharms
-                        anharmfreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
+                        afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
+                        afreqs = get_listofstrings(afreqs)
              
             elif qccode == 'mopac':
                 xyz = get_mopac_xyz(lines)
                 freqs = get_mopac_freq(lines)
+                freqs = get_listofstrings(freqs)
                 zpe = get_mopac_zpe(lines)
                 deltaH = get_mopac_deltaH(lines)
         except:
             msg = 'Parsing failed for "{0}"\n'.format(io.get_path(qclog))
-            return msg,xyz,freqs,zpe,deltaH,anharmfreqs,xmat
+            return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
     else:
         msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
                 
-    return msg,xyz,freqs,zpe,deltaH,anharmfreqs,xmat
+    return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
 
 
 def parse_cclib(out):
