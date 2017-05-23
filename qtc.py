@@ -8,7 +8,7 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 
-__updated__ = "2017-05-19"
+__updated__ = "2017-05-20"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -177,7 +177,7 @@ def run(s):
         qclog = smilesname + '.log'
     else:
         qclog = smilesname + '.qclog'
-              
+    print(msg)          
     if runqc:
         if io.check_file(runfile):
             msg += ('Skipping {0}\n'.format(smilesname))
@@ -200,7 +200,7 @@ def run(s):
                 msg += qc.run_qcscript(_qcscript, _qctemplate, geofile, mult)
         elif _qccode == 'submit':
             print(s)        
-                
+    print(msg)            
     if runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
@@ -234,7 +234,8 @@ def run(s):
         if runthermo:    
             msg += write_chemkin_polynomial(mol, _qcmethod, zpe, xyz, freqs, deltaH)
     io.cd(cwd)
-    return msg
+    print(msg)
+    return
 
 
 if __name__ == "__main__":
@@ -286,14 +287,14 @@ if __name__ == "__main__":
 #    print("QTC: Calculations started...")
     if nproc > 1:
         pool = multiprocessing.Pool(nproc)
-        results = pool.map(run, mylist)
+        pool.map(run, mylist)
     else:
         results = map(run, mylist)
     end = timer()
     print("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
-    print("QTC: Printing logs for the calculations...")
-    for result in results:
-        print(result)
+    #print("QTC: Printing logs for the calculations...")
+    #for result in results:
+    #    print(result)
     print("QTC: Total time (s)          = {0:.2f}".format(end-start))
     print("QTC: Date and time           = {0}".format(io.get_date()))
 
