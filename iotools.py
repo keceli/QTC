@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-05-19"
+__updated__ = "2017-05-23"
 
 
 def get_date():
@@ -63,6 +63,14 @@ def cd(path):
     return
 
 
+def mv(oldname,newname):
+    """
+    Renames or moves a file
+    """
+    import os
+    os.rename(oldname,newname)
+    return 
+
 def pwd():
     """
     Return current directory
@@ -71,12 +79,26 @@ def pwd():
     return os.getcwd()
 
 
+def find_files(directory, pattern):
+    """
+    Yields files in a directory (including subdirectories) with a given pattern
+    https://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python
+    """
+    import os, fnmatch
+    for root, dirs, files in os.walk(directory):
+        for basename in files:
+            if fnmatch.fnmatch(basename, pattern):
+                filename = os.path.join(root, basename)
+                yield filename
+             
+                
 def join_path(*paths):
     """
     Concatenes strings into a portable path using correct seperators.
     """
     import os
     return os.path.join(*paths)
+
 
 def write_file(s, filename='newfile'):
     """
@@ -199,6 +221,35 @@ def read_list(listfile):
     with open(listfile, 'r') as f:
         lines = filter(None, (line.rstrip() for line in f))
     return lines
+
+
+def execute(exe,inp=None,out=None):
+    """
+    Executes a calculation for a given input file inp and executable exe.
+    """
+    from subprocess import Popen, PIPE
+    if not check_exe(exe):
+        return 'Executable "{0}" not found.\n'.format(exe)
+    if inp:
+        if not check_file(inp,1):
+            return 'Input file "{0}" not found.\n'.format(get_path(inp))
+    if inp and out:
+        process = Popen([exe, inp, out], stdout=PIPE, stderr=PIPE)
+    elif inp:
+        process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
+    else:
+        process = Popen([exe], stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate()
+    if stderr is None or stderr == '':
+        msg = 'Run {0} {1}: Success.\n'.format(exe, inp)
+    else:
+        errstr = """ERROR in "{0}"\n
+        STDOUT:\n{1}\n
+        STDERR:\n{2}""".format(inp, stdout, stderr)
+        errfile = inp + '.err'
+        write_file(errstr, errfile)
+        msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, get_path(errfile))
+    return msg
 
 
 if __name__ == "__main__":
