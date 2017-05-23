@@ -320,7 +320,7 @@ def get_pf_input(mol,method,zpe,xyz,freqs):
     inp += 'RRHO\n'
     inp += 'Geometry[angstrom] {0} !{1}\n'.format(natom,optmethod)
     inp += ''.join(xyz.splitlines(True)[2:])
-    inp += 'Core RigidRotor\n'
+    inp += '\nCore RigidRotor\n'
     inp += 'SymmetryFactor {0}\n'.format(sym)
     inp += 'End\n'
     inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),freqmethod)
