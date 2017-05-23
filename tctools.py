@@ -18,10 +18,9 @@ MESS partition function code
 PAC99 
 thermp
 """    
-__updated__ = "2017-05-19"
+__updated__ = "2017-05-23"
 
 
-  
 def get_stoichometry(formula,element):
     """
     Returns the stoichometry (count) of an element in a given formula
@@ -216,6 +215,29 @@ def get_name_from_messpf(inputfile='pf.inp'):
     return name
 
 
+def get_chemkin_str(deltaH,tag,formula,filename):
+    """
+    Given formula string, tag string, deltaH float and a filename string,
+    returns a string for NASA polynomials in chemkin format:
+    !
+    !DHf(0K) =    25.00 [kcal/mol], taken from SJK ANL0
+    !Q(T) from CI+QC/cc-pVTZ by SJK on  18Apr2017
+    C2H3                    H   3C   2O   0N   0G   200.00   3000.00  1000.00      1
+     2.98462760E+00 1.07839183E-02-5.15860183E-06 1.20073114E-09-1.10370162E-13    2
+     3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
+    -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4    
+    """
+    lines1to3 = get_comment_lines(tag, deltaH)
+    nH = get_stoichometry(formula, 'H')
+    nC = get_stoichometry(formula, 'C')
+    nN = get_stoichometry(formula, 'N')
+    nO = get_stoichometry(formula, 'O')
+    line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
+    lines5to7 = get_coefficients(formula+'.c97')
+    
+    return lines1to3 + line4 +lines5to7   
+
+
 def write_chemkin_file(deltaH,tag,formula,filename):
     """
     Given formula string, tag string, deltaH float and a filename string,
@@ -238,6 +260,44 @@ def write_chemkin_file(deltaH,tag,formula,filename):
     with open(filename,'w') as f:
         f.write(lines1to3 + line4 +lines5to7)   
     return 0   
+
+
+def get_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.):
+    """
+    Returns thermp input text as a string for a given formula string and deltaH (float)
+    e.g.
+    1, 0
+    Nwell, Nprod
+    30
+    nt
+    71.82    0.                          //enthalpy at specified T (in kcal/mol), with T = 0 or 298 K
+    C2H3                                    //name of species
+    C  2                                    //composition in terms of
+    H  3                                    //element_name  element_count
+    **
+    1000.                                   //temperature to break the fit
+    """
+    nH = get_stoichometry(formula, 'H')
+    nC = get_stoichometry(formula, 'C')
+    nN = get_stoichometry(formula, 'N')
+    nO = get_stoichometry(formula, 'O')
+    tmp = '1, 0\n'
+    tmp +='Nwell, Nprod\n'
+    tmp +='30\n'
+    tmp +='nt\n'
+    tmp +='{0} {1}\n'.format(deltaH, enthalpyT)
+    tmp +='{0}\n'.format(formula)
+    if nC > 0:
+        tmp +='C {0}\n'.format(nC)
+    if nH > 0:
+        tmp +='H {0}\n'.format(nH)
+    if nO > 0:
+        tmp +='O {0}\n'.format(nO)
+    if nN > 0:
+        tmp +='N {0}\n'.format(nN)
+    tmp +='**\n'
+    tmp +='{0}'.format(breakT)
+    return tmp
 
 
 def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp.dat'):
@@ -306,7 +366,6 @@ def get_pf_input(mol,method,zpe,xyz,freqs):
     0 1
     End
     """
-    import iotools as io
     optmethod  = method
     freqmethod = method
     tagmethod  = method
@@ -336,7 +395,7 @@ def run_pf(messpf='messpf',inputfile='pf.inp'):
     Runs mess to generate partition function
     Requires an input file,i.e. pf.inp.
     '/tcghome/ygeorgi/fock/crossrate/bin/partition_function'
-    Output is pf.log
+    Output is input_prefix + ".log"
     e.g.
     Temperature(step[K],size)        100.   30
     RelativeTemperatureIncrement            0.001
@@ -377,31 +436,25 @@ def run_pf(messpf='messpf',inputfile='pf.inp'):
         msg += "{0} mess partitition function executable does not exist.\n".format(messpf)
     return msg
 
-def run_thermp(thermp='thermp',thermpfile='thermp.dat',pffile='pf.dat'):
+def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.dat', thermpexe='thermp'):
     """
     Runs thermp.exe
-    Requires pf.dat and thermp.dat files as input
+    Requires pf.dat and thermp.dat files to be present
     linus
     /tcghome/sjk/gen/aux_me/therm/thermp.exe
     """
-    import os
-    import subprocess
     import iotools as io
     msg = ''
-    if not io.check_exe(thermp):
-        msg += "{0} thermp executable does not exist.\n".format(thermp)
-        return msg
+    io.write_file(thermpinput, thermpfile)
+    if not io.check_file(thermpfile,1):
+        return "{0} file not found.\n".format(thermpfile)    
     pflog = pffile.replace('dat','log')
     if io.check_file(pflog) and not io.check_file(pffile):
-        os.rename(pflog,pffile)
-    if io.check_file(thermpfile,3):
-        if io.check_file(pffile,3):
-            if io.check_exe(thermp):
-                subprocess.call([thermp])
-            else:
-                msg += 'Thermp nat found\n'    
+        io.mv(pflog,pffile)
+        if io.check_file(pffile,1):
+            msg += io.execute(thermpexe)
         else:
-            msg += "{0} file does not exist.\n".format(pffile)
+            msg += "{0} file not found.\n".format(pffile)
     return msg
 
 

@@ -8,7 +8,7 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 
-__updated__ = "2017-05-20"
+__updated__ = "2017-05-23"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -118,17 +118,18 @@ def write_chemkin_polynomial(mol, method, zpe, xyz, freqs, deltaH):
     A driver to perform all operations to write NASA polynomial in
     chemkin format. Assumes quantum chemistry calculation is performed.
     """
-    inputfile = 'pf.inp'
+    messpfinput = 'pf.inp'
+    thermpinput = 'thermp.dat'
+    messpfoutput = 'pf.log'
     name = mol.formula
     tag = method
     inp = tc.get_pf_input(mol, method, zpe, xyz, freqs)
-    io.write_file(inp, inputfile)
-    msg = 'Running mess partition function.\n'
-    msg += tc.run_pf()
-    msg += 'Generating thermp input.\n'
-    msg += tc.write_thermp_input(mol.formula, deltaH)
-    msg += 'Running thermp.\n'
-    msg += tc.run_thermp()
+    io.write_file(inp, messpfinput)
+    msg = 'Running {0} to generate partition function.\n'.format(_messpf)
+    msg += io.execute(_messpf,messpfinput)
+    msg += 'Running thermp .\n'
+    inp = tc.get_thermp_input(mol.formula, deltaH)
+    msg = tc.run_thermp(inp, 'thermp.dat', messpfoutput, _thermp) 
     msg += 'Running pac99.\n'
     msg += tc.run_pac99(name)
     msg += 'Converting to chemkin format.\n'
