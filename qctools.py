@@ -13,7 +13,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-05-19"
+__updated__ = "2017-05-23"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -84,29 +84,58 @@ def parse_cclib(out):
     return cclib.io.ccread(out)
 
 
-def getcc_enthalpy(ccdata):
-    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
-        return ccdata.enthalpy  
+def getcc_enthalpy(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+        if io.check_file(out, 1):
+            ccdata = parse_cclib(out)
+        else:
+            return '{0} not found'.format(out)    
+    else:
+        ccdata = out
+    return ccdata.enthalpy    
+
+def getcc_entropy(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+        if io.check_file(out, 1):
+            ccdata = parse_cclib(out)
+        else:
+            return '{0} not found'.format(out)    
+    else:
+        ccdata = out        
+    return ccdata.entropy  
 
 
-def getcc_entropy(ccdata):
-    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
-        return ccdata.entropy  
+def getcc_freeenergy(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+        if io.check_file(out, 1):
+            ccdata = parse_cclib(out)
+        else:
+            return '{0} not found'.format(out)    
+    else:
+        ccdata = out        
+    return ccdata.freeenergy  
 
 
-def getcc_freeenergy(ccdata):
-    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
-        return ccdata.freeenergy  
-
-
-def getcc_frequencies(ccdata):
-    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
-        return ccdata.vibfreqs
+def getcc_frequencies(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+        if io.check_file(out, 1):
+            ccdata = parse_cclib(out)
+        else:
+            return '{0} not found'.format(out)    
+    else:
+        ccdata = out        
+    return ccdata.vibfreqs
     
     
-def getcc_xyz(ccdata):     
-    if type(ccdata) == cclib.parser.data.ccData_optdone_bool:
-        return ccdata.writexyz()
+def getcc_xyz(out):     
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+        if io.check_file(out, 1):
+            ccdata = parse_cclib(out)
+        else:
+            return '{0} not found'.format(out)    
+    else:
+        ccdata = out        
+    return ccdata.writexyz()
     
     
 def get_symbol(atomno):
