@@ -60,7 +60,6 @@ def parse_line16(s):
     n = len(s) / 16
     #replace fortran exponent D to E
     tmp = s.replace('D','E')
-    nums = [0.]*n
     nums = np.zeros(n)
     for i in range(n):
         nums[i] = float(tmp[i*16:(i+1)*16])
