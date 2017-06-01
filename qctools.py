@@ -13,7 +13,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-05-23"
+__updated__ = "2017-05-24"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -523,7 +523,7 @@ def get_gaussian_xmatrix(s,nfreq):
     return xmat
 
 
-def get_gaussian_fundamentals(s,nfreq):
+def get_gaussian_fundamentals(s,nfreq=None):
     """
     Parses harmonic and anharmonic frequencies from gaussian
     log file.
@@ -559,6 +559,8 @@ def get_gaussian_fundamentals(s,nfreq):
  18(1)            317.554      296.967   -0.035184   -0.010866   -0.010861
 Overtones (DE w.r.t. Ground State) 
     """
+    if nfreq is None:
+        nfreq = get_gaussian_nfreq(s)
     freqs = np.zeros((nfreq,2)) 
     lines = s.splitlines()
     key = 'Fundamental Bands (DE w.r.t. Ground State)'
@@ -570,7 +572,7 @@ Overtones (DE w.r.t. Ground State)
         line = lines[iline]
         cols = line.split()
         freqs[i,:] = [float(cols[1]),float(cols[2])]        
-    return freqs
+    return freqs[freqs[:,0].argsort()]
 
     
 def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1, dothermo=False):
@@ -610,6 +612,29 @@ def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1,
     if dothermo:
         inp += '\n' + keys.replace('opt', 'oldgeo thermo').strip()
     return inp
+
+
+def get_gaussian_islinear(s):
+    """
+    Returns true if the molecule is linear for the given log.
+    """
+    if "Linear Molecule" in s:
+        return True
+    else:
+        return False
+    
+
+def get_gaussian_nfreq(s):
+    """
+    Return the number of vibrational degrees of freedom for 
+    a given log.
+    """
+    natom = get_gaussian_natom(s)
+    if get_gaussian_islinear(s):
+        nvdof = 3*natom - 5
+    else:
+        nvdof = 3*natom - 6
+    return nvdof        
 
 
 def get_mopac_natom(lines):
