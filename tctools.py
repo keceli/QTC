@@ -15,9 +15,9 @@ Thermochemistry tools.
 Requires:
 Quantum chemistry code, NWChem, MOPAC, ...
 MESS partition function code
-PAC99 
+PAC99
 thermp
-"""    
+"""
 __updated__ = "2017-05-23"
 
 
@@ -41,7 +41,7 @@ def get_stoichometry(formula,element):
             idx = formula.find(element,idx+length)
         except:
             n += 1
-            idx = formula.find(element,idx+1) 
+            idx = formula.find(element,idx+1)
     return n
 
 
@@ -54,9 +54,9 @@ def parse_line16(s):
     array([  2.80732614e-08,  -7.92328675e-12,   0.00000000e+00,
              3.32942894e+04,   3.81627887e+01])
     """
-    assert len(s) % 16 == 0, 'Given string for parse_line should have 16n chararacters, n={1,2,...}' 
+    assert len(s) % 16 == 0, 'Given string for parse_line should have 16n chararacters, n={1,2,...}'
     assert len(s) > 0, 'Given string for parse_line should have 16n chararacters, n={1,2,...}'
-    
+
     n = len(s) / 16
     #replace fortran exponent D to E
     tmp = s.replace('D','E')
@@ -74,7 +74,7 @@ def get_comment_lines(tag,deltaH):
     line 1:!
     line 2:!DHf(0K) =    25.00 [kcal/mol], taken from SJK ANL0
     line 3:!Q(T) from CI+QC/cc-pVTZ by SJK on  18Apr2017
-    
+
     TODO: To simplify, instead of a tag, comments could be given directly or
     it could be read from a database of tags, which can be accessed outside
     the code.
@@ -141,7 +141,7 @@ def get_comment_lines(tag,deltaH):
         line3 = '!Q(T) from CASPT2/cc-pVQZ by SJK on  ' + date + '\n'
     else:
         line2 = '!{0}.\n'.format(date)
-        line3 = '!{0}.n'.format(tag)
+        line3 = '!{0}.\n'.format(tag)
     return line1 + line2 + line3
 
 
@@ -150,7 +150,7 @@ def get_coefficients(c97filename):
     Returns a string of 3 lines containing NASA polynomial
     coefficients in chemkin format
     *.c97 file:
-    C2H3                                                                      
+    C2H3
     3 201704 C   2.00H   3.00    0.00    0.00    0.00 0   27.0452200     296391.000
     100.000   200.000 2  0.0  1.0  0.0  0.0  0.0  0.0  0.0  0.0        10698.000
     3.587567650D+00 3.894470300D-03 0.000000000D+00 0.000000000D+00 0.000000000D+00
@@ -161,7 +161,7 @@ def get_coefficients(c97filename):
     1000.000  3000.000 5  0.0  1.0  2.0  3.0  4.0  0.0  0.0  0.0        10698.000
     2.984627599D+00 1.078391826D-02-5.158601830D-06 1.200731137D-09-1.103701620D-13
     0.000000000D+00 0.000000000D+00 0.000000000D+00 3.423078010D+04 7.923373280D+00
-    
+
         coefficients in chemkin format:
      2.98462760E+00 1.07839183E-02-5.15860183E-06 1.20073114E-09-1.10370162E-13    2
      3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
@@ -210,7 +210,7 @@ def get_name_from_messpf(inputfile='pf.inp'):
         lines = f.readlines()
     for line in lines:
         if 'Species' in line:
-            name = line.split()[-1]   
+            name = line.split()[-1]
     return name
 
 
@@ -224,7 +224,7 @@ def get_chemkin_str(deltaH,tag,formula,filename):
     C2H3                    H   3C   2O   0N   0G   200.00   3000.00  1000.00      1
      2.98462760E+00 1.07839183E-02-5.15860183E-06 1.20073114E-09-1.10370162E-13    2
      3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
-    -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4    
+    -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
     lines1to3 = get_comment_lines(tag, deltaH)
     nH = get_stoichometry(formula, 'H')
@@ -233,8 +233,8 @@ def get_chemkin_str(deltaH,tag,formula,filename):
     nO = get_stoichometry(formula, 'O')
     line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
     lines5to7 = get_coefficients(formula+'.c97')
-    
-    return lines1to3 + line4 +lines5to7   
+
+    return lines1to3 + line4 +lines5to7
 
 
 def write_chemkin_file(deltaH,tag,formula,filename):
@@ -247,7 +247,7 @@ def write_chemkin_file(deltaH,tag,formula,filename):
     C2H3                    H   3C   2O   0N   0G   200.00   3000.00  1000.00      1
      2.98462760E+00 1.07839183E-02-5.15860183E-06 1.20073114E-09-1.10370162E-13    2
      3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
-    -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4    
+    -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
     lines1to3 = get_comment_lines(tag, deltaH)
     nH = get_stoichometry(formula, 'H')
@@ -257,8 +257,8 @@ def write_chemkin_file(deltaH,tag,formula,filename):
     line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
     lines5to7 = get_coefficients(formula+'.c97')
     with open(filename,'w') as f:
-        f.write(lines1to3 + line4 +lines5to7)   
-    return 0   
+        f.write(lines1to3 + line4 +lines5to7)
+    return 0
 
 
 def get_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.):
@@ -385,10 +385,10 @@ def get_pf_input(mol,method,zpe,xyz,freqs):
     inp += ' '.join(freqs) + '\n'
     inp += 'ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpe,tagmethod)
     inp += 'ElectronicLevels[1/cm]  1\n'
-    inp += '0 {0}\n'.format(multiplicity) 
+    inp += '0 {0}\n'.format(multiplicity)
     inp += 'End\n'
     return inp
-    
+
 def run_pf(messpf='messpf',inputfile='pf.inp'):
     """
     Runs mess to generate partition function
@@ -414,7 +414,7 @@ def run_pf(messpf='messpf',inputfile='pf.inp'):
     ZeroEnergy[kcal/mol]            -34.41  ! ANL1
     ElectronicLevels[1/cm]        1
     0   2
-    End    
+    End
     """
     import subprocess
     import iotools as io
@@ -427,7 +427,7 @@ def run_pf(messpf='messpf',inputfile='pf.inp'):
                     msg += '{0} generated by mess.\n'.format(inputfile)
             else:
                 msg += 'Mess executable not found {0}\n'.format(messpf)
-                return msg    
+                return msg
         else:
             msg += "{0} input file does not exist.\n".format(inputfile)
 
@@ -435,7 +435,7 @@ def run_pf(messpf='messpf',inputfile='pf.inp'):
         msg += "{0} mess partitition function executable does not exist.\n".format(messpf)
     return msg
 
-def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.dat', thermpexe='thermp'):
+def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.log', thermpexe='thermp'):
     """
     Runs thermp.exe
     Requires pf.dat and thermp.dat files to be present
@@ -446,14 +446,13 @@ def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.dat', thermpexe='t
     msg = ''
     io.write_file(thermpinput, thermpfile)
     if not io.check_file(thermpfile,1):
-        return "{0} file not found.\n".format(thermpfile)    
-    pflog = pffile.replace('dat','log')
-    if io.check_file(pflog) and not io.check_file(pffile):
-        io.mv(pflog,pffile)
-        if io.check_file(pffile,1):
-            msg += io.execute(thermpexe)
-        else:
-            msg += "{0} file not found.\n".format(pffile)
+        return "{0} file not found.\n".format(thermpfile)
+    pfdat = pffile.replace('log','dat')
+    io.mv(pffile,pfdat)
+    if io.check_file(pfdat,1):
+        msg += io.execute(thermpexe)
+    else:
+        msg += "{0} file not found.\n".format(pffile)
     return msg
 
 
@@ -480,14 +479,14 @@ def run_pac99(formula,pac99='pac99'):
                     p.communicate(formula)
                 else:
                     msg += 'pac99 not found.\n'
-                    return msg   
+                    return msg
             else:
                 msg += 'new.groups file is required to run pac99.\n'
-        else:        
-            msg += '{0} file not found.\n'.format(i97file)        
+        else:
+            msg += '{0} file not found.\n'.format(i97file)
 
     else:
-        msg += '{0} file not found.\n'.format(pac99)        
+        msg += '{0} file not found.\n'.format(pac99)
     if io.check_file(c97file) and io.check_file(o97file):
         msg += "{0} {1} files are written.\n".format(c97file,o97file)
     return msg
