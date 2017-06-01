@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-05-19"
+__updated__ = "2017-06-01"
 
 def get_format(s):
     """
@@ -72,6 +72,35 @@ def get_mol(s, make3D=True):
             mol.make3D()
     return mol
 
+
+def get_smiles(s):
+    """
+    Returns the smiles string for a given chemical name.
+    Requires cirpy module and internet connection
+    >>> get_smiles('methane')
+    'C'
+    """
+    import cirpy
+    if cirpy:
+        return cirpy.resolve(s,'smiles')
+    else:
+        return None
+    
+    
+def get_inchi(s):
+    """
+    Returns the smiles string for a given chemical name.
+    Requires cirpy module and internet connection
+    >>> get_inchi('methane')
+    'InChI=1/CH4/h1H4'
+    """
+    import cirpy
+    if cirpy:
+        return cirpy.resolve(s,'inchi')
+    else:
+        return None    
+    
+    
 def get_multiplicity(x):
     """
     Returns the spin multiplicity (2S+1) of the molecule, where S is the
@@ -221,6 +250,9 @@ def get_zmat(x):
     a4= 109.47
     d4= 240.00
     r5= 1.0922
+    a5= 109.47
+    d5= 120.00
+    <BLANKLINE>
     """
     mol = get_mol(x)
     return '\n'.join(mol.write('gzmat').splitlines()[5:])
