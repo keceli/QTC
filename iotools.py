@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-05-23"
+__updated__ = "2017-05-24"
 
 
 def get_date():
@@ -189,7 +189,7 @@ def get_path(f,executable=False):
         return os.path.abspath(f)
 
 
-def get_line_number(keyword, lines=None, filename=None):
+def get_line_number(keyword, lines=None, filename=None,getlastone=False):
     """
     Returns the line number of a keyword found in given lines of string.
     Returns -1 if keyword is not found
@@ -202,7 +202,10 @@ def get_line_number(keyword, lines=None, filename=None):
 
     for n, line in enumerate(lines):
         if keyword in line:
-            num = n
+            if getlastone:
+                num = n
+            else:
+                return n
     return num
 
 def get_git_version():
