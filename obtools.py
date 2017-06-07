@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-06-01"
+__updated__ = "2017-06-07"
 
 def get_format(s):
     """
@@ -71,34 +71,6 @@ def get_mol(s, make3D=True):
         if make3D and not frm == 'xyz':
             mol.make3D()
     return mol
-
-
-def get_smiles(s):
-    """
-    Returns the smiles string for a given chemical name.
-    Requires cirpy module and internet connection
-    >>> get_smiles('methane')
-    'C'
-    """
-    import cirpy
-    if cirpy:
-        return cirpy.resolve(s,'smiles')
-    else:
-        return None
-    
-    
-def get_inchi(s):
-    """
-    Returns the smiles string for a given chemical name.
-    Requires cirpy module and internet connection
-    >>> get_inchi('methane')
-    'InChI=1/CH4/h1H4'
-    """
-    import cirpy
-    if cirpy:
-        return cirpy.resolve(s,'inchi')
-    else:
-        return None    
     
     
 def get_multiplicity(x):
@@ -191,12 +163,48 @@ def get_natom(x):
     return len(mol.atoms)
 
 
+def get_natom_heavy(x):
+    """
+    Return number of heavy atoms (nonHydrogens) in mol.
+    >>> mol = get_mol('CC')
+    >>> get_natom(mol)
+    8
+    >>> mols = [get_mol(s) for s in ['[CH3]', 'CCO', '[O][O]', 'InChI=1S/H2O/h1H2']]
+    >>> [get_natom_heavy(mol) for mol in mols]
+    [1, 3, 2, 1]
+    """
+    mol = get_mol(x)
+    return mol.OBMol.NumHvyAtoms()
+
+
+def get_nrotor(x):
+    """
+    Return number of rotors.
+    """
+    mol = get_mol(x)
+    return mol.OBMol.NumRotors()
+    
+def get_nelectron(x):
+    """
+    Return number of electrons.
+    >>> get_nelectron('C')
+    10
+    """
+    mol = get_mol(x)
+    n = 0
+    for i in range(get_natom(mol)):
+        a = mol.OBMol.GetAtomById(i)
+        n += a.GetAtomicNum()
+    return n
+
+    
 def get_charge(x):
     """
     Return charge.
     TODO
     """
-    return 0
+    mol = get_mol(x)
+    return mol.OBMol.GetTotalCharge()
 
 
 def get_xyz(x):
@@ -376,6 +384,57 @@ def set_mult(x,mult):
     mol = get_mol(x)
     mol.OBMol.SetTotalSpinMultiplicity(mult)
     return mol
+
+
+def fetch_smiles(s):
+    """
+    Returns the smiles string for a given chemical name.
+    Requires cirpy module and internet connection
+    >>> fetch_smiles('methane')
+    'C'
+    """
+    import cirpy
+    if cirpy:
+        return cirpy.resolve(s,'smiles')
+    else:
+        return None
+    
+    
+def fetch_inchi(s):
+    """
+    Returns the smiles string for a given chemical name.
+    Requires cirpy module and internet connection
+    >>> fetch_inchi('methane')
+    'InChI=1/CH4/h1H4'
+    """
+    try:
+        import cirpy
+    except:
+        r = 'requires_cirpy'
+    if cirpy:
+        r = cirpy.resolve(s,'inchi')  
+    return r
+        
+
+def fetch_name(s):
+    """
+    Return IUPAC name for a given smiles or inchi string.
+    Requires cirpy module and internet connection
+    >>> print fetch_name('C=O')
+    FORMALDEHYDE
+    """
+    import cirpy
+    frm = get_format(s)
+    if frm == 'smi':
+        name = cirpy.resolve(s,'iupac_name',resolvers=['smiles'])
+    elif frm == 'inchi':
+        name = cirpy.resolve(s,'iupac_name',resolvers=['inchi'])
+    elif frm == 'xyz':
+        mol = get_mol(s)
+        name = cirpy.resolve(mol.write('inchi').strip(),'iupac_name',resolvers=['inchi'])
+    else:
+        name = None
+    return name
 
     
 if __name__ == "__main__":
