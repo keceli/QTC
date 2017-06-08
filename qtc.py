@@ -8,7 +8,7 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 
-__updated__ = "2017-05-23"
+__updated__ = "2017-06-08"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -66,10 +66,10 @@ def get_args():
                         default=1,
                         help='Number of processors, default is all processors')
     parser.add_argument('-m', '--qcmethod', type=str,
-                        default='pm3',
+                        default='',
                         help='Quantum chemistry method to be used')
     parser.add_argument('-b', '--qcbasis', type=str,
-                        default='cc-pvdz',
+                        default='',
                         help='Basis-set level in quantum chemistry calculations')
     parser.add_argument('-c', '--qccode', type=str,
                         default='mopac',
@@ -77,12 +77,17 @@ def get_args():
     parser.add_argument('-t', '--qctemplate', type=str,
                         default='qctemplate.txt',
                         help='Template for quantum chemistry input file')
+    parser.add_argument('-g', '--geopath', type=str,
+                        default='',
+                        help='Path for the directory for xyz file')
     parser.add_argument('-Q', '--runqc', action='store_true',
                         help='Run quantum chemistry calculation')
     parser.add_argument('-S', '--subqc', action='store_true',
                         help='Submit quantum chemistry calculations')
     parser.add_argument('-T', '--runthermo', action='store_true',
                         help='Run thermochemistry calculations')
+    parser.add_argument('-W', '--writefiles', action='store_true',
+                        help='Write .xyz, .ene files')
     parser.add_argument('-I', '--runinteractive', action='store_true',
                         help='Interactive mode for QTC')
     parser.add_argument('-O', '--overwrite', action='store_true',
@@ -95,6 +100,9 @@ def get_args():
     parser.add_argument('--nwchem', type=str,
                         default='nwchem',
                         help='Path for nwchem executable')
+    parser.add_argument('--molpro', type=str,
+                        default='molpro',
+                        help='Path for molpro executable')
     parser.add_argument('--gaussian', type=str,
                         default='g09',
                         help='Path for gaussian executable')
@@ -126,7 +134,7 @@ def write_chemkin_polynomial(mol, method, zpe, xyz, freqs, deltaH):
     inp = tc.get_pf_input(mol, method, zpe, xyz, freqs)
     io.write_file(inp, messpfinput)
     msg = 'Running {0} to generate partition function.\n'.format(_messpf)
-    msg += io.execute(_messpf,messpfinput)
+    msg += io.execute([_messpf,messpfinput])
     msg += 'Running thermp .\n'
     inp = tc.get_thermp_input(mol.formula, deltaH)
     msg = tc.run_thermp(inp, 'thermp.dat', messpfoutput, _thermp) 
@@ -158,8 +166,14 @@ def run(s):
     mult = ob.get_mult(s)
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
+    xyzpath =  ob.get_smiles_path(mol, mult, method='', basis='', geopath=_geopath) 
+    xyzfile = io.join_path(*(xyzpath,smilesname+'.xyz'))
+    if io.check_file(xyzfile, 1):
+        xyz = io.read_file(xyzfile)
+        coords = ob.get_coordinates_array(xyz)
+        mol = ob.set_xyz(mol, coords)
 #    dirpath = ob.get_unique_path(mol, method=_qcmethod, mult=mult)
-    dirpath = ob.get_smiles_path(mol, mult, method=_qcmethod, basis=_qcbasis)
+    dirpath = ob.get_smiles_path(mol, mult, method=_qcmethod, basis=_qcbasis, geopath=_geopath)
     runfile = smilesname + '.run'
     runqc = _runqc
     runthermo = _runthermo
@@ -201,7 +215,23 @@ def run(s):
                 msg += qc.run_qcscript(_qcscript, _qctemplate, geofile, mult)
         elif _qccode == 'submit':
             print(s)        
-    print(msg)            
+        print(msg)
+    if _writefiles:
+        if io.check_file(qclog):
+            newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, _qccode, anharmonic=runanharmonic)
+            msg += newmsg
+            print(msg)
+            io.write_file(xyz, smilesname + '.xyz')
+            if freqs:
+                io.write_file(qc.get_string(freqs), smilesname + '.hrm')
+                if afreqs:
+                    io.write_file(qc.get_string(afreqs), smilesname + '.anhrm')
+                if zpe:    
+                    io.write_file(str(zpe), smilesname + '.zpe')
+
+        else:
+            msg += "Log file '{0}' not found".format(qclog)
+                            
     if runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
@@ -246,7 +276,8 @@ if __name__ == "__main__":
     start  = timer()
     args = get_args()
     global _runqc, _runthermo, _qcmethod, _qccode,_qctemplate,_qcscript
-    global _mopac, _nwchem, _gaussian, _messpf, _thermp, _pac99,_anharmonic
+    global _writefiles, _anharmonic
+    global _mopac, _nwchem, _molpro, _gaussian, _messpf, _thermp, _pac99
     _runinteractive = args.runinteractive
     _runqc = args.runqc
     _runthermo = args.runthermo
@@ -254,11 +285,14 @@ if __name__ == "__main__":
     _qcbasis = args.qcbasis
     _qccode = args.qccode
     _anharmonic = args.anharmonic
+    _geopath = args.geopath
+    _writefiles = args.writefiles
     _qctemplate = io.get_path(args.qctemplate)
     _qcscript = io.get_path(args.qcscript,executable=True)
     _mopac = io.get_path(args.mopac,executable=True)
     _nwchem = io.get_path(args.nwchem,executable=True)
     _gaussian = io.get_path(args.gaussian,executable=True)
+    _molpro = io.get_path(args.molpro,executable=True)
     _messpf = io.get_path(args.messpf,executable=True)
     _thermp = io.get_path(args.thermp,executable=True)
     _pac99 = io.get_path(args.pac99,executable=True)

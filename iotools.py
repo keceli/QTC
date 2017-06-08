@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-05-24"
+__updated__ = "2017-06-08"
 
 
 def get_date():
@@ -226,7 +226,7 @@ def read_list(listfile):
     return lines
 
 
-def execute(exe,inp=None,out=None):
+def execute_old(exe,inp=None,out=None):
     """
     Executes a calculation for a given input file inp and executable exe.
     """
@@ -252,6 +252,49 @@ def execute(exe,inp=None,out=None):
         errfile = inp + '.err'
         write_file(errstr, errfile)
         msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, get_path(errfile))
+    return msg
+
+
+def execute(command, stdoutfile=None, stderrfile=None):
+    """
+    Executes a given command, and optionally write stderr and/or stdout.
+    Parameters
+    ----------
+    command: List of strings, where a command line is seperated into words.
+    stderrfile: None or a string for a file name to write stderr
+    stdoutfile: None or a string for a file name to write stdout
+    
+    Returns
+    ---------
+    If stdoutfile:
+        A string describing the success or failure of the calculation
+    Else:
+        stdout
+        
+    Doctest
+    ---------    
+    >>> io.execute(['echo','this works'])
+    'this works\n'     
+    """
+    from subprocess import Popen, PIPE
+    process = Popen(command, stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    if type(command) == str:
+        command = [command]
+    commandstr = ' '.join(command)
+    msg = ''
+    if stdoutfile:
+        write_file(out,stdoutfile)
+    else:
+        msg = out
+    if stderrfile:    
+        if err is None or err == '':
+            msg += 'Run {0}: Success.\n'.format(commandstr)
+        else:
+            msg += '\nRun {0}: Error, see "{1}"\n'.format(commandstr, get_path(stderrfile))
+            write_file(err+msg, stderrfile)
+    else:
+        msg += err        
     return msg
 
 
