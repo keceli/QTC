@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-06-08"
+__updated__ = "2017-06-09"
 
 
 def get_date():
@@ -255,7 +255,7 @@ def execute_old(exe,inp=None,out=None):
     return msg
 
 
-def execute(command, stdoutfile=None, stderrfile=None):
+def execute(command, stdoutfile=None, stderrfile=None, merge=False):
     """
     Executes a given command, and optionally write stderr and/or stdout.
     Parameters
@@ -275,26 +275,34 @@ def execute(command, stdoutfile=None, stderrfile=None):
     ---------    
     >>> io.execute(['echo','this works'])
     'this works\n'     
+    >>> io.execute('echo this also works')
+    'this also works\n'     
     """
     from subprocess import Popen, PIPE
+    if type(command) == str:
+        commandstr = command
+        command = command.split()
+    else:
+        commandstr = ' '.join(command)
     process = Popen(command, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
-    if type(command) == str:
-        command = [command]
-    commandstr = ' '.join(command)
     msg = ''
-    if stdoutfile:
-        write_file(out,stdoutfile)
+    if merge:
+        if type(out) == str and type(err) == str:
+            out += err
+    if out is None or out == '':
+        msg = 'No STDOUT\n'
     else:
-        msg = out
-    if stderrfile:    
-        if err is None or err == '':
-            msg += 'Run {0}: Success.\n'.format(commandstr)
+        if stdoutfile:
+            write_file(out,stdoutfile)
         else:
-            msg += '\nRun {0}: Error, see "{1}"\n'.format(commandstr, get_path(stderrfile))
-            write_file(err+msg, stderrfile)
+            msg += 'STDOUT\n'  
+    if err is None or err == '':
+        msg += 'Run {0}: Success.\n'.format(commandstr)
     else:
-        msg += err        
+        msg += '\nRun {0}: Error: \n "{1}"\n'.format(commandstr, get_path(err))
+        if stderrfile:
+            write_file(msg + err, stderrfile)      
     return msg
 
 

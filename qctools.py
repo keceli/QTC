@@ -13,7 +13,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-05-24"
+__updated__ = "2017-06-09"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -28,6 +28,17 @@ def get_listofstrings(array):
     return s
 
 
+def get_string(array):
+    """
+    Return a list of strings from a given array
+    """
+    n = len(array)
+    s = ''
+    for i in range(n):
+        s += '{0}\n'.format(array[i]) 
+    return s
+
+
 def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
 
     xyz = None
@@ -36,6 +47,55 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
     deltaH = None
     xmat = None
     afreqs = None
+    msg =''
+    if io.check_file(qclog, 1):
+        s = io.read_file(qclog, aslines=False)
+    else:
+        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog)) 
+        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat   
+    lines = s.splitlines()
+    if check_logfile(s):
+        try:
+            if qccode == 'gaussian':
+                mol = ob.get_gaussian_mol(qclog)
+                zpe = mol.energy
+                if cclib:
+                    ccdata = parse_cclib(qclog)
+                    xyz = ccdata.writexyz()
+                    freqs = ccdata.vibfreqs
+                    freqs = get_listofstrings(freqs)
+                    nfreq = len(freqs)
+                    deltaH = ccdata.enthalpy
+                    if anharmonic:
+                        xmat = ccdata.vibanharms
+                        afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
+                        afreqs = get_listofstrings(afreqs)
+             
+            elif qccode == 'mopac':
+                xyz = get_mopac_xyz(lines)
+                freqs = get_mopac_freq(lines)
+                freqs = get_listofstrings(freqs)
+                zpe = get_mopac_zpe(lines)
+                deltaH = get_mopac_deltaH(lines)
+        except:
+            msg = 'Parsing failed for "{0}"\n'.format(io.get_path(qclog))
+            return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
+    else:
+        msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
+                
+    return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
+
+
+def parse_qclog_as_dict(qclog,qccode='gaussian',anharmonic=False):
+
+    xyz = None
+    freqs = None
+    zpe = None
+    deltaH = None
+    xmat = None
+    afreqs = None
+    basis = None
+    method = None
     msg =''
     if io.check_file(qclog, 1):
         s = io.read_file(qclog, aslines=False)
@@ -167,14 +227,15 @@ def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
     return msg
 
 
-def execute(inp, exe):
+def execute(inp, exe,outputfile=None):
     """
     Executes a calculation for a given input file inp and executable exe.
     """
     from subprocess import Popen, PIPE
     process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
-    
+    if outputfile:
+        io.write_file(out,outputfile)    
     if err is None or err == '':
         msg = 'Run {0} {1}: Success.\n'.format(exe, inp)
     else:
@@ -208,12 +269,12 @@ def execute_gaussian(inp, exe='g09'):
     return msg
 
 
-def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False):
+def run_gaussian(s, exe='g09', template='gaussian_template.txt', mult=None, overwrite=False):
     """
     Runs gaussian calculation
     """
     mol = ob.get_mol(s, make3D=True)
-    if mult == 0:
+    if mult is None:
         mult = ob.get_multiplicity(mol)
     tmp = io.read_file(template)    
     inptext = get_gaussian_input(mol, tmp, mult)
@@ -234,6 +295,42 @@ def run_gaussian(s, exe='g09', template='qctemplate.txt',mult=0,overwrite=False)
             io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
             msg = execute(inpfile, exe)
+            if io.check_file(outfile, timeout=1):
+                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
+        else:
+            msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
+    return msg
+
+
+def run_nwchem(s, exe='nwchem', template='nwchem_template.txt', mult=None, overwrite=False):
+    """
+    Runs nwchem, returns a string specifying the status of the calculation.
+    nwchem inp.nw > nw.log
+    NWChem writes output and error to stdout.
+    """
+    mol = ob.get_mol(s, make3D=True)
+    if mult is None:
+        mult = ob.get_multiplicity(mol)
+    tmp = io.read_file(template)    
+    inptext = get_qc_input(mol, tmp, mult)
+    prefix = ob.get_smiles_filename(s)
+    inpfile = prefix + '.nw'  
+    outfile = prefix + '_nwchem.log'
+    command = [exe, inpfile]
+    if io.check_file(outfile, timeout=1):
+        if overwrite:
+            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
+            run = True
+        else:
+            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
+            run = False
+    else:
+        run = True
+    if run:
+        if not io.check_file(inpfile, timeout=1) or overwrite:
+            io.write_file(inptext, inpfile)
+        if io.check_file(inpfile, timeout=1):
+            msg = io.execute(command,stdoutfile=outfile,merge=True)
             if io.check_file(outfile, timeout=1):
                 msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
         else:
@@ -302,19 +399,6 @@ def execute_mopac(inp, exe='mopac'):
     return msg
 
 
-def run_nwchem(s, nwchem='nwchem'):
-    import iotools as io
-    import obtools as ob
-
-    mol = ob.get_mol(s)
-    input = get_input_text(mol=mol)
-    inchikey = mol.write(format='inchikey').replace('\n', '')
-    inputfile = inchikey + 'nw'
-    io.write_file(input, filename=inputfile)
-    execute('nwchem', inputfile, stdout=True)
-    return s
-
-
 def get_input_text(mol=None, s=None, template='qc_template.txt'):
     """
     Returns the text for quantum chemistry input file based on a template.
@@ -353,6 +437,36 @@ def check_logfile(s):
     else:
         return False
 
+def get_qc_input(x, template, mult=None):
+    """
+    Returns Gaussian input file based on a given template.
+    """
+    mol = ob.get_mol(x)
+    if mult is None:
+        mult = ob.get_multiplicity(mol)
+    nopen = mult - 1
+    charge = ob.get_charge(mol)
+    formula = ob.get_formula(mol)
+    geo = ob.get_geo(mol)
+    xyz = ob.get_xyz(mol)
+    zmat = ob.get_zmat(mol)
+    uniquekey = ob.get_unique_key(mol, mult)
+    smilesname = ob.get_smiles_filename(mol)
+    inp = template.replace("QTC(CHARGE)", str(charge))
+    inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
+    inp = inp.replace("QTC(NOPEN)", str(nopen))
+    inp = inp.replace("QTC(UNIQUEKEY)", uniquekey)
+    inp = inp.replace("QTC(SMILESNAME)", smilesname)
+    inp = inp.replace("QTC(ZMAT)", zmat)
+    inp = inp.replace("QTC(GEO)", geo)
+    inp = inp.replace("QTC(XYZ)", xyz)
+    inp = inp.replace("QTC(FORMULA)", formula)
+    if "QTC(" in inp:
+        print("Error in template file:\n" + inp)
+        return
+    return inp
+
+
 def get_gaussian_input(x, template, mult=0):
     """
     Returns Gaussian input file based on a given template.
@@ -361,15 +475,19 @@ def get_gaussian_input(x, template, mult=0):
         mol = ob.get_mol(x)
     else:
         mol = x
-    zmat = ob.get_zmat(mol)
     if mult == 0:
         mult = ob.get_multiplicity(mol)
     charge = ob.get_charge(mol)
+    geo = ob.get_geo(mol)
+    xyz = ob.get_xyz(mol)
+    zmat = ob.get_zmat(mol)
     uniquekey = ob.get_unique_key(mol, mult)
     inp = template.replace("QTC(CHARGE)", str(charge))
     inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
     inp = inp.replace("QTC(UNIQUEKEY)", uniquekey)
     inp = inp.replace("QTC(ZMAT)", zmat)
+    inp = inp.replace("QTC(GEO)", geo)
+    inp = inp.replace("QTC(XYZ)", xyz)
     if "QTC(" in inp:
         print("Error in template file:\n" + inp)
         return
@@ -388,27 +506,69 @@ def get_gaussian_natom(lines):
     return int(lines[n].split()[1])
 
 
-def get_gaussian_xyz(lines):
+def get_gaussian_basis(lines):
     """
-    TODO
-                             Ref.Geom.
+    Standard basis: CC-pVDZ (5D, 7F)
+    """
+    import iotools as io
+    if type(lines) == str:
+        lines = lines.splitlines()
+    keyword = 'Standard basis:'
+    n = io.get_line_number(keyword, lines=lines)
+    return int(lines[n].split()[2])
+
+
+def get_method(s):
+    """
+    """
+    methods = ['b3lyp','ccsdt(q)','ccsdt','ccsd(t)','ccsd','mp2','mp3','pm3', 'pm6', 'pm7']
+    method = ''
+    for m in methods:
+        if m in s.lower:
+            method = m
+            break
+    method = method.replace('(','p')
+    method = method.replace(')','')
+    method = method.replace('*','')
+        
+    return method    
+
+
+def get_basis(s):
+    """
+    """
+    opts = ['aug-cc-pvdz','aug-cc-pvtz','aug-cc-pvqz','cc-pvdz','cc-pvtz','cc-pvqz', 'sto-3g', '6-31g']
+    basis = ''
+    for m in opts:
+        if m in s.lower():
+            basis = m
+            break
+    basis = basis.replace('(','p')
+    basis = basis.replace(')','')
+    basis = basis.replace('*','')        
+    return basis    
+
+
+def get_gaussian_xyz(lines,optimized=True):
+    """
+                          Input orientation:
  ---------------------------------------------------------------------
- Center     Atomic                     Coordinates (Angstroms)
- Number     Number                        X           Y           Z
+ Center     Atomic      Atomic             Coordinates (Angstroms)
+ Number     Number       Type             X           Y           Z
  ---------------------------------------------------------------------
-      1          6                    0.639026    0.420560    0.000000
-      2          1                    0.639026    1.074418    0.870857
-      3          1                    0.639026    1.074418   -0.870857
-      4          6                   -0.639026   -0.420560    0.000000
-      5          1                   -0.639026   -1.074418    0.870857
-      6          1                   -0.639026   -1.074418   -0.870857
+      1          1           0        0.000000    0.000000    0.122819
+      2          1           0        0.000000    0.000000    0.877181
+ ---------------------------------------------------------------------
     """
     import iotools as io
     if type(lines) == str:
         lines = lines.splitlines()
     natom = get_gaussian_natom(lines)
+
     keyword = 'Input orientation:'
-    n = io.get_line_number(keyword, lines=lines)
+    n = io.get_line_number(keyword, lines=lines,getlastone=optimized)
+    #for i in range(n):
+        
     return 
 
 
@@ -520,7 +680,7 @@ def get_gaussian_xmatrix(s,nfreq):
             xmat[irow,icol:icol+ncol] = [float(num) for num in cols[1:]]  
         iline += 1
         line = lines[iline]          
-    return xmat
+    return xmat 
 
 
 def get_gaussian_fundamentals(s,nfreq=None):
