@@ -316,7 +316,7 @@ def get_unique_path(x, mult=0, method=''):
     return io.join_path(*dirs)
 
 
-def get_smiles_path(x, mult=0, method='',basis=''):
+def get_smiles_path(x, mult=0, method='',basis='',geopath=''):
     """
     Returns a smiles based path for database directory.
     Note that smiles strings are not unique. Even the 
@@ -333,7 +333,7 @@ def get_smiles_path(x, mult=0, method='',basis=''):
     formula = get_formula(mol)
     formula_noH = get_formula(mol, stoichemetry=True, hydrogens=False)
     elements_noH = get_formula(mol, stoichemetry=False, hydrogens=False)
-    dirs = 'database', elements_noH, formula_noH, formula, s, method, basis
+    dirs = 'database', elements_noH, formula_noH, formula, s,geopath, method, basis
     return io.join_path(*dirs)
 
 
@@ -377,12 +377,38 @@ def get_smiles_filename(x):
     return s
 
 
+def get_coordinates_array(xyz):
+    """
+    Given xyz string, return natom*3 array that contains the
+    coordinates of the atoms.
+    """
+    lines = xyz.splitlines()
+    n = int(lines[0])
+    coords = [0.]*(n*3)
+    i = 0
+    for line in lines[2:2+n]:
+        coords[i:i+3] = [float(c) for c in line.split()[1:4]]
+        i += 3
+    return coords
+
+
 def set_mult(x,mult):
     """
     Sets the total spin multiplicity.
     """
     mol = get_mol(x)
     mol.OBMol.SetTotalSpinMultiplicity(mult)
+    return mol
+
+
+def set_xyz(x,coords):
+    """
+    Parameters:
+    mol : Open babel mol object, or anything that can be converted to mol object with get_mol.
+    coords : One-d array of natom floats
+    """
+    mol = get_mol(x)
+    mol.OBMol.SetCoordinates(openbabel.double_array(coords))
     return mol
 
 
