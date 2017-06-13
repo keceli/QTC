@@ -13,7 +13,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-06-09"
+__updated__ = "2017-06-13"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -40,7 +40,6 @@ def get_string(array):
 
 
 def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
-
     xyz = None
     freqs = None
     zpe = None
@@ -80,6 +79,43 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
         except:
             msg = 'Parsing failed for "{0}"\n'.format(io.get_path(qclog))
             return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
+    else:
+        msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
+                
+    return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
+
+
+def parse_qclog_cclib(qclog,anharmonic=False):
+    xyz = None
+    freqs = None
+    zpe = None
+    deltaH = None
+    xmat = None
+    afreqs = None
+    msg =''
+    if io.check_file(qclog, 1):
+        s = io.read_file(qclog, aslines=False)
+    else:
+        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog)) 
+        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat   
+    if check_logfile(s):
+        if cclib:
+            ccdata = parse_cclib(qclog)
+            xyz = ccdata.writexyz()
+            try:
+                freqs = ccdata.vibfreqs
+                freqs = get_listofstrings(freqs)
+                nfreq = len(freqs)
+            except AttributeError:
+                pass    
+            try:
+                deltaH = ccdata.enthalpy
+            except AttributeError:
+                pass
+            if anharmonic:
+                xmat = ccdata.vibanharms
+                afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
+                afreqs = get_listofstrings(afreqs)
     else:
         msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
                 
@@ -280,7 +316,7 @@ def run_gaussian(s, exe='g09', template='gaussian_template.txt', mult=None, over
     inptext = get_gaussian_input(mol, tmp, mult)
     prefix = ob.get_smiles_filename(s)
     inpfile = prefix + '.g09'  
-    outfile = prefix + '.log'
+    outfile = prefix + '_gaussian.log'
     if io.check_file(outfile, timeout=1):
         if overwrite:
             msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
@@ -307,6 +343,9 @@ def run_nwchem(s, exe='nwchem', template='nwchem_template.txt', mult=None, overw
     Runs nwchem, returns a string specifying the status of the calculation.
     nwchem inp.nw > nw.log
     NWChem writes output and error to stdout.
+    Generates .db (a binary file to restart a job) and .movecs (scf wavefunction) files in the run directory.
+    Generates many junk files in a scratch directory.
+    If scratch is not specified, these junk files are placed in the run directory.
     """
     mol = ob.get_mol(s, make3D=True)
     if mult is None:
@@ -338,7 +377,82 @@ def run_nwchem(s, exe='nwchem', template='nwchem_template.txt', mult=None, overw
     return msg
 
 
-def run_mopac(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 opt', mult=0, overwrite=False):
+def run_mopac(s, exe='mopac', template='mopac_template.txt', mult=None, overwrite=False):
+    """
+    Runs mopac, returns a string specifying the status of the calculation.
+    mopac inp inp.out
+    Mopac always writes the log file into a file with .out extension
+    """
+    mol = ob.get_mol(s, make3D=True)
+    if mult is None:
+        mult = ob.get_multiplicity(mol)
+    tmp = io.read_file(template)    
+    inptext = get_qc_input(mol, tmp, mult)
+    prefix = ob.get_smiles_filename(s)
+    inpfile = prefix + '.mop'  
+    outfile = prefix + '.out'
+    command = [exe, inpfile]
+    if io.check_file(outfile, timeout=1):
+        if overwrite:
+            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
+            run = True
+        else:
+            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
+            run = False
+    else:
+        run = True
+    if run:
+        if not io.check_file(inpfile, timeout=1) or overwrite:
+            io.write_file(inptext, inpfile)
+        if io.check_file(inpfile, timeout=1):
+            msg = io.execute(command)
+            if io.check_file(outfile, timeout=1):
+                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
+        else:
+            msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
+    return msg
+
+
+def run_molpro(s, exe='molpro', template='molpro_template.txt', mult=None, overwrite=False):
+    """
+    Runs molpro, returns a string specifying the status of the calculation.
+    nwchem inp.nw > nw.log
+    NWChem writes output and error to stdout.
+    Generates .db (a binary file to restart a job) and .movecs (scf wavefunction) files in the run directory.
+    Generates many junk files in a scratch directory.
+    If scratch is not specified, these junk files are placed in the run directory.
+    """
+    mol = ob.get_mol(s, make3D=True)
+    if mult is None:
+        mult = ob.get_multiplicity(mol)
+    tmp = io.read_file(template)    
+    inptext = get_qc_input(mol, tmp, mult)
+    prefix = ob.get_smiles_filename(s)
+    inpfile = prefix + '.nw'  
+    outfile = prefix + '_nwchem.log'
+    command = [exe, inpfile]
+    if io.check_file(outfile, timeout=1):
+        if overwrite:
+            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
+            run = True
+        else:
+            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
+            run = False
+    else:
+        run = True
+    if run:
+        if not io.check_file(inpfile, timeout=1) or overwrite:
+            io.write_file(inptext, inpfile)
+        if io.check_file(inpfile, timeout=1):
+            msg = io.execute(command,stdoutfile=outfile,merge=True)
+            if io.check_file(outfile, timeout=1):
+                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
+        else:
+            msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
+    return msg
+
+
+def run_mopac_old(s, exe='mopac', method='pm7', mopackeys='precise nosym threads=1 opt', mult=0, overwrite=False):
     """
     Runs mopac calculation.
     If overwrite=False, no calculation if output file already exists.

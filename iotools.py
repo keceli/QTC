@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-06-09"
+__updated__ = "2017-06-13"
 
 
 def get_date():
@@ -90,7 +90,7 @@ def find_files(directory, pattern):
             if fnmatch.fnmatch(basename, pattern):
                 filename = os.path.join(root, basename)
                 yield filename
-             
+
                 
 def join_path(*paths):
     """

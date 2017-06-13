@@ -8,7 +8,7 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 
-__updated__ = "2017-06-08"
+__updated__ = "2017-06-13"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -67,17 +67,20 @@ def get_args():
                         help='Number of processors, default is all processors')
     parser.add_argument('-m', '--qcmethod', type=str,
                         default='',
-                        help='Quantum chemistry method to be used')
+                        help='Quantum chemistry method to be used (obsolete, use --rundir)')
     parser.add_argument('-b', '--qcbasis', type=str,
                         default='',
-                        help='Basis-set level in quantum chemistry calculations')
+                        help='Basis-set level in quantum chemistry calculations (obsolete, use --rundir)')
     parser.add_argument('-c', '--qccode', type=str,
                         default='mopac',
                         help='Quantum chemistry code ("gausian","mopac","qcscript") to be used')
     parser.add_argument('-t', '--qctemplate', type=str,
                         default='qctemplate.txt',
                         help='Template for quantum chemistry input file')
-    parser.add_argument('-g', '--geopath', type=str,
+    parser.add_argument('-p', '--qcpath', type=str,
+                        default='',
+                        help='Path for the directory for running qc jobs')
+    parser.add_argument('-x', '--xyzpath', type=str,
                         default='',
                         help='Path for the directory for xyz file')
     parser.add_argument('-Q', '--runqc', action='store_true',
@@ -166,44 +169,66 @@ def run(s):
     mult = ob.get_mult(s)
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
-    xyzpath =  ob.get_smiles_path(mol, mult, method='', basis='', geopath=_geopath) 
-    xyzfile = io.join_path(*(xyzpath,smilesname+'.xyz'))
-    if io.check_file(xyzfile, 1):
-        xyz = io.read_file(xyzfile)
-        coords = ob.get_coordinates_array(xyz)
-        mol = ob.set_xyz(mol, coords)
-#    dirpath = ob.get_unique_path(mol, method=_qcmethod, mult=mult)
-    dirpath = ob.get_smiles_path(mol, mult, method=_qcmethod, basis=_qcbasis, geopath=_geopath)
+    smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='', geopath='')
+    qcpath  = io.join_path(*(smilesdir,_qcpath))
+    xyzpath = None
+    if _xyzpath:
+        if io.check_dir(_xyzpath):
+            xyzpath = _xyzpath
+        elif io.check_dir(io.join_path(*(smilesdir,_xyzpath))):
+            xyzpath = io.join_path(*(smilesdir,_xyzpath))
+        else:
+            msg += "xyz path not found {0}".format(_xyzpath)
+    if xyzpath:                
+        xyzfile = io.find_files(xyzpath, '*.xyz')
+        try:
+            xyzfile = next(xyzfile)
+            xyz = io.read_file(xyzfile)
+            coords = ob.get_coordinates_array(xyz)
+            mol = ob.set_xyz(mol, coords)
+        except StopIteration:
+            msg += "xyz file not found in {0}".format(xyzpath)
     runfile = smilesname + '.run'
     runqc = _runqc
     runthermo = _runthermo
     runanharmonic = _anharmonic
-    io.mkdir(dirpath)
+    io.mkdir(qcpath)
     cwd = io.pwd()
-    if io.check_dir(dirpath, 1):
-        io.cd(dirpath)
-        msg += "cd '{0}'\n".format(dirpath)
+    if io.check_dir(qcpath, 1):
+        io.cd(qcpath)
+        msg += "cd '{0}'\n".format(qcpath)
     else:
-        msg += ('I/O error, {0} directory not found.\n'.format(dirpath))
+        msg += ('I/O error, {0} directory not found.\n'.format(qcpath))
         return -1
     if _qccode == 'mopac':
         qclog = smilesname + '.out'
     elif _qccode == 'gaussian'  :
-        qclog = smilesname + '.log'
+        qclog = smilesname + '_gaussian.log'
+    elif _qccode == 'nwchem'  :
+        qclog = smilesname + '_nwchem.log'
+    elif _qccode == 'molpro'  :
+        qclog = smilesname + '_molpro.log'
     else:
-        qclog = smilesname + '.qclog'
-    print(msg)          
+        qclog = smilesname + '_qc.log'
+    print(msg)
+    msg = ''          
     if runqc:
         if io.check_file(runfile):
-            msg += ('Skipping {0}\n'.format(smilesname))
+            if _overwrite:
+                msg += 'Overwriting previous attempt.\n'
+            else:
+                msg += ('Skipping {0}\n'.format(smilesname))
         else:
             io.touch(runfile)
         if _qccode == 'mopac':
             msg += "Running mopac...\n"
-            msg += qc.run_mopac(s, exe=_mopac, method=_qcmethod, mult=mult)
+            msg += qc.run_mopac(s, exe=_mopac, template=_qctemplate, mult=mult,overwrite=_overwrite)
         elif _qccode == 'gaussian':
             msg += "Running gaussian...\n"
-            msg += qc.run_gaussian(s, exe=_gaussian, template=_qctemplate, mult=mult,overwrite=False)
+            msg += qc.run_gaussian(s, exe=_gaussian, template=_qctemplate, mult=mult,overwrite=_overwrite)
+        elif _qccode == 'nwchem':
+            msg += "Running nwchem...\n"
+            msg += qc.run_nwchem(s, exe=_nwchem, template=_qctemplate, mult=mult,overwrite=_overwrite)
         elif _qccode == 'qcscript':
             msg += "Running qcscript...\n"
             geofile = smilesname + '.geo'
@@ -216,9 +241,10 @@ def run(s):
         elif _qccode == 'submit':
             print(s)        
         print(msg)
+        msg = ''
     if _writefiles:
         if io.check_file(qclog):
-            newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, _qccode, anharmonic=runanharmonic)
+            newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog_cclib(qclog, anharmonic=runanharmonic)
             msg += newmsg
             print(msg)
             io.write_file(xyz, smilesname + '.xyz')
@@ -231,7 +257,8 @@ def run(s):
 
         else:
             msg += "Log file '{0}' not found".format(qclog)
-                            
+        print(msg)
+        msg = ''                            
     if runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
@@ -276,7 +303,7 @@ if __name__ == "__main__":
     start  = timer()
     args = get_args()
     global _runqc, _runthermo, _qcmethod, _qccode,_qctemplate,_qcscript
-    global _writefiles, _anharmonic
+    global _writefiles, _anharmonic,_overwrite
     global _mopac, _nwchem, _molpro, _gaussian, _messpf, _thermp, _pac99
     _runinteractive = args.runinteractive
     _runqc = args.runqc
@@ -284,8 +311,10 @@ if __name__ == "__main__":
     _qcmethod = args.qcmethod
     _qcbasis = args.qcbasis
     _qccode = args.qccode
+    _qcpath = args.qcpath
     _anharmonic = args.anharmonic
-    _geopath = args.geopath
+    _overwrite = args.overwrite
+    _xyzpath = args.xyzpath
     _writefiles = args.writefiles
     _qctemplate = io.get_path(args.qctemplate)
     _qcscript = io.get_path(args.qcscript,executable=True)
