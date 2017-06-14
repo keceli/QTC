@@ -13,7 +13,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-06-13"
+__updated__ = "2017-06-14"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -525,7 +525,7 @@ def get_input_text(mol=None, s=None, template='qc_template.txt'):
     with open(template, 'r') as f:
         tmp = f.read()
     tmp = tmp.replace('QCPUT(GEO)\n', xyzstr)
-    tmp = tmp.replace('QCPUT(UNIQUEKEY)', inchikey)
+    tmp = tmp.replace('QCPUT(UNIQUENAME)', inchikey)
     tmp = tmp.replace('QCPUT(MULTIPLICITY)', str(mol.spin))
     tmp = tmp.replace('QCPUT(BASIS)', 'cc-pvdz')
     if mol.spin == 1:
@@ -564,12 +564,12 @@ def get_qc_input(x, template, mult=None):
     geo = ob.get_geo(mol)
     xyz = ob.get_xyz(mol)
     zmat = ob.get_zmat(mol)
-    uniquekey = ob.get_unique_key(mol, mult)
+    uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     inp = template.replace("QTC(CHARGE)", str(charge))
     inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
     inp = inp.replace("QTC(NOPEN)", str(nopen))
-    inp = inp.replace("QTC(UNIQUEKEY)", uniquekey)
+    inp = inp.replace("QTC(UNIQUENAME)", uniquename)
     inp = inp.replace("QTC(SMILESNAME)", smilesname)
     inp = inp.replace("QTC(ZMAT)", zmat)
     inp = inp.replace("QTC(GEO)", geo)
@@ -595,10 +595,10 @@ def get_gaussian_input(x, template, mult=0):
     geo = ob.get_geo(mol)
     xyz = ob.get_xyz(mol)
     zmat = ob.get_zmat(mol)
-    uniquekey = ob.get_unique_key(mol, mult)
+    uniquename = ob.get_inchi_key(mol, mult)
     inp = template.replace("QTC(CHARGE)", str(charge))
     inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
-    inp = inp.replace("QTC(UNIQUEKEY)", uniquekey)
+    inp = inp.replace("QTC(UNIQUENAME)", uniquename)
     inp = inp.replace("QTC(ZMAT)", zmat)
     inp = inp.replace("QTC(GEO)", geo)
     inp = inp.replace("QTC(XYZ)", xyz)

@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-06-07"
+__updated__ = "2017-06-14"
 
 def get_format(s):
     """
@@ -284,7 +284,20 @@ def get_mop(x, keys='pm3 precise nosym threads=1 opt'):
     return mol.write(format='mop', opt={'k': keys})
 
 
-def get_unique_key(x, mult=0, extra=''):
+def get_inchi_key(x, mult=0, extra=''):
+    """
+    Returns a unique key composed of inchikey and multiplicity
+    >>> mol = get_mol('[O][O]')
+    >>> get_unique_key(mol)
+    'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
+    """
+    mol = get_mol(x)
+    if mult == 0:
+        mult = mol.spin
+    return mol.write("inchikey").strip() + str(mult) + extra
+
+
+def get_unique_name(x, mult=0, extra=''):
     """
     Returns a unique key composed of inchikey and multiplicity
     >>> mol = get_mol('[O][O]')

@@ -1,0 +1,33 @@
+start QTC(UNIQUENAME)
+#memory stack 2000 mb heap 200 mb global 1600 mb noverify
+scratch_dir /tmp/QTC(UNIQUENAME)
+ECHO
+geometry units angstrom 
+QTC(GEO)
+end
+
+basis
+    * library aug-cc-pvdz #file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
+end
+
+scf
+    thresh 1.0e-8
+    nopen QTC(NOPEN)
+end
+
+mp2
+    freeze atomic
+    scratchdisk 512
+end
+
+tce
+    thresh 1.0e-10
+    freeze atomic
+    diis 5
+#   ccsd(2)
+#    ccsdt(2)_q
+end
+end 
+
+task scf energy
+#task shell "rm -rf ./tmp/QTC(UNIQUENAME)"
