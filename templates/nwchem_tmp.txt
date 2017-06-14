@@ -1,13 +1,14 @@
 start QTC(UNIQUENAME)
-#memory stack 2000 mb heap 200 mb global 1600 mb noverify
-scratch_dir /tmp/QTC(UNIQUENAME)
+memory stack 2000 mb heap 200 mb global 1600 mb noverify
+#task shell "mkdir ./tmp/QTC(UNIQUENAME)"
+#scratch_dir ./tmp/QTC(UNIQUENAME)
 ECHO
 geometry units angstrom 
 QTC(GEO)
 end
 
 basis
-    * library aug-cc-pvdz #file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
+    * library aug-cc-pvdz file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
 end
 
 scf
@@ -27,7 +28,6 @@ tce
 #   ccsd(2)
 #    ccsdt(2)_q
 end
-end 
 
-task scf energy
+task scf optimize
 #task shell "rm -rf ./tmp/QTC(UNIQUENAME)"
