@@ -59,7 +59,7 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
                 mol = ob.get_gaussian_mol(qclog)
                 zpe = mol.energy
                 if cclib:
-                    ccdata = parse_cclib(qclog)
+                    ccdata = cclib.io.ccread(qclog)
                     xyz = ccdata.writexyz()
                     freqs = ccdata.vibfreqs
                     freqs = get_listofstrings(freqs)
@@ -542,14 +542,17 @@ def get_input_text(mol=None, s=None, template='qc_template.txt'):
 
 def check_logfile(s):
     """
-    Returns true if gaussian calculation completed succesfully
+    Returns true if quantum chemistry calculation completed succesfully
     """
     if "Normal termination of Gaussian" in s:
         return True
     elif "== MOPAC DONE ==" in s:
         return True
+    elif "Kowalski" in s:
+        return True
     else:
         return False
+
 
 def get_qc_input(x, template, mult=None):
     """
