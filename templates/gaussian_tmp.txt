@@ -1,8 +1,0 @@
-%mem=20GB
-#P pm3 opt nosym freq=anharmonic
-
-test
-
-0 QTC(MULTIPLICITY)
-QTC(ZMAT)
-

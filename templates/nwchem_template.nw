@@ -7,12 +7,12 @@ geometry units angstrom
 QTC(GEO)
 end
 
-basis
-    * library aug-cc-pvdz file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
+basis spherical
+    * library cc-pvdz file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
 end
 
 scf
-    thresh 1.0e-8
+    thresh 1.0e-12
     nopen QTC(NOPEN)
 end
 
@@ -25,9 +25,12 @@ tce
     thresh 1.0e-10
     freeze atomic
     diis 5
+   ccsd
 #   ccsd(2)
 #    ccsdt(2)_q
 end
 
-task scf optimize
+task tce optimize
+#task tce energy
+task tce freq
 #task shell "rm -rf ./tmp/QTC(UNIQUENAME)"

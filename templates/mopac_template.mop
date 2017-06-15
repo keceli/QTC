@@ -1,0 +1,6 @@
+pm3 precise nosym threads=1 opt
+QTC(SMILESNAME)
+
+QTC(GEO)
+pm3 precise nosym threads=1 oldgeo thermo
+

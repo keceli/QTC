@@ -1,0 +1,8 @@
+%mem=20GB
+#P ccsd/cc-pvdz opt int=ultrafine scf=verytight nosym freq
+
+test
+
+0 QTC(MULTIPLICITY)
+QTC(ZMAT)
+
