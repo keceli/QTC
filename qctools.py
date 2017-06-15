@@ -24,7 +24,7 @@ def get_listofstrings(array):
     n = len(array)
     s = ['']*n
     for i in range(n):
-        s [i] = '{0}\n'.format(array[i]) 
+        s [i] = '{0}\n'.format(array[i])
     return s
 
 
@@ -35,7 +35,7 @@ def get_string(array):
     n = len(array)
     s = ''
     for i in range(n):
-        s += '{0}\n'.format(array[i]) 
+        s += '{0}\n'.format(array[i])
     return s
 
 
@@ -50,8 +50,8 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
     if io.check_file(qclog, 1):
         s = io.read_file(qclog, aslines=False)
     else:
-        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog)) 
-        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat   
+        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog))
+        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
     lines = s.splitlines()
     if check_logfile(s):
         try:
@@ -69,7 +69,7 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
                         xmat = ccdata.vibanharms
                         afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
                         afreqs = get_listofstrings(afreqs)
-             
+
             elif qccode == 'mopac':
                 xyz = get_mopac_xyz(lines)
                 freqs = get_mopac_freq(lines)
@@ -81,7 +81,7 @@ def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
             return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
     else:
         msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
-                
+
     return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
 
 
@@ -96,8 +96,8 @@ def parse_qclog_cclib(qclog,anharmonic=False):
     if io.check_file(qclog, 1):
         s = io.read_file(qclog, aslines=False)
     else:
-        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog)) 
-        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat   
+        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog))
+        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
     if check_logfile(s):
         if cclib:
             ccdata = parse_cclib(qclog)
@@ -107,7 +107,7 @@ def parse_qclog_cclib(qclog,anharmonic=False):
                 freqs = get_listofstrings(freqs)
                 nfreq = len(freqs)
             except AttributeError:
-                pass    
+                pass
             try:
                 deltaH = ccdata.enthalpy
             except AttributeError:
@@ -118,7 +118,7 @@ def parse_qclog_cclib(qclog,anharmonic=False):
                 afreqs = get_listofstrings(afreqs)
     else:
         msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
-                
+
     return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
 
 
@@ -136,8 +136,8 @@ def parse_qclog_as_dict(qclog,qccode='gaussian',anharmonic=False):
     if io.check_file(qclog, 1):
         s = io.read_file(qclog, aslines=False)
     else:
-        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog)) 
-        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat   
+        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog))
+        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
     lines = s.splitlines()
     if check_logfile(s):
         try:
@@ -155,7 +155,7 @@ def parse_qclog_as_dict(qclog,qccode='gaussian',anharmonic=False):
                         xmat = ccdata.vibanharms
                         afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
                         afreqs = get_listofstrings(afreqs)
-             
+
             elif qccode == 'mopac':
                 xyz = get_mopac_xyz(lines)
                 freqs = get_mopac_freq(lines)
@@ -167,7 +167,7 @@ def parse_qclog_as_dict(qclog,qccode='gaussian',anharmonic=False):
             return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
     else:
         msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
-                
+
     return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
 
 
@@ -185,20 +185,20 @@ def getcc_enthalpy(out):
         if io.check_file(out, 1):
             ccdata = parse_cclib(out)
         else:
-            return '{0} not found'.format(out)    
+            return '{0} not found'.format(out)
     else:
         ccdata = out
-    return ccdata.enthalpy    
+    return ccdata.enthalpy
 
 def getcc_entropy(out):
     if type(out) is not cclib.parser.data.ccData_optdone_bool:
         if io.check_file(out, 1):
             ccdata = parse_cclib(out)
         else:
-            return '{0} not found'.format(out)    
+            return '{0} not found'.format(out)
     else:
-        ccdata = out        
-    return ccdata.entropy  
+        ccdata = out
+    return ccdata.entropy
 
 
 def getcc_freeenergy(out):
@@ -206,10 +206,10 @@ def getcc_freeenergy(out):
         if io.check_file(out, 1):
             ccdata = parse_cclib(out)
         else:
-            return '{0} not found'.format(out)    
+            return '{0} not found'.format(out)
     else:
-        ccdata = out        
-    return ccdata.freeenergy  
+        ccdata = out
+    return ccdata.freeenergy
 
 
 def getcc_frequencies(out):
@@ -217,23 +217,23 @@ def getcc_frequencies(out):
         if io.check_file(out, 1):
             ccdata = parse_cclib(out)
         else:
-            return '{0} not found'.format(out)    
+            return '{0} not found'.format(out)
     else:
-        ccdata = out        
+        ccdata = out
     return ccdata.vibfreqs
-    
-    
-def getcc_xyz(out):     
+
+
+def getcc_xyz(out):
     if type(out) is not cclib.parser.data.ccData_optdone_bool:
         if io.check_file(out, 1):
             ccdata = parse_cclib(out)
         else:
-            return '{0} not found'.format(out)    
+            return '{0} not found'.format(out)
     else:
-        ccdata = out        
+        ccdata = out
     return ccdata.writexyz()
-    
-    
+
+
 def get_symbol(atomno):
     """
     Returns the element symbol for a given atomic number.
@@ -271,7 +271,7 @@ def execute(inp, exe,outputfile=None):
     process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
     if outputfile:
-        io.write_file(out,outputfile)    
+        io.write_file(out,outputfile)
     if err is None or err == '':
         msg = 'Run {0} {1}: Success.\n'.format(exe, inp)
     else:
@@ -292,7 +292,7 @@ def execute_gaussian(inp, exe='g09'):
     from subprocess import Popen, PIPE
     process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
-    
+
     if err is None or err == '':
         msg = 'Run {0} {1}: Success.'.format(exe, inp)
     else:
@@ -312,11 +312,12 @@ def run_gaussian(s, exe='g09', template='gaussian_template.txt', mult=None, over
     mol = ob.get_mol(s, make3D=True)
     if mult is None:
         mult = ob.get_multiplicity(mol)
-    tmp = io.read_file(template)    
+    tmp = io.read_file(template)
     inptext = get_gaussian_input(mol, tmp, mult)
     prefix = ob.get_smiles_filename(s)
-    inpfile = prefix + '.g09'  
+    inpfile = prefix + '.g09'
     outfile = prefix + '_gaussian.log'
+    command = [exe, inpfile, outfile]
     if io.check_file(outfile, timeout=1):
         if overwrite:
             msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
@@ -327,10 +328,10 @@ def run_gaussian(s, exe='g09', template='gaussian_template.txt', mult=None, over
     else:
         run = True
     if run:
-        if not io.check_file(inpfile, timeout=1):
+        if not io.check_file(inpfile, timeout=1) or overwrite:
             io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
-            msg = execute(inpfile, exe)
+            msg = io.execute(command)
             if io.check_file(outfile, timeout=1):
                 msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
         else:
@@ -350,10 +351,10 @@ def run_nwchem(s, exe='nwchem', template='nwchem_template.txt', mult=None, overw
     mol = ob.get_mol(s, make3D=True)
     if mult is None:
         mult = ob.get_multiplicity(mol)
-    tmp = io.read_file(template)    
+    tmp = io.read_file(template)
     inptext = get_qc_input(mol, tmp, mult)
     prefix = ob.get_smiles_filename(s)
-    inpfile = prefix + '.nw'  
+    inpfile = prefix + '.nw'
     outfile = prefix + '_nwchem.log'
     command = [exe, inpfile]
     if io.check_file(outfile, timeout=1):
@@ -386,10 +387,10 @@ def run_mopac(s, exe='mopac', template='mopac_template.txt', mult=None, overwrit
     mol = ob.get_mol(s, make3D=True)
     if mult is None:
         mult = ob.get_multiplicity(mol)
-    tmp = io.read_file(template)    
+    tmp = io.read_file(template)
     inptext = get_qc_input(mol, tmp, mult)
     prefix = ob.get_smiles_filename(s)
-    inpfile = prefix + '.mop'  
+    inpfile = prefix + '.mop'
     outfile = prefix + '.out'
     command = [exe, inpfile]
     if io.check_file(outfile, timeout=1):
@@ -425,10 +426,10 @@ def run_molpro(s, exe='molpro', template='molpro_template.txt', mult=None, overw
     mol = ob.get_mol(s, make3D=True)
     if mult is None:
         mult = ob.get_multiplicity(mol)
-    tmp = io.read_file(template)    
+    tmp = io.read_file(template)
     inptext = get_qc_input(mol, tmp, mult)
     prefix = ob.get_smiles_filename(s)
-    inpfile = prefix + '.nw'  
+    inpfile = prefix + '.nw'
     outfile = prefix + '_nwchem.log'
     command = [exe, inpfile]
     if io.check_file(outfile, timeout=1):
@@ -647,8 +648,8 @@ def get_method(s):
     method = method.replace('(','p')
     method = method.replace(')','')
     method = method.replace('*','')
-        
-    return method    
+
+    return method
 
 
 def get_basis(s):
@@ -662,8 +663,8 @@ def get_basis(s):
             break
     basis = basis.replace('(','p')
     basis = basis.replace(')','')
-    basis = basis.replace('*','')        
-    return basis    
+    basis = basis.replace('*','')
+    return basis
 
 
 def get_gaussian_xyz(lines,optimized=True):
@@ -685,13 +686,13 @@ def get_gaussian_xyz(lines,optimized=True):
     keyword = 'Input orientation:'
     n = io.get_line_number(keyword, lines=lines,getlastone=optimized)
     #for i in range(n):
-        
-    return 
+
+    return
 
 
 def get_gaussian_zpve(s):
     """
-    Parses zero-point vibrational energy from gaussian 
+    Parses zero-point vibrational energy from gaussian
     log file.
     Input:
     s: String containing the log file output.
@@ -702,15 +703,15 @@ def get_gaussian_zpve(s):
         A string showing the error.
     Portion of the relevant output:
     Zero-point vibrational energy     194497.1 (Joules/Mol)
-                                   46.48591 (Kcal/Mol)    
+                                   46.48591 (Kcal/Mol)
     """
     key = "Zero-point vibrational energy"
     lines = s.splitlines()
-    iline = io.get_line_number(key,lines=lines) 
+    iline = io.get_line_number(key,lines=lines)
     if iline < 0:
         return 'Not found: {0}'.format(key)
     iline += 1
-    line = lines[iline]     
+    line = lines[iline]
     return float(line.split()[0])
 
 
@@ -778,7 +779,7 @@ def get_gaussian_xmatrix(s,nfreq):
 
  Resonance Analysis
     """
-    xmat = np.zeros((nfreq,nfreq)) 
+    xmat = np.zeros((nfreq,nfreq))
     lines = s.splitlines()
     key = 'X matrix of Anharmonic Constants (cm-1)'
     iline = io.get_line_number(key,lines=lines)
@@ -788,16 +789,16 @@ def get_gaussian_xmatrix(s,nfreq):
         return 'Not found: {0}'.format(key)
     while line.strip():
         cols = line.split()
-        icol = int(cols[0])-1 
+        icol = int(cols[0])-1
         for irow in range(icol,nfreq):
             iline += 1
-            line = lines[iline] 
+            line = lines[iline]
             cols = line.split()
-            ncol = len(cols) - 1 
-            xmat[irow,icol:icol+ncol] = [float(num) for num in cols[1:]]  
+            ncol = len(cols) - 1
+            xmat[irow,icol:icol+ncol] = [float(num) for num in cols[1:]]
         iline += 1
-        line = lines[iline]          
-    return xmat 
+        line = lines[iline]
+    return xmat
 
 
 def get_gaussian_fundamentals(s,nfreq=None):
@@ -814,7 +815,7 @@ def get_gaussian_fundamentals(s,nfreq=None):
         2nd column for anharmonic frequencies in cm-1
     else:
         A string showing the error.
-    Portion of the relevant output:   
+    Portion of the relevant output:
   Fundamental Bands (DE w.r.t. Ground State)
   1(1)           3106.899     2957.812   -0.042978   -0.008787   -0.008920
   2(1)           3106.845     2959.244   -0.042969   -0.008924   -0.008782
@@ -834,11 +835,11 @@ def get_gaussian_fundamentals(s,nfreq=None):
  16(1)            821.858      814.503   -0.025712   -0.008603   -0.010446
  17(1)            821.847      814.500   -0.025693   -0.010449   -0.008599
  18(1)            317.554      296.967   -0.035184   -0.010866   -0.010861
-Overtones (DE w.r.t. Ground State) 
+Overtones (DE w.r.t. Ground State)
     """
     if nfreq is None:
         nfreq = get_gaussian_nfreq(s)
-    freqs = np.zeros((nfreq,2)) 
+    freqs = np.zeros((nfreq,2))
     lines = s.splitlines()
     key = 'Fundamental Bands (DE w.r.t. Ground State)'
     iline = io.get_line_number(key,lines=lines)
@@ -848,10 +849,10 @@ Overtones (DE w.r.t. Ground State)
         iline += 1
         line = lines[iline]
         cols = line.split()
-        freqs[i,:] = [float(cols[1]),float(cols[2])]        
+        freqs[i,:] = [float(cols[1]),float(cols[2])]
     return freqs[freqs[:,0].argsort()]
 
-    
+
 def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1, dothermo=False):
     """
     Returns mopac input as a string.
@@ -899,11 +900,11 @@ def get_gaussian_islinear(s):
         return True
     else:
         return False
-    
+
 
 def get_gaussian_nfreq(s):
     """
-    Return the number of vibrational degrees of freedom for 
+    Return the number of vibrational degrees of freedom for
     a given log.
     """
     natom = get_gaussian_natom(s)
@@ -911,7 +912,7 @@ def get_gaussian_nfreq(s):
         nvdof = 3*natom - 5
     else:
         nvdof = 3*natom - 6
-    return nvdof        
+    return nvdof
 
 
 def get_mopac_natom(lines):
