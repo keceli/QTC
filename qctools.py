@@ -13,7 +13,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-06-14"
+__updated__ = "2017-06-17"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -352,7 +352,7 @@ def run_nwchem(s, exe='nwchem', template='nwchem_template.txt', mult=None, overw
     if mult is None:
         mult = ob.get_multiplicity(mol)
     tmp = io.read_file(template)
-    inptext = get_qc_input(mol, tmp, mult)
+    inptext = get_qcinput(mol, tmp, mult)
     prefix = ob.get_smiles_filename(s)
     inpfile = prefix + '.nw'
     outfile = prefix + '_nwchem.log'
@@ -388,7 +388,7 @@ def run_mopac(s, exe='mopac', template='mopac_template.txt', mult=None, overwrit
     if mult is None:
         mult = ob.get_multiplicity(mol)
     tmp = io.read_file(template)
-    inptext = get_qc_input(mol, tmp, mult)
+    inptext = get_qcinput(mol, tmp, mult)
     prefix = ob.get_smiles_filename(s)
     inpfile = prefix + '.mop'
     outfile = prefix + '.out'
@@ -408,7 +408,7 @@ def run_mopac(s, exe='mopac', template='mopac_template.txt', mult=None, overwrit
         if io.check_file(inpfile, timeout=1):
             msg = io.execute(command)
             if io.check_file(outfile, timeout=1):
-                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
+                msg += 'Output file: "{0}"\n'.format(io.get_path(outfile))
         else:
             msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
     return msg
@@ -417,17 +417,13 @@ def run_mopac(s, exe='mopac', template='mopac_template.txt', mult=None, overwrit
 def run_molpro(s, exe='molpro', template='molpro_template.txt', mult=None, overwrite=False):
     """
     Runs molpro, returns a string specifying the status of the calculation.
-    nwchem inp.nw > nw.log
-    NWChem writes output and error to stdout.
-    Generates .db (a binary file to restart a job) and .movecs (scf wavefunction) files in the run directory.
-    Generates many junk files in a scratch directory.
-    If scratch is not specified, these junk files are placed in the run directory.
+    TODO
     """
     mol = ob.get_mol(s, make3D=True)
     if mult is None:
         mult = ob.get_multiplicity(mol)
     tmp = io.read_file(template)
-    inptext = get_qc_input(mol, tmp, mult)
+    inptext = get_qcinput(mol, tmp, mult)
     prefix = ob.get_smiles_filename(s)
     inpfile = prefix + '.nw'
     outfile = prefix + '_nwchem.log'
@@ -555,7 +551,7 @@ def check_logfile(s):
         return False
 
 
-def get_qc_input(x, template, mult=None):
+def get_qcinput(x, template, mult=None):
     """
     Returns Gaussian input file based on a given template.
     """
@@ -585,6 +581,24 @@ def get_qc_input(x, template, mult=None):
     return inp
 
 
+def get_qcpackage(templatename):
+    """
+    Return the quantum chemistry package name based on the template file name
+    """
+    suffix = templatename.split('.')[-1]
+    if 'nwchem' in templatename or 'nw' in suffix:
+        p = 'nwchem'
+    elif 'gau' in templatename or 'g09' in suffix or 'com' in suffix or 'g03' in suffix:
+        p = 'gaussian'
+    elif 'mopac' in templatename or 'mop' in suffix:
+        p = 'mopac'
+    elif 'molpro' in templatename or 'mlp' in suffix:
+        p = 'molpro'
+    else:
+        p = 'unknown'
+    return p
+
+    
 def get_gaussian_input(x, template, mult=0):
     """
     Returns Gaussian input file based on a given template.

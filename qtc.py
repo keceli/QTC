@@ -8,7 +8,7 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 
-__updated__ = "2017-06-13"
+__updated__ = "2017-06-17"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -34,7 +34,7 @@ By ECP-PACC team
 # _thermpexe = 'thermp'
 # _pac99exe = 'pac99'
 # _qcmethod = 'pm3'
-# _qccode = 'mopac'
+# _qcpackage = 'mopac'
 # _runqc = False
 # _runthermo = False
 
@@ -71,15 +71,18 @@ def get_args():
     parser.add_argument('-b', '--qcbasis', type=str,
                         default='',
                         help='Basis-set level in quantum chemistry calculations (obsolete, use --rundir)')
-    parser.add_argument('-c', '--qccode', type=str,
-                        default='mopac',
-                        help='Quantum chemistry code ("gausian","mopac","qcscript") to be used')
+    parser.add_argument('-c', '--qcpackage', type=str,
+                        default='',
+                        help='Quantum chemistry package ("gausian","mopac","nwchem",qcscript") to be used')
     parser.add_argument('-t', '--qctemplate', type=str,
-                        default='qctemplate.txt',
+                        default='',
                         help='Template for quantum chemistry input file')
-    parser.add_argument('-p', '--qcpath', type=str,
+    parser.add_argument('-d', '--qcdirectory', type=str,
                         default='',
                         help='Path for the directory for running qc jobs')
+    parser.add_argument('-e', '--qcexe', type=str,
+                        default='',
+                        help='Path for the executable for qc calculations')
     parser.add_argument('-x', '--xyzpath', type=str,
                         default='',
                         help='Path for the directory for xyz file')
@@ -158,19 +161,18 @@ def run(s):
     A driver function to run quantum chemistry and thermochemistry calculations based
     on command line options:
     --qcmethod
-    --qccode
+    --qcpackage
     """
     import qctools as qc
     import obtools as ob
     import iotools as io
-    mult = 0
     msg = "***************************************\n"
     msg += "{0}\n".format(s)
     mult = ob.get_mult(s)
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='', geopath='')
-    qcpath  = io.join_path(*(smilesdir,_qcpath))
+    qcdirectory  = io.join_path(*(smilesdir,_qcdirectory))
     xyzpath = None
     if _xyzpath:
         if io.check_dir(_xyzpath):
@@ -192,24 +194,29 @@ def run(s):
     runqc = _runqc
     runthermo = _runthermo
     runanharmonic = _anharmonic
-    io.mkdir(qcpath)
+    io.mkdir(qcdirectory)
     cwd = io.pwd()
-    if io.check_dir(qcpath, 1):
-        io.cd(qcpath)
-        msg += "cd '{0}'\n".format(qcpath)
+    if io.check_dir(qcdirectory, 1):
+        io.cd(qcdirectory)
+        msg += "cd '{0}'\n".format(qcdirectory)
     else:
-        msg += ('I/O error, {0} directory not found.\n'.format(qcpath))
+        msg += ('I/O error, {0} directory not found.\n'.format(qcdirectory))
         return -1
-    if _qccode == 'mopac':
-        qclog = smilesname + '.out'
-    elif _qccode == 'gaussian'  :
-        qclog = smilesname + '_gaussian.log'
-    elif _qccode == 'nwchem'  :
-        qclog = smilesname + '_nwchem.log'
-    elif _qccode == 'molpro'  :
-        qclog = smilesname + '_molpro.log'
+    if _qcpackage == '':
+        if _qctemplate == '':
+            msg = '''You have to provide a template for quantum chemistry calculations. 
+                    Use -t or --qctemplate to specify the path for the template and
+                    optionally use -c or --qcpackage to specify the quantum chemistry package'''
+            print(msg)
+            return
+        else:
+            qcpackage = qc.get_qcpackage(_qctemplate)
     else:
-        qclog = smilesname + '_qc.log'
+        qcpackage = _qcpackage  
+    if qcpackage == 'mopac':
+        qclog = smilesname + '.out'
+    else:
+        qclog = '{0}_{1}.log'.format(smilesname,qcpackage)
     print(msg)
     msg = ''          
     if runqc:
@@ -219,17 +226,17 @@ def run(s):
             else:
                 msg += ('Skipping {0}\n'.format(smilesname))
         else:
-            io.touch(runfile)
-        if _qccode == 'mopac':
+            io.touch(runfile)     
+        if qcpackage == 'mopac':
             msg += "Running mopac...\n"
             msg += qc.run_mopac(s, exe=_mopac, template=_qctemplate, mult=mult,overwrite=_overwrite)
-        elif _qccode == 'gaussian':
+        elif qcpackage == 'gaussian':
             msg += "Running gaussian...\n"
             msg += qc.run_gaussian(s, exe=_gaussian, template=_qctemplate, mult=mult,overwrite=_overwrite)
-        elif _qccode == 'nwchem':
+        elif qcpackage == 'nwchem':
             msg += "Running nwchem...\n"
             msg += qc.run_nwchem(s, exe=_nwchem, template=_qctemplate, mult=mult,overwrite=_overwrite)
-        elif _qccode == 'qcscript':
+        elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"
             geofile = smilesname + '.geo'
             xyzlines = ob.get_xyz(mol).splitlines()
@@ -238,7 +245,7 @@ def run(s):
             io.write_file(geo, geofile)
             if io.check_file(geofile, 1):
                 msg += qc.run_qcscript(_qcscript, _qctemplate, geofile, mult)
-        elif _qccode == 'submit':
+        elif qcpackage == 'submit':
             print(s)        
         print(msg)
         msg = ''
@@ -263,7 +270,7 @@ def run(s):
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
         msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qclog))
-        newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, _qccode, anharmonic=runanharmonic)
+        newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, qcpackage, anharmonic=runanharmonic)
         msg += newmsg
         if xyz is not None:
             msg += "Optimized xyz in Angstroms:\n{0} \n".format(xyz)
@@ -302,22 +309,23 @@ if __name__ == "__main__":
     from timeit import default_timer as timer
     start  = timer()
     args = get_args()
-    global _runqc, _runthermo, _qcmethod, _qccode,_qctemplate,_qcscript
-    global _writefiles, _anharmonic,_overwrite
+    global  _qcexe, _qcdirectory, _qcpackage, _qctemplate, _qcscript
+    global _writefiles, _anharmonic,_overwrite,_runqc, _runthermo
     global _mopac, _nwchem, _molpro, _gaussian, _messpf, _thermp, _pac99
     _runinteractive = args.runinteractive
     _runqc = args.runqc
     _runthermo = args.runthermo
     _qcmethod = args.qcmethod
     _qcbasis = args.qcbasis
-    _qccode = args.qccode
-    _qcpath = args.qcpath
+    _qcpackage = args.qcpackage
+    _qcdirectory = args.qcdirectory
     _anharmonic = args.anharmonic
     _overwrite = args.overwrite
     _xyzpath = args.xyzpath
     _writefiles = args.writefiles
     _qctemplate = io.get_path(args.qctemplate)
     _qcscript = io.get_path(args.qcscript,executable=True)
+    _qcexe = io.get_path(args.qcexe,executable=True)
     _mopac = io.get_path(args.mopac,executable=True)
     _nwchem = io.get_path(args.nwchem,executable=True)
     _gaussian = io.get_path(args.gaussian,executable=True)
