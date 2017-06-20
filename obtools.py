@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-06-14"
+__updated__ = "2017-06-20"
 
 def get_format(s):
     """
@@ -65,11 +65,14 @@ def get_mol(s, make3D=True):
     import pybel
     if type(s) is pybel.Molecule:
         mol = s
-    elif type(s) is str:    
-        frm = get_format(s)
-        mol = pybel.readstring(frm, s)
-        if make3D and not frm == 'xyz':
-            mol.make3D()
+    elif type(s) is str:
+        if '.xyz' in s:
+            mol = pybel.readfile('xyz', s)
+        else:   
+            frm = get_format(s)
+            mol = pybel.readstring(frm, s)
+            if make3D and not frm == 'xyz':
+                mol.make3D()
     return mol
     
     
@@ -98,7 +101,7 @@ def get_mult(s):
         mult = int(m.strip())
     else:
         mol = get_mol(s,make3D=False)
-        mult = mol.spin
+        mult = mol.spin 
     return mult
 
 def get_formula(x, hydrogens=True, stoichemetry=True):
