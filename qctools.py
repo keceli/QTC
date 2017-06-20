@@ -13,7 +13,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-06-17"
+__updated__ = "2017-06-20"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -796,8 +796,13 @@ def get_gaussian_xmatrix(s,nfreq):
     xmat = np.zeros((nfreq,nfreq))
     lines = s.splitlines()
     key = 'X matrix of Anharmonic Constants (cm-1)'
+    key2 = 'Total Anharmonic X Matrix (in cm^-1)'
     iline = io.get_line_number(key,lines=lines)
-    iline += 1
+    if iline > 0:
+        iline += 1
+    else:
+        iline = io.get_line_number(key2,lines=lines)
+        iline += 1
     line = lines[iline]
     if iline < 0:
         return 'Not found: {0}'.format(key)
@@ -809,7 +814,7 @@ def get_gaussian_xmatrix(s,nfreq):
             line = lines[iline]
             cols = line.split()
             ncol = len(cols) - 1
-            xmat[irow,icol:icol+ncol] = [float(num) for num in cols[1:]]
+            xmat[irow,icol:icol+ncol] = [float(num.replace('D','E')) for num in cols[1:]]
         iline += 1
         line = lines[iline]
     return xmat
