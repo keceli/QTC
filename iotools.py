@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-06-13"
+__updated__ = "2017-06-21"
 
 
 def get_date():
@@ -207,6 +207,25 @@ def get_line_number(keyword, lines=None, filename=None,getlastone=False):
             else:
                 return n
     return num
+
+
+def get_line_numbers(keyword, lines=None, filename=None):
+    """
+    Returns the line numbers as a list for a keyword in given lines of string.
+    Returns -1 if keyword is not found
+    """
+    if lines is None and filename is None:
+        print 'List of lines or a filename to be read is required for get_line_numbers'
+    elif filename:
+        lines = read_file(filename, aslines=True)
+    nums = []
+    for n, line in enumerate(lines):
+        if keyword in line:
+            nums.append(n)
+    if len(nums) == 0:
+        nums = -1
+    return nums
+
 
 def get_git_version():
     """
