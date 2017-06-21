@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 """
 Quantum chemistry tools.
-
 """
-import subprocess
 import obtools as ob
-import argparse
 import iotools as io
 import numpy as np
 try:
@@ -13,7 +10,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-06-20"
+__updated__ = "2017-06-21"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -24,7 +21,7 @@ def get_listofstrings(array):
     n = len(array)
     s = ['']*n
     for i in range(n):
-        s [i] = '{0}\n'.format(array[i])
+        s[i] = '{0}\n'.format(array[i])
     return s
 
 
@@ -1026,6 +1023,128 @@ def get_mopac_deltaH(lines):
     keyword = 'FINAL HEAT OF FORMATION'
     n = io.get_line_number(keyword, lines=lines)
     return float(lines[n].split()[5])
+
+def get_nwchem_energies(inp, filename=False):
+    if filename:
+        lines = io.read_file(inp,aslines=True)
+    else:
+        if type(inp) is str:
+            lines = inp.splitlines()
+        else:
+            lines = inp
+    nwdict = {'scf'        : 'Total SCF energy',
+     'mp2'        : 'Total MP2 energy',
+     'mp3'        : 'Total MP3 energy',
+     'ccsd'       : 'CCSD total energy / hartree',
+     'ccsd(t)'    : 'CCSD(T) total energy / hartree',
+     'ccsd(2)_t'  : 'CCSD(2)_T total energy / hartree',
+     'ccsd(2)'    : 'CCSD(2) total energy / hartree',
+     'ccsdt'      : 'CCSDT total energy / hartree',
+     'ccsdt(2)_q' : 'CCSDT(2)_Q total energy / hartree',
+     'ccsdtq'     : 'CCSDTQ total energy / hartree'
+      }
+
+    energies = {'unit':'hartree'}
+    for key,value in nwdict.iteritems():
+        i = io.get_line_number(value,lines=lines,getlastone=True)
+        if i >= 0:
+            try:
+                energies[key] = float(lines[i].split()[-1])
+            except:
+                print('Cannot parse {0}'.format(value))
+    return energies
+
+
+def get_nwchem_basis(inp, filename=False):
+    """
+------------------------------------------------------------------------------
+       Tag                 Description            Shells   Functions and Types
+ ---------------- ------------------------------  ------  ---------------------
+ C                        aug-cc-pvdz                9       23   4s3p2d
+ H                        aug-cc-pvdz                5        9   3s2p
+
+    """
+    if filename:
+        lines = io.read_file(inp,aslines=True)
+    else:
+        if type(inp) is str:
+            lines = inp.splitlines()
+        else:
+            lines = inp
+    key = 'Tag                 Description            Shells   Functions and Types'
+    i = io.get_line_number(key,lines,getlastone=True)
+    basis = []
+    nbasis = 0
+    for line in lines[i+2:]:
+        items = line.split()
+        if len(items) == 5:
+            basis.append(items[1])
+            nbasis += int(items[-2])
+        else:
+            break
+    if len(set(basis)) > 1:
+        basis = set(basis)
+        basis = '_'.join(basis)
+    else:
+        basis = basis[0]
+    return {'basis-set': basis,'number of basis functions': nbasis}
+
+
+def get_nwchem_frequencies(inp, filename=False, minfreq=10):
+    """
+             (Projected Frequencies expressed in cm-1)
+
+                    1           2           3           4           5           6
+
+ P.Frequency        0.00        0.00        0.00        0.00        0.00        0.00
+
+           1     0.00000     0.11409     0.07801     0.21786     0.00000     0.00000
+           2    -0.00312     0.00000     0.00000     0.00000     0.00172     0.25797
+           3    -0.01627     0.00000     0.00000     0.00000     0.25748    -0.00191
+           4     0.00000    -0.45282    -0.30962     0.65355     0.00000     0.00000
+           5     0.57079     0.00000     0.00000     0.00000     0.03802     0.26467
+           6    -0.01627     0.00000     0.00000     0.00000     0.25748    -0.00191
+           7     0.00000     0.79511    -0.30961     0.00000     0.00000     0.00000
+           8    -0.29008     0.00000     0.00000     0.00000    -0.01644     0.25462
+           9     0.48076     0.00000     0.00000     0.00000     0.28892     0.00389
+          10     0.00000     0.00000     0.85326     0.00000     0.00000     0.00000
+          11    -0.29008     0.00000     0.00000     0.00000    -0.01644     0.25462
+          12    -0.51329     0.00000     0.00000     0.00000     0.22603    -0.00771
+
+                    7           8           9          10          11          12
+
+ P.Frequency      498.18     1406.65     1406.83     3103.34     3292.00     3292.33
+
+           1    -0.12950     0.00000     0.00000     0.00000     0.00000     0.00000
+           2     0.00000     0.00000     0.08818     0.00000    -0.09484     0.00000
+           3     0.00000    -0.08818     0.00000    -0.00009     0.00000    -0.09484
+           4     0.51400     0.00000     0.00000     0.00000     0.00000     0.00000
+           5     0.00000     0.00000    -0.77117     0.00000    -0.01518     0.00000
+           6     0.00000    -0.07120     0.00000    -0.57437     0.00000     0.76857
+           7     0.51398     0.00000     0.00000     0.00000     0.00000     0.00000
+           8     0.00000    -0.36472    -0.13940     0.49839     0.57222     0.33868
+           9     0.00000     0.56060     0.36475     0.28770     0.33914     0.18033
+          10     0.51398     0.00000     0.00000     0.00000     0.00000     0.00000
+          11     0.00000     0.36472    -0.13940    -0.49839     0.57222    -0.33868
+          12     0.00000     0.56060    -0.36475     0.28770    -0.33914     0.18033 
+    """
+    key = 'P.Frequency'
+    if filename:
+        lines = io.read_file(inp,aslines=True)
+    else:
+        if type(inp) is str:
+            lines = inp.splitlines()
+        else:
+            lines = inp
+    nums = io.get_line_numbers(key,lines)
+    freqs = []
+    for num in nums:
+        line = lines[num]
+        for item in line.split()[1:]:
+            freq = float(item)
+            if freq > minfreq:
+                freqs.append(freq)
+    return np.array(freqs)
 
 
 def print_list(s):
