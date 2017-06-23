@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-06-20"
+__updated__ = "2017-06-23"
 
 def get_format(s):
     """
@@ -327,7 +327,7 @@ def get_unique_path(x, mult=0, method=''):
     formula = get_formula(mol)
     formula_noH = get_formula(mol, stoichemetry=True, hydrogens=False)
     elements_noH = get_formula(mol, stoichemetry=False, hydrogens=False)
-    uniquekey = get_unique_key(mol, mult)
+    uniquekey = get_inchi_key(mol, mult)
     dirs = 'database', elements_noH, formula_noH, formula, uniquekey, method
     return io.join_path(*dirs)
 
