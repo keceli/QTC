@@ -18,7 +18,7 @@ MESS partition function code
 PAC99
 thermp
 """
-__updated__ = "2017-05-23"
+__updated__ = "2017-06-23"
 
 
 def get_stoichometry(formula,element):
@@ -491,6 +491,33 @@ def run_pac99(formula,pac99='pac99'):
         msg += "{0} {1} files are written.\n".format(c97file,o97file)
     return msg
 
+
+def write_chemkin_polynomial(mol, zpe, xyz, freqs, deltaH,parameters):
+    """
+    A driver to perform all operations to write NASA polynomial in
+    chemkin format. Assumes quantum chemistry calculation is performed.
+    """
+    messpfinput = 'pf.inp'
+    messpfoutput = 'pf.log'
+    name = mol.formula
+    tag = parameters['qcmethod']
+    inp = get_pf_input(mol, tag, zpe, xyz, freqs)
+    io.write_file(inp, messpfinput)
+    msg = 'Running {0} to generate partition function.\n'.format(parameters['messpf'])
+    msg += io.execute([parameters['messpf'],messpfinput])
+    msg += 'Running thermp .\n'
+    inp = get_thermp_input(mol.formula, deltaH)
+    msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp']) 
+    msg += 'Running pac99.\n'
+    msg += run_pac99(name)
+    msg += 'Converting to chemkin format.\n'
+    chemkinfile = name + '.ckin'
+    msg += 'Writing chemking file {0}.\n'.format(chemkinfile)
+    try:
+        msg += write_chemkin_file(deltaH, tag, name, chemkinfile)
+    except:
+        "Failed to write polynomials"
+    return msg
 
 def get_new_groups():
     s = """
