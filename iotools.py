@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-06-21"
+__updated__ = "2017-06-23"
 
 
 def get_date():
@@ -121,11 +121,12 @@ def read_file(filename, aslines=False):
     return tmp
 
 
-def check_file(filename, timeout=0):
+def check_file(filename, timeout=0, verbose=False):
     """
     Returns True (False) if a file exists (doesn't exist).
     If timeout>0 is given, then checks file in a loop until
     timeout seconds pass.
+    If verbose is True and file does not exist, prints an error message
     """
     import time
     from os.path import isfile
@@ -136,6 +137,8 @@ def check_file(filename, timeout=0):
             if isfile(filename):
                 exists = True
                 break
+    if not exists and verbose:
+        print('"{0}" file not found.'.format(filename))
     return exists
 
 
