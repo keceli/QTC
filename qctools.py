@@ -5,6 +5,7 @@ Quantum chemistry tools.
 import obtools as ob
 import iotools as io
 import numpy as np
+import patools as pa
 try:
     import cclib
 except:
@@ -54,10 +55,11 @@ def parse_output(s, smilesname, write=False):
         energy = energies[theory]
         hrmfreqs = get_nwchem_frequencies(lines)
         parsed = True
-    elif package == 'mopac':
-        pass
-    else:
-        pass
+    elif package == 'molpro':
+        theory, energy = pa.molpro_energy(lines)
+    elif package == 'gaussian':
+        theory, energy = pa.gaussian_energy(lines)
+        
     if parsed:
         if write:
             fname = smilesname + '.xyz'

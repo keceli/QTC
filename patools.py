@@ -68,7 +68,7 @@ def gaussian_energy(lines,method=''):
     else:
         energ = '(\S+)\s*A\.U\.'
         energ = re.findall(energ,lines)
-        return float(energ[-1])
+        return (method, float(energ[-1]))
 
 def gaussian_opt_zmat_params(lines):
     
@@ -205,7 +205,7 @@ def molpro_energy(lines,method=''):
     if len(energ) == 0:
         print 'energy not found'
     else:
-        return float(energ[-1].replace('\n','').replace(' ',''))
+        return (method,float(energ[-1].replace('\n','').replace(' ','')))
 
     return 0 
    
