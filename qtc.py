@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 import argparse
-import subprocess
 import multiprocessing
 
 import iotools as io
 import obtools as ob
 import qctools as qc
 import tctools as tc
-
-__updated__ = "2017-06-17"
+from pprint import pprint
+__updated__ = "2017-06-23"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -64,16 +63,16 @@ def get_args():
                         help='Ending index of the species list')
     parser.add_argument('-n', '--nproc', type=int,
                         default=1,
-                        help='Number of processors, default is all processors')
+                        help='Number of processors, default is one processor')
     parser.add_argument('-m', '--qcmethod', type=str,
                         default='',
                         help='Quantum chemistry method to be used (obsolete, use --rundir)')
     parser.add_argument('-b', '--qcbasis', type=str,
                         default='',
                         help='Basis-set level in quantum chemistry calculations (obsolete, use --rundir)')
-    parser.add_argument('-c', '--qcpackage', type=str,
+    parser.add_argument('-p', '--qcpackage', type=str,
                         default='',
-                        help='Quantum chemistry package ("gausian","mopac","nwchem",qcscript") to be used')
+                        help='Quantum chemistry package ("gausian","mopac","nwchem","qcscript") to be used')
     parser.add_argument('-t', '--qctemplate', type=str,
                         default='',
                         help='Template for quantum chemistry input file')
@@ -86,8 +85,13 @@ def get_args():
     parser.add_argument('-x', '--xyzpath', type=str,
                         default='',
                         help='Path for the directory for xyz file')
+    parser.add_argument('-o', '--qcoutput', type=str,
+                        default='',
+                        help='Path for the qc output file')
     parser.add_argument('-Q', '--runqc', action='store_true',
                         help='Run quantum chemistry calculation')
+    parser.add_argument('-P', '--parseqc', action='store_true',
+                        help='Parses quantum chemistry output')
     parser.add_argument('-S', '--subqc', action='store_true',
                         help='Submit quantum chemistry calculations')
     parser.add_argument('-T', '--runthermo', action='store_true',
@@ -122,38 +126,10 @@ def get_args():
                         default='pac99',
                         help='Path for pac99 executable')
     parser.add_argument('--qcscript', type=str,
-                        default='/lcrc/project/PACC/test-awj/builddb/bin/qcscript.pl',
+#                        default='/lcrc/project/PACC/test-awj/builddb/bin/qcscript.pl',
+                        default='',
                         help='Path for qcscript perl script')
     return parser.parse_args()
-
-
-def write_chemkin_polynomial(mol, method, zpe, xyz, freqs, deltaH):
-    """
-    A driver to perform all operations to write NASA polynomial in
-    chemkin format. Assumes quantum chemistry calculation is performed.
-    """
-    messpfinput = 'pf.inp'
-    thermpinput = 'thermp.dat'
-    messpfoutput = 'pf.log'
-    name = mol.formula
-    tag = method
-    inp = tc.get_pf_input(mol, method, zpe, xyz, freqs)
-    io.write_file(inp, messpfinput)
-    msg = 'Running {0} to generate partition function.\n'.format(_messpf)
-    msg += io.execute([_messpf,messpfinput])
-    msg += 'Running thermp .\n'
-    inp = tc.get_thermp_input(mol.formula, deltaH)
-    msg = tc.run_thermp(inp, 'thermp.dat', messpfoutput, _thermp) 
-    msg += 'Running pac99.\n'
-    msg += tc.run_pac99(name)
-    msg += 'Converting to chemkin format.\n'
-    chemkinfile = name + '.ckin'
-    msg += 'Writing chemking file {0}.\n'.format(chemkinfile)
-    try:
-        msg += tc.write_chemkin_file(deltaH, tag, name, chemkinfile)
-    except:
-        "Failed to write polynomials"
-    return msg
 
 
 def run(s):
@@ -163,37 +139,50 @@ def run(s):
     --qcmethod
     --qcpackage
     """
-    import qctools as qc
-    import obtools as ob
-    import iotools as io
+    global parameters
+    runqc = parameters['runqc']
+    parseqc = parameters['parseqc']
+    runthermo = parameters['runthermo']
+    runanharmonic = parameters['anharmonic']
     msg = "***************************************\n"
     msg += "{0}\n".format(s)
     mult = ob.get_mult(s)
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='', geopath='')
-    qcdirectory  = io.join_path(*(smilesdir,_qcdirectory))
-    xyzpath = None
-    if _xyzpath:
-        if io.check_dir(_xyzpath):
-            xyzpath = _xyzpath
-        elif io.check_dir(io.join_path(*(smilesdir,_xyzpath))):
-            xyzpath = io.join_path(*(smilesdir,_xyzpath))
+    qcdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
+    qctemplate = io.get_path(parameters['qctemplate'])
+    qcpackage = parameters['qcpackage']
+    qcscript = io.get_path(parameters['qcscript'])
+    qclog = smilesname + '_' + qcpackage + '.out'
+    xyzpath = parameters['xyzpath']
+    xyzfile = None  
+    if xyzpath:
+        if io.check_file(xyzpath):
+            xyzfile = xyzpath
+        elif io.check_file(io.join_path(*(smilesdir,xyzpath))):
+            xyzfile = io.join_path(*(smilesdir,xyzpath))
+        elif io.check_dir(xyzpath):
+            try:
+                xyzfile = next(io.find_files(xyzpath, '*.xyz'))
+            except StopIteration:
+                msg += "xyz file not found in {0}".format(xyzpath)
+        elif io.check_dir(io.join_path(*(smilesdir,xyzpath))):
+            xyzpath = io.join_path(*(smilesdir,xyzpath))
+            try:
+                xyzfile = next(io.find_files(xyzpath, '*.xyz'))
+            except StopIteration:
+                msg += "xyz file not found in {0}".format(xyzpath)        
         else:
-            msg += "xyz path not found {0}".format(_xyzpath)
-    if xyzpath:                
-        xyzfile = io.find_files(xyzpath, '*.xyz')
-        try:
-            xyzfile = next(xyzfile)
-            xyz = io.read_file(xyzfile)
-            coords = ob.get_coordinates_array(xyz)
-            mol = ob.set_xyz(mol, coords)
-        except StopIteration:
-            msg += "xyz file not found in {0}".format(xyzpath)
-    runfile = smilesname + '.run'
-    runqc = _runqc
-    runthermo = _runthermo
-    runanharmonic = _anharmonic
+            msg += "xyz path not found {0}".format(xyzpath)
+            return msg
+    if xyzfile:
+        msg += "Using xyz file in '{0}'\n".format(xyzfile)
+        xyz = io.read_file(xyzfile)
+        coords = ob.get_coordinates_array(xyz)
+        mol = ob.set_xyz(mol, coords)
+    print(msg)
+    msg = ''
     io.mkdir(qcdirectory)
     cwd = io.pwd()
     if io.check_dir(qcdirectory, 1):
@@ -202,70 +191,32 @@ def run(s):
     else:
         msg += ('I/O error, {0} directory not found.\n'.format(qcdirectory))
         return -1
-    if _qcpackage == '':
-        if _qctemplate == '':
-            msg = '''You have to provide a template for quantum chemistry calculations. 
-                    Use -t or --qctemplate to specify the path for the template and
-                    optionally use -c or --qcpackage to specify the quantum chemistry package'''
-            print(msg)
-            return
-        else:
-            qcpackage = qc.get_qcpackage(_qctemplate)
-    else:
-        qcpackage = _qcpackage  
-    if qcpackage == 'mopac':
-        qclog = smilesname + '.out'
-    else:
-        qclog = '{0}_{1}.log'.format(smilesname,qcpackage)
     print(msg)
-    msg = ''          
+    msg = ''
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation' ]          
     if runqc:
-        if io.check_file(runfile):
-            if _overwrite:
-                msg += 'Overwriting previous attempt.\n'
-            else:
-                msg += ('Skipping {0}\n'.format(smilesname))
-        else:
-            io.touch(runfile)     
-        if qcpackage == 'mopac':
-            msg += "Running mopac...\n"
-            msg += qc.run_mopac(s, exe=_mopac, template=_qctemplate, mult=mult,overwrite=_overwrite)
-        elif qcpackage == 'gaussian':
-            msg += "Running gaussian...\n"
-            msg += qc.run_gaussian(s, exe=_gaussian, template=_qctemplate, mult=mult,overwrite=_overwrite)
-        elif qcpackage == 'nwchem':
-            msg += "Running nwchem...\n"
-            msg += qc.run_nwchem(s, exe=_nwchem, template=_qctemplate, mult=mult,overwrite=_overwrite)
+        if qcpackage in available_packages:
+            print('Running {0}'.format(qcpackage))
+            msg += qc.run(s, qctemplate, parameters, mult)
         elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"
             geofile = smilesname + '.geo'
-            xyzlines = ob.get_xyz(mol).splitlines()
-            natom = int(xyzlines[0].strip())
             geo = ob.get_geo(mol)
             io.write_file(geo, geofile)
             if io.check_file(geofile, 1):
-                msg += qc.run_qcscript(_qcscript, _qctemplate, geofile, mult)
-        elif qcpackage == 'submit':
-            print(s)        
+                msg += qc.run_qcscript(qcscript, qctemplate, geofile, mult)
+        else:
+            msg = '{0} package not implemented\n'.format(qcpackage)
+            msg += 'Available packages are {0}'.format(available_packages)
+            exit(msg)   
         print(msg)
         msg = ''
-    if _writefiles:
-        if io.check_file(qclog):
-            newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog_cclib(qclog, anharmonic=runanharmonic)
-            msg += newmsg
-            print(msg)
-            io.write_file(xyz, smilesname + '.xyz')
-            if freqs:
-                io.write_file(qc.get_string(freqs), smilesname + '.hrm')
-                if afreqs:
-                    io.write_file(qc.get_string(afreqs), smilesname + '.anhrm')
-                if zpe:    
-                    io.write_file(str(zpe), smilesname + '.zpe')
-
-        else:
-            msg += "Log file '{0}' not found".format(qclog)
-        print(msg)
-        msg = ''                            
+    if parseqc:
+        if io.check_file(qclog, timeout=1,verbose=False):
+            out = io.read_file(qclog,aslines=False)
+            d = qc.parse_output(out,smilesname, parameters['writefiles'])
+            pprint(d)
+                                   
     if runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
@@ -280,11 +231,11 @@ def run(s):
             msg += "Harmonic frequencies in cm-1:\n {0} \n".format(freqs)
         else:
             runthermo = False        
-        if afreqs is not None:
+        if afreqs:
             msg += "Anharmonic frequencies in cm-1:\n {0}\n".format(afreqs)
         else:
             runanharmonic = False        
-        if zpe is not None:
+        if zpe:
             msg += 'ZPE = {0} kcal/mol\n'.format(zpe)
         else:
             runthermo = False        
@@ -297,42 +248,42 @@ def run(s):
         else:
             runanharmonic = False        
         if runthermo:    
-            msg += write_chemkin_polynomial(mol, _qcmethod, zpe, xyz, freqs, deltaH)
+            msg += tc.write_chemkin_polynomial(mol, zpe, xyz, freqs, deltaH, parameters)
     io.cd(cwd)
     print(msg)
     return
 
-
+    
 if __name__ == "__main__":
-    import socket
-    import iotools as io
+    from socket import gethostname
     from timeit import default_timer as timer
+    from sys import exit
+    global parameters
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian' ]
     start  = timer()
     args = get_args()
-    global  _qcexe, _qcdirectory, _qcpackage, _qctemplate, _qcscript
-    global _writefiles, _anharmonic,_overwrite,_runqc, _runthermo
-    global _mopac, _nwchem, _molpro, _gaussian, _messpf, _thermp, _pac99
-    _runinteractive = args.runinteractive
-    _runqc = args.runqc
-    _runthermo = args.runthermo
-    _qcmethod = args.qcmethod
-    _qcbasis = args.qcbasis
-    _qcpackage = args.qcpackage
-    _qcdirectory = args.qcdirectory
-    _anharmonic = args.anharmonic
-    _overwrite = args.overwrite
-    _xyzpath = args.xyzpath
-    _writefiles = args.writefiles
-    _qctemplate = io.get_path(args.qctemplate)
-    _qcscript = io.get_path(args.qcscript,executable=True)
-    _qcexe = io.get_path(args.qcexe,executable=True)
-    _mopac = io.get_path(args.mopac,executable=True)
-    _nwchem = io.get_path(args.nwchem,executable=True)
-    _gaussian = io.get_path(args.gaussian,executable=True)
-    _molpro = io.get_path(args.molpro,executable=True)
-    _messpf = io.get_path(args.messpf,executable=True)
-    _thermp = io.get_path(args.thermp,executable=True)
-    _pac99 = io.get_path(args.pac99,executable=True)
+    parameters = vars(args)
+    if not parameters['qcpackage']:
+        if not parameters['qctemplate']:
+            if parameters['runqc']:
+                exit('Please specify template file with -t')
+        else:
+            parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
+    if not parameters['qcexe']:
+        if parameters['qcpackage'] in available_packages:
+            parameters['qcexe'] = parameters[parameters['qcpackage']]
+    if parameters['writefiles']:
+        parameters['parseqc'] = True
+    parameters['qctemplate'] = io.get_path(args.qctemplate)
+    parameters['qcexe'] = io.get_path(args.qcexe,executable=True)
+    parameters['qcscript'] = io.get_path(args.qcscript)
+    parameters['mopac'] = io.get_path(args.mopac,executable=True)
+    parameters['nwchem'] = io.get_path(args.nwchem,executable=True)
+    parameters['gaussian'] = io.get_path(args.gaussian,executable=True)
+    parameters['molpro'] = io.get_path(args.molpro,executable=True)
+    parameters['messpf'] = io.get_path(args.messpf,executable=True)
+    parameters['thermp'] = io.get_path(args.thermp,executable=True)
+    parameters['pac99'] = io.get_path(args.pac99,executable=True)
     beginindex = args.first
     endindex = args.last
     inp = args.input
@@ -349,14 +300,13 @@ if __name__ == "__main__":
     print("QTC: Date and time           = {0}".format(io.get_date()))
     print("QTC: Last update             = {0}".format(__updated__))
     print("QTC: Number of processes     = {0}".format(nproc))
-    print("QTC: Hostname                = {0}".format(socket.gethostname()))
+    print("QTC: Hostname                = {0}".format(gethostname()))
     print('QTC: Given arguments         =')
-    for arg in vars(args):
-        print('                             --{0:20s}\t{1}'.format(arg, getattr(args, arg)))
+    for param in parameters:
+        print('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
     print("QTC: Number of species       = {0}".format(len(mylist)))
     init = timer()
     print("QTC: Initialization time (s) = {0:.2f}".format(init-start))
-#    print("QTC: Calculations started...")
     if nproc > 1:
         pool = multiprocessing.Pool(nproc)
         pool.map(run, mylist)
@@ -364,9 +314,6 @@ if __name__ == "__main__":
         results = map(run, mylist)
     end = timer()
     print("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
-    #print("QTC: Printing logs for the calculations...")
-    #for result in results:
-    #    print(result)
     print("QTC: Total time (s)          = {0:.2f}".format(end-start))
     print("QTC: Date and time           = {0}".format(io.get_date()))
 
