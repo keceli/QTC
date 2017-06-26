@@ -63,7 +63,7 @@ def gaussian_energy(lines,method=''):
         method = method.replace('(','\(').replace(')','\)')
         energ  = method + '=([\w,\.,\s,-]*)'
         energ  = re.findall(energ,lines)
-        return float(energ[-1].replace('\n','').replace(' ',''))
+        return (method,float(energ[-1].replace('\n','').replace(' ','')))
 
     else:
         energ = '(\S+)\s*A\.U\.'
