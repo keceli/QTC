@@ -224,11 +224,11 @@ def getenergy_fromlogfile(logfile,theory):
     lines = io.read_file(logfile)
     prog  = getprog_fromlogfile(lines)
     if prog == 'g09':
-       return pa.gaussian_energy(lines)
+       return pa.gaussian_energy(lines)[1]
     elif prog == 'molpro':
-       return pa.molpro_energy(lines)
+       return pa.molpro_energy(lines)[1]
     elif prog == None:
-       return pa.molpro_energy(lines)
+       return pa.molpro_energy(lines)[1]
     print 'no energy found for this molecule, please use -e to manually set it'
     return
 
