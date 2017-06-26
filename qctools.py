@@ -908,7 +908,7 @@ def get_gaussian_xmatrix(s,nfreq):
         iline += 1
     else:
         iline = io.get_line_number(key2,lines=lines)
-        iline += 2
+        iline += 1
     line = lines[iline]
     if iline < 0:
         return 'Not found: {0}'.format(key)
