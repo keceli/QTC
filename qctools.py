@@ -56,10 +56,11 @@ def parse_output(s, smilesname, write=False):
         hrmfreqs = get_nwchem_frequencies(lines)
         parsed = True
     elif package == 'molpro':
-        theory, energy = pa.molpro_energy(lines)
+        theory, energy = pa.molpro_energy(s)
+        parsed = True
     elif package == 'gaussian':
-        theory, energy = pa.gaussian_energy(lines)
-        
+        theory, energy = pa.gaussian_energy(s)
+        parsed = True
     if parsed:
         if write:
             fname = smilesname + '.xyz'
