@@ -4,7 +4,7 @@ QTC includes modules that integrates open babel with quantum chemistry calculati
 
 It depends on:
   * Open Babel for cheminformatics (read/write chemical identifiers)
-  * MOPAC, NWChem, Gaussian for quantum chemistry calculations
+  * MOPAC, NWChem, Gaussian, Molpro for quantum chemistry calculations
   * MESS for calculating partititon function
   * RMG for generating a species list important for combustion chemistry
   * PAC99, thermp for format conversions
