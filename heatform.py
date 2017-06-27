@@ -7,26 +7,35 @@ import sys
 sys.path.insert(0, '/home/elliott/Packages/QTC/')
 import iotools as io
 import patools as pa
+import obtools as ob
 
 """
 Heatform determines the heat of formation for a molecule by using a basis of 
 molecules with well-determined heats of formation
 
 To use this script from command line you can do the following:
+
 (1) python heatform.py -l <logfile.log>
     this will automatically determine what stoichiometry, program, level of theory, basis set,
     and electronic energy heatform needs as parameters 
-(2) python heatform.py -s <stoichiometry> -p <program> -t <method>/<basisset> -e <energy>
-    manually set all these parameters so that no logfile is required
-(3) after (1) or (2)'s arguements, user can also use -b <chosen basis> to manually select the
-    basis of molecules
+
+(3) python heatform.py -s <smiles> -r -t <method>/<basisset> 
+    will run an energy computation for the smiles molecule at method/basis level of theory 
+    before it starts the basis molecules (-p will let you choose g09 or molpro)
+
+(4) python heatform.py -s <stoichiometry> -p <program> -t <method>/<basisset> -e <energy>
+    manually set all these parameters so that no logfile or first computation is required
+
+(3) User can also use -b <R1 R2 R3> to manually select the basis of molecules
+
 To use this as a module in another script:
-(1) main(stoich, logfile, electronic_energy, basisset, theory, database, prog) will return 
+
+(1) main(stoich, logfile, electronic_energy, basisset, theory, database, prog, runE) will return 
     the heat of formation in kcal.  If logfile is set, the rest can be auto (see defaults), and if 
     logfile is gibberish, the rest must be set.
+
 """
 #  TO DO:
-#  Option to compute energy for molecule of interest and not just basis species
 #  Search directory structures for energies instead of/ alongside using test database
 #  Store energies when they are computed for basis setsOnce energy is computed for basis sets
 
@@ -216,19 +225,20 @@ def getbasisset_fromlogfile(logfile):
     lines = io.read_file(logfile)
     return pa.basisset(lines)
 
-def getenergy_fromlogfile(logfile,theory):
+def getenergy_fromlogfile(logfile,theory='',prog=''):
     """
     Returns by default final energy solved for in logfile, or 
     the energy corresponding to a given method in logfile
     """
     lines = io.read_file(logfile)
-    prog  = getprog_fromlogfile(lines)
+    if prog == '':
+        prog  = getprog_fromlogfile(lines)
     if prog == 'g09':
-       return pa.gaussian_energy(lines)[1]
+       return pa.gaussian_energy(lines,theory)[1]
     elif prog == 'molpro':
-       return pa.molpro_energy(lines)[1]
+       return pa.molpro_energy(lines,theory)[1]
     elif prog == None:
-       return pa.molpro_energy(lines)[1]
+       return pa.molpro_energy(lines,theory)[1]
     print 'no energy found for this molecule, please use -e to manually set it'
     return
 
@@ -249,7 +259,7 @@ def get_gaussian_zmat(filename):
     lines  = io.read_file(filename)
     return pa.gaussian_zmat(lines)
 
-def build_gauss(dic, theory, basisset):
+def build_gauss(mol, theory, basisset):
     """
     Builds a Guassian optimization inputfile for a molecule
     INPUT:
@@ -268,6 +278,18 @@ def build_gauss(dic, theory, basisset):
     bases = ['cc-pvqz','cc-pvtz','cc-pvdz','6-311+g(d,p)','6-31+g(d,p)']
     zmat  = 'none'
     
+    if type(mol) == dict:
+        dic    = mol
+        mol    = ob.get_mol(dic['_id'])
+        stoich = dic['stoich']
+        charge = dic['charge']
+        mult   = dic['mult']
+    else:
+        dic = {'g09':'nope'}
+        stoich = ob.get_formula(mol)
+        mult   = ob.get_multiplicity(mol)
+        charge = ob.get_charge(mol)
+
     if theory.lower().lstrip('r') in dic['g09']:
         for j in range(len(bases)):
             if bases[j] in dic['g09'][theory.lower().lstrip('r')]:
@@ -280,18 +302,17 @@ def build_gauss(dic, theory, basisset):
                     if bases[j]  in dic['g09'][meths[i]]:
                         if 'zmat'in dic['g09'][meths[i]][bases[j]]:
                             zmat =  dic['g09'][meths[i]][bases[j]]['zmat']
+
     if zmat == 'none':
-        import obtools as ob
-        mol = ob.get_mol(dic['_id'])
         zmat = ob.get_zmat(mol)
-        gauss += str(dic['charge']) + ' ' + str(dic['mult']) + '\n'
+        gauss += str(charge) + ' ' + str(mult) + '\n'
     gauss += zmat.lstrip('\n')
 
-    io.write_file(gauss, dic['stoich'] + '.inp')
+    io.write_file(gauss, stoich + '.inp')
 
     return
 
-def build_molpro(dic, theory, basisset):
+def build_molpro(mol, theory, basisset):
     """
     Builds a Guassian optimization inputfile for a molecule
     INPUT:
@@ -301,6 +322,16 @@ def build_molpro(dic, theory, basisset):
     OUPUT:
     None (but an inputfile now exists with name <stoich>.inp)
     """
+    if type(mol) == dict:
+        dic = mol
+        mol = ob.get_mol(dic['_id'])
+        stoich = dic['stoich']
+        mult   = dic['mult']
+    else:
+        dic = {'g09':'nope'}
+        stoich = ob.get_formula(mol)
+        mult   = ob.get_mult(mol)
+
     molp  = 'memory,         200 ,m\nnosym\ngeometry={angstrom\n'
     meths = ['ccsdt','ccsd(t)','ccsd','m062x','b3lyp']
     bases = ['cc-pvqz','cc-pvtz','cc-pvdz','6-311+g(d,p)','6-31+g(d,p)']
@@ -318,21 +349,34 @@ def build_molpro(dic, theory, basisset):
                     if bases[j]  in dic['g09'][meths[i]]:
                         if 'zmat'in dic['g09'][meths[i]][bases[j]]:
                             zmat =  dic['g09'][meths[i]][bases[j]]['zmat']
+    if zmat == 'none':
+        zmat = '\n\n' + ob.get_zmat(mol).replace('=', '') 
+
     zmat1 = '\n'.join(zmat.split('Variables:')[0].split('\n')[2:] )
     zmat2 = '}\n'
+
     for line in zmat.split('Variables:')[1].split('\n')[1:-1]:
         zmat2 += line.split()[0] + '  =  ' + line.split()[1] + '\n'
+
     molp += zmat1 + zmat2
-    spin  = 1/2.*(dic['mult']-1) * 2
+    spin  = 1/2.*(mult -1) * 2
     molp += '\nSET,SPIN=     ' + str(spin) + '\n\n'
+
     if spin == 0:
-        molp += '!closed shell input\nbasis=' + basisset + '\nhf\n' + theory.lower() + '\noptg\nENERGY=energy'
+        molp += '!closed shell input\nbasis=' + basisset + '\nhf\n' 
+        if 'ccsd' in theory.lower() or 'cisd' in theory.lower() or 'hf' in theory.lower() or 'mp' in theory.lower():
+             pass
+        else:
+            molp += 'dft=[' + theory.lower() + ']\n'
+            theory = 'dft'
+        molp += theory.lower() + '\noptg\nENERGY=energy'
     else:
         if 'ccsd' in theory.lower() or 'cisd' in theory.lower() or 'hf' in theory.lower() or 'mp' in theory.lower():
 	    molp += '!open shell input\nbasis=' + basisset + '\nhf\nu' + theory.lower() + '\noptg\nENERGY=energy'
         else:
-            molp += '!open shell input\nbasis=' + basisset + '\nuhf\n' + theory.lower() + '\noptg\nENERGY=energy'
-    io.write_file(molp, dic['stoich'] + '.inp')
+            molp += '!open shell input\nbasis=' + basisset + '\ndft=['+theory.lower() + ']\nuhf\ndft\noptg\nENERGY=energy'
+
+    io.write_file(molp, stoich + '.inp')
  
     return 
 
@@ -352,9 +396,47 @@ def run_molpro(filename):
     
     return
 
+def run_energy(mol, theory, basisset, prog, mol_is_smiles=False):
+    """
+    Runs a g09 or molpro job for 
+    INPUT:
+    stoich   - stoichiometry of molecule
+    theory   - theory energy should be listed or computed with
+    basisset - basis set energy should be listed or computed with
+    prog     - program an energy should be listed or computed with
+    OUTPUT:
+    E        - energy 
+    """
+    if mol_is_smiles:
+        dic    = ob.get_mol(mol)
+        stoich = ob.get_formula(mol)
+        
+    else:     #mol is dictionary
+        stoich = mol['stoich']
+        dic    = mol
+
+    dic    = mol      
+
+    if  prog == 'g09':
+        print 'Running G09 on ' + stoich + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
+        build_gauss(dic, theory, basisset)
+        run_gauss(stoich+'.inp')
+        E = getenergy_fromlogfile(stoich+'.log',theory.lstrip('R').lstrip('U'),'gaussian')
+        print 'Energy found to be: ' + str(E)
+        return E
+
+    elif prog == 'molpro':
+        print 'Running Molpro on ' + stoich + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
+        build_molpro(mol, theory, basisset)
+        run_molpro(stoich+'.inp')
+        E = getenergy_fromlogfile(stoich+'.out',theory.lstrip('R').lstrip('U'),'molpro')
+        print 'Energy found to be: ' + str(E)
+        return E
+
+
 def E_dic(dic,energORs,theory,basisset,prog):
     """
-    Checks a dictionary for energy at a specified level of theory and basisset
+    Checks a dictionary for energy at a specified level of theory and basisset 
     Computes energy if it isn't in dictionary already
     INPUT:
     dic      - dictionary we are checking
@@ -370,21 +452,8 @@ def E_dic(dic,energORs,theory,basisset,prog):
             if basisset.lower() in dic[prog.lower()][theory.lower().lstrip('r')]:
                 return dic[prog.lower()][theory.lower().lstrip('r')][basisset.lower()][energORs]
 
-    if energORs == 'energy' and prog == 'g09':
-        print 'Running G09 on ' + dic['stoich'] + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
-        build_gauss(dic, theory, basisset)
-        run_gauss(dic['stoich']+'.inp')
-        E = getenergy_fromlogfile(dic['stoich']+'.log',theory)
-        print 'Energy found to be: ' + str(E)
-        return E
-
-    elif energORs == 'energy' and prog == 'molpro':
-        print 'Running Molpro on ' + dic['stoich'] + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
-        build_molpro(dic, theory, basisset)
-        run_molpro(dic['stoich']+'.inp')
-        E = getenergy_fromlogfile(dic['stoich']+'.log',theory)
-        print 'Energy found to be: ' + str(E)
-        return E
+    if energORs == 'energy':
+        return run_energy(dic, theory, basisset, prog)
 
     elif energORs != 'energy':
         return .001
@@ -404,8 +473,7 @@ def comp_energy(mol,basis,coefflist,E,theory,basisset,prog):
     coefflist - coefficients [a,b,c,d...] described above
     E         - electronic energy of molecule
     OUTPUTS:
-    lE        - 0K heat of formation of molecule
-    hE        - 298K heat of formation of molecule
+    zE        - 0K heat of formation of molecule
     sigma     - uncertainty estimate (i.e., delH = lE +/- sigma)
    
     """
@@ -416,30 +484,30 @@ def comp_energy(mol,basis,coefflist,E,theory,basisset,prog):
             if dic['stoich'] == mol:
                 bas = dic
         E = E_dic(bas, 'energy',theory,basisset,prog)
-    lE        = E
+    zE        = E
     var       = 0
     for i,bas in enumerate(basis):
         for dic in db:
             if dic['stoich'] == bas:
                 bas = dic
                 break
-        lE  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
+        zE  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
 
         var += (coefflist[i] * nest_2_dic(bas,'HeatForm','sigma') * 0.00038088   )**2
         
         E    =  E_dic(bas, 'energy',theory,basisset,prog)
-        lE  -=  coefflist[i] * E
+        zE  -=  coefflist[i] * E
         #var += (coefflist[i] * E * E_dic(bas,'sigma',theory,basisset,prog) )**2
 
     sigma = np.sqrt(var)
-    return lE, sigma
+    return zE, sigma
     
 def check(clist, basis,stoich,atomlist):
     """
     Makes sure nothing funky happened while computing coefficients
     """
     check = np.zeros(len(clist))
-    statement = 'Coefficients produce correct stoichiometry'
+    statement = 'Coefficients produce correct stoichiometry\n'
     for i, c in enumerate(clist):
        check += c * get_stoich(basis[i],atomlist)
     for i, sto in enumerate(stoich):
@@ -448,7 +516,7 @@ def check(clist, basis,stoich,atomlist):
             break
     return statement
 
-def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/',db='tempdb',prog = 'auto'):
+def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/',db='tempdb',prog = 'auto', runE=False):
     
     basis = basis.split()
     #AUTO SET NONUSERDEFINED PARAMETRS##
@@ -460,11 +528,15 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
         theory  = gettheory_fromlogfile(logfile)
         theory += '/'
         theory += getbasisset_fromlogfile(logfile)
-    theory, basisset = theory.split('/')
-    
-    if is_auto(E):
-         E = getenergy_fromlogfile(logfile,theory)
 
+    theory, basisset = theory.split('/')
+    if is_auto(E):
+        E = getenergy_fromlogfile(logfile,theory)
+
+    if runE:
+        E = run_energy(mol, theory, basisset, prog, True)
+        mol = ob.get_formula(ob.get_mol(mol))
+        
     basprint = 'manually select basis'
     atomlist = get_atomlist(mol)
     basisselection = 0
@@ -478,7 +550,8 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
     lines =  ('\n-------------------------------------------------\n\n' +
               'HEAT OF FORMATION FOR: ' + mol +
               '\n    at ' + theory + '/' +  basisset + 
-              '\n\n-------------------------------------------------\n\nYou have chosen to ' + 
+              '\n\n-------------------------------------------------\n\n'
+              + 'Electronic Energy is: ' +  str(E) + '\nYou have chosen to ' + 
               basprint + '\n\nBasis is: ' + ', '.join(basis))
     print lines 
  
@@ -547,21 +620,23 @@ if __name__ == '__main__':
 
     parser.add_argument('-s','--stoichiometry',     type=str,  default='auto')
     parser.add_argument('-e','--electronic_energy', type=float,default=9999.9)
+    parser.add_argument('-r','--run_energy',              action='store_true')
     parser.add_argument('-b','--select_basis',      type=str,  default='auto')
     parser.add_argument('-t','--level_of_theory',   type=str,  default='auto/')
     parser.add_argument('-l','--logfile',           type=str,  default='geoms/reac1_l1.log')
     parser.add_argument('-d','--database',          type=str,  default='testdb')
-    parser.add_argument('-p','--program',           type=str,  default='g09')
+    parser.add_argument('-p','--program',           type=str,  default='auto')
 
     ###########################
     args = parser.parse_args()
 
     mol    = args.stoichiometry
     E      = args.electronic_energy
+    runE   = args.run_energy
     basis  = args.select_basis
     theory = args.level_of_theory
     logfile= args.logfile
     db     = args.database
     prog   = args.program
 
-    main(mol,logfile, E, basis, theory, db,prog) 
+    main(mol,logfile, E, basis, theory, db, prog, runE) 

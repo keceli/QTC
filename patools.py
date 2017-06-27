@@ -45,9 +45,9 @@ def gaussian_basisset(lines):
 
 def gaussian_method(lines):
 
-    method = 'E\((\w+)'
+    method = 'Done:\s*E\((\w+)'
     method = re.findall(method,lines)
-    if method[-1] == 'CORR':
+    if method[-1].strip().upper() == 'CORR' or method[-1].strip().upper() == 'Z':
        if 'CCSD(T)' in lines:
            return 'CCSD(T)'
        elif 'CCSD' in lines:
@@ -58,13 +58,11 @@ def gaussian_energy(lines,method=''):
 
     if method == '':
         method = gaussian_method(lines)
-    
     if 'CCSD' in method:
         method = method.replace('(','\(').replace(')','\)')
         energ  = method + '=([\w,\.,\s,-]*)'
-        energ  = re.findall(energ,lines)
+        energ  = re.findall(energ,lines.replace('\n','').replace(' ',''))
         return (method,float(energ[-1].replace('\n','').replace(' ','')))
-
     else:
         energ = '(\S+)\s*A\.U\.'
         energ = re.findall(energ,lines)
@@ -160,7 +158,6 @@ def gaussian_xyz(lines):
 ############      MOLPRO PARSER    ###########
 ##############################################
 def molpro_energy(lines,method=''):
-    
     if method == '':
         method = molpro_method(lines)
     method = method.replace('(','\(').replace(')','\)')
@@ -168,7 +165,7 @@ def molpro_energy(lines,method=''):
         energ = 'E\(' + method +'\) \/ Hartree\s*[\d,\-,\.]*\s*([\d,\-,\.]*)'
         energ  = re.findall(energ,lines)
         if len(energ) != 0:
-            return float(energ[-1].replace('\n','').replace(' ',''))
+            return (method, float(energ[-1].replace('\n','').replace(' ','')))
 
     if 'CCSD' in method:
         energ  = method + ' total energy\s*([\d,\-,\.]+)'
@@ -179,18 +176,17 @@ def molpro_energy(lines,method=''):
             if len(energ) == 0:
                 print 'energy not found'
             else:
-                return float(energ[-1].replace('\n','').replace(' ',''))
+                return (method, float(energ[-1].replace('\n','').replace(' ','')))
         else:
-            return float(energ[-1].replace('\n','').replace(' ',''))
+            return (method, float(energ[-1].replace('\n','').replace(' ','')))
 
     elif 'HF' in method:
         energ = method + ' STATE\s*\d\.\d\s*Energy\s*([\w,\-,\.]+)'
         energ = re.findall(energ,lines)
-        print energ
         if len(energ) == 0:
             print 'energy not found'
         else:
-            return float(energ[-1].replace('\n','').replace(' ',''))
+            return (method, float(energ[-1].replace('\n','').replace(' ','')))
     
     elif 'MP' in method:
         energ = ' ' + method + ' total energy:\s*([\w,\-,\.]+)'
@@ -198,12 +194,17 @@ def molpro_energy(lines,method=''):
         if len(energ) == 0:
             print 'energy not found'
         else:
-            return float(energ[-1].replace('\n','').replace(' ',''))
+            return (method, float(energ[-1].replace('\n','').replace(' ','')))
 
     energ  = 'SETTING ENERGY\s*=\s*([\w,\.,-]+)'
     energ  = re.findall(energ,lines)
     if len(energ) == 0:
-        print 'energy not found'
+        energ  = 'SETTING CBSEN\s*=\s*([\w,\.,-]+)'
+        energ  = re.findall(energ,lines)
+        if len(energ) == 0:
+            print 'energy not found'
+        else:
+            return (method,float(energ[-1].replace('\n','').replace(' ','')))
     else:
         return (method,float(energ[-1].replace('\n','').replace(' ','')))
 
@@ -225,6 +226,9 @@ def molpro_method(lines):
     method  = re.findall(method,lines)
     if 'CCSD(T)' in lines:
         return 'CCSD(T)'
+    if method[-1] == 'DFT':
+        method = 'dft=\[([\d,\w]*)\]'
+        method  = re.findall(method,lines)
     return method[-1]
 
 def molpro_basisset(lines):
