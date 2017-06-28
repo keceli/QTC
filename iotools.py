@@ -327,6 +327,102 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False):
             write_file(msg + err, stderrfile)      
     return msg
 
+def db_head_path(db_location=None):
+
+    if db_location == None:
+        return '/home/elliott/testdirectory/'
+    else:
+        return db_location
+
+
+def db_smiles_path(smiles, db_location = None):
+
+    import obtools as ob
+    mol = ob.get_mol(smiles)
+    directory = ob.get_smiles_path(mol)
+    if db_location == None:
+        db_location = db_head_path()
+
+    return join_path(db_location, directory)
+
+
+def prog_meth_bas_path(prog, method, basis):
+    return prog + '__' + method + '__' + basis + '/'
+
+
+def db_opt_path(prog, method, basis, db_location=None, smiles=None):
+
+    if smiles == None:
+        directory = db_head_path(db_location)
+    else:
+        directory = db_smiles_path(smiles, db_location)
+    if method == None:
+        return join_path(directory, 'sp/')
+    return join_path(directory, prog_meth_bas_path(prog, method, basis))
+
+
+def db_sp_path(prog, method, basis, db_location=None, smiles=None, optprog=None, optmethod=None, optbasis=None):
+    
+    directory = db_opt_path(optprog, optmethod, optbasis, db_location, smiles)
+    if prog == None:
+        if optprog == None:
+            return db_head_path(db_location)
+        return directory
+    return join_path(directory, prog_meth_bas_path(prog,method,basis))
+
+
+def db_store_opt_prop(s, smiles, typ='zmat', db_location=None, prog=None, method=None, basis=None):
+
+    if prog == None:
+        directory =  db_head_path(db_location)
+    else:
+        directory =  db_opt_path(prog, method, basis, db_location, smiles)
+
+    mkdir(directory)
+    write_file(s, join_path(directory, smiles + '.' + typ))
+    return
+
+def db_get_opt_prop(smiles, typ='zmat', db_location=None, prog=None, method=None, basis=None):
+
+    if prog == None:
+        directory =  db_head_path(db_location)
+    else:
+        directory =  db_opt_path(prog, method, basis, db_location, smiles)
+
+    if check_file(join_path(directory, smiles + '.' + typ)):
+        return read_file(join_path(directory, smiles + '.' + typ))
+    return 
+
+def db_store_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
+       
+    if prog == None:
+        directory =  db_head_path(db_location)
+    elif optprog == None:
+        directory = db_sp_path(prog, method, basis, db_location, smiles, prog, method, basis)
+    else:
+        directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+
+    mkdir(directory) 
+    write_file(s, join_path(directory, smiles + '.' + typ))
+    return 
+    
+def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
+
+    if prog == None:
+        directory =  db_head_path(db_location)
+    elif optprog == None:
+        directory = db_sp_path(prog, method, basis, db_location, smiles, prog, method, basis)
+    else:
+        directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+
+    if check_file(join_path(directory, smiles + '.' + typ)):
+        return read_file(join_path(directory, smiles + '.' + typ))
+    return 
+
+def db_logfile_dir(db_location, smiles=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
+    directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+    mkdir(join_path(directory, 'logfiles/')) 
+    return  join_path(directory, 'logfiles/')
 
 if __name__ == "__main__":
     import doctest
