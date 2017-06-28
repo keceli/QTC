@@ -277,7 +277,7 @@ def get_gaussian_zmat(filename):
     lines  = io.read_file(filename)
     return pa.gaussian_zmat(lines)
 
-def build_gauss(mol, theory, basisset):
+def build_gauss(mol, theory, basisset,directory=None):
     """
     Builds a Guassian optimization inputfile for a molecule
     INPUT:
@@ -326,11 +326,13 @@ def build_gauss(mol, theory, basisset):
         gauss += str(charge) + ' ' + str(mult) + '\n'
     gauss += zmat.lstrip('\n')
 
-    io.write_file(gauss, stoich + '.inp')
+    directory = io.db_logfile_dir(directory)
+    filename  = io.join_path(directory, stoich + '.inp')
+    io.write_file(gauss, filename)
 
-    return
+    return filename
 
-def build_molpro(mol, theory, basisset):
+def build_molpro(mol, theory, basisset, directory=None):
     """
     Builds a Guassian optimization inputfile for a molecule
     INPUT:
@@ -394,9 +396,11 @@ def build_molpro(mol, theory, basisset):
         else:
             molp += '!open shell input\nbasis=' + basisset + '\ndft=['+theory.lower() + ']\nuhf\ndft\noptg\nENERGY=energy'
 
-    io.write_file(molp, stoich + '.inp')
+    directory = io.db_logfile_dir(directory)
+    filename  = io.join_path(directory, stoich + '.inp')
+    io.write_file(molp, filename)
  
-    return 
+    return filename 
 
 def run_gauss(filename):
     """
@@ -433,41 +437,31 @@ def run_energy(mol, theory, basisset, prog, mol_is_smiles=True):
         stoich = mol['stoich']
 
     dic    = mol      
-    io.mkdir('scrap')
-    io.cd('scrap')
+    
+    directory = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
 
     if  prog == 'g09':
         print 'Running G09 on ' + stoich + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
-        build_gauss(dic, theory, basisset)
-        run_gauss(stoich+'.inp')
-        E = getenergy_fromlogfile(stoich+'.log',theory.lstrip('R').lstrip('U'),'g09')
+        filename = build_gauss(dic, theory, basisset, directory)
+        run_gauss(filename)
+        E = getenergy_fromlogfile(filename.replace('.inp', '.log'),theory.lstrip('R').lstrip('U'),'g09')
         print 'Energy found to be: ' + str(E)
-        io.cd('..')
         return E
 
     elif prog == 'molpro':
         print 'Running Molpro on ' + stoich + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
-        build_molpro(mol, theory, basisset)
-        run_molpro(stoich+'.inp')
-        E = getenergy_fromlogfile(stoich+'.out',theory.lstrip('R').lstrip('U'),'molpro')
+        filename = build_molpro(mol, theory, basisset, directory)
+        run_molpro(filename)
+        E = getenergy_fromlogfile(filename.replace('.inp', '.out'),theory.lstrip('R').lstrip('U'),'molpro')
         print 'Energy found to be: ' + str(E)
-        io.cd('..')
         return E
-
-def get_energy_file_location(smiles,prog, theory, basisset):
-
-    dire   = '/home/elliott/directorytest/'
-    dire  += ob.get_smiles_path(ob.get_mol(smiles))
-    dire  += prog + '__' + theory + '__' + basisset 
-    io.mkdir(dire)
-    return dire
 
 def E_dic(bas,energORs,theory,basisset,prog):
     """
     Checks a dictionary and directories for energy at a specified level of theory and basisset 
     Computes energy if it isn't in dictionary already
     INPUT:
-    dic      - dictionary we are checking
+    bas      - smiles string of molecule or basis moleule
     energORs - are we checking for the energy or its uncertainty (uncertainty broken)
     theory   - theory energy should be listed or computed with
     basisset - basis set energy should be listed or computed with
@@ -490,17 +484,17 @@ def E_dic(bas,energORs,theory,basisset,prog):
 
     ### Check directory ###
 
-    dire = get_energy_file_location(bas, prog, theory, basisset)
-    io.cd(dire)
-    if io.check_file('energy.txt'):
-        E = float(io.read_file('energy.txt').strip())
-        print 'Energy ' + str(E) +  ' pulled from: ' + dire + '/energy.txt'
+    dire = io.db_sp_path(prog, theory, basisset, None, bas, prog, theory, basisset)
+    enefile = io.join_path(dire, bas+ '.ene')
+    if io.check_file(enefile):
+        E = float(io.read_file(enefile).strip())
+        print 'Energy ' + str(E) +  ' pulled from: ' + enefile
         return E
 
     if energORs == 'energy':
         E = run_energy(bas, theory, basisset, prog)
-        io.write_file(str(E), 'energy.txt')
-        print 'Energy ' + str(E) +  ' saved to: ' + dire + '/energy.txt'
+        io.db_store_sp_prop(str(E), bas, 'ene', dire)
+        print 'Energy ' + str(E) +  ' saved to: ' + enefile
         return E
 
     elif energORs != 'energy':
@@ -555,7 +549,6 @@ def check(clist, basis,stoich,atomlist):
 
 def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/',db='tempdb',prog = 'auto', runE=False):
    
-    pwd   = io.pwd() 
     basis = basis.split()
     stoich_to_smiles = {'H2':'[H][H]','O2':'[O][O]','H2O':'O','NH3':'N','SO2':'O=S=O','CO2':'C(=O)=O',
                         'CH3CH3': 'CC', 'C2H6':'CC','CH3OH':'CO','CH4O':'CO','H2CO':'C=O','CH2O':'C=O','CH4':'C'}
@@ -568,7 +561,7 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
 
     if is_auto(mol):
         mol = getname_fromdirname() 
-        mol = ob.get_formula(ob.get_mol(mol))
+        molstoich = ob.get_formula(ob.get_mol(mol))
 
     if is_auto(theory) and io.check_file(logfile):
         theory  = gettheory_fromlogfile(logfile)
@@ -576,22 +569,24 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
         theory += getbasisset_fromlogfile(logfile)
     theory, basisset = theory.split('/')
 
-    dire = get_energy_file_location(mol, prog, theory, basisset)
-    if io.check_file(dire + '/energy.txt'):
-        E = float(io.read_file(dire + '/energy.txt').strip())
-        print 'Energy ' + str(E) +  ' pulled from: ' + dire + '/energy.txt'
-        mol = ob.get_formula(ob.get_mol(mol))
+
+    dire = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
+    enefile = io.join_path(dire, mol + '.ene')
+    if io.check_file(enefile):
+        E = float(io.read_file(enefile).strip())
+        print 'Energy ' + str(E) +  ' pulled from: ' + enefile
+        molstoich = ob.get_formula(ob.get_mol(mol))
+
     elif runE:
-        io.cd(dire)
         E = run_energy(mol, theory, basisset, prog, True)
-        print 'Energy ' + str(E) +  ' saved to: ' + dire + '/energy.txt'
-        io.write_file(str(E), 'energy.txt')
-        mol = ob.get_formula(ob.get_mol(mol))
+        io.write_file(str(E), enefile)
+        print 'Energy ' + str(E) +  ' saved to: ' + enefile
+        molstoich = ob.get_formula(ob.get_mol(mol))
     elif is_auto(E):
         E = getenergy_fromlogfile(logfile,theory)
         
     basprint = 'manually select basis'
-    atomlist = get_atomlist(mol)
+    atomlist = get_atomlist(molstoich)
     basisselection = 0
     if is_auto(basis[0]):
         basis = select_basis(atomlist)
@@ -600,10 +595,10 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
     elif basis[0] == 'basis.dat':
         basis = io.read_file('basis.dat').split()
         basprint = 'read basis from basis.dat'
-    lines =  ('\n-------------------------------------------------\n\n' +
-              'HEAT OF FORMATION FOR: ' + mol +
-              '\n    at ' + theory + '/' +  basisset + 
-              '\n\n-------------------------------------------------\n\n'
+    lines =  ('\n---------------------------------------------------\n\n' +
+              'HEAT OF FORMATION FOR: ' + mol + ' (' + molstoich + ')' +
+              '\n      at ' + theory + '/' +  basisset + 
+              '\n\n---------------------------------------------------\n\n'
               + 'Electronic Energy is: ' +  str(E) + '\nYou have chosen to ' + 
               basprint + '\n\nBasis is: ' + ', '.join(basis))
     print lines 
@@ -615,14 +610,14 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
 
     #COMPUTE Atomlist, stoichlist, matrix, and coefficients
     atomlist = list(set(atomlist))
-    stoich = get_stoich(mol,atomlist)
+    stoich = get_stoich(molstoich,atomlist)
     mat = form_mat(basis,atomlist)
 
     for i in range(5):
         if np.linalg.det(mat) != 0:
              break
         print 'Matrix is singular -- select new basis'
-        atomlist = get_atomlist(mol)
+        atomlist = get_atomlist(molstoich)
         basis = select_basis(atomlist,basisselection)
         basisselection += 1
         print ('\n\nBasis is: ' + ', '.join(basis))
@@ -630,7 +625,7 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
             bas = ob.get_formula(ob.get_mol(bas))
             atomlist.extend(get_atomlist(bas))
         atomlist = list(set(atomlist))
-        stoich = get_stoich(mol,atomlist)
+        stoich = get_stoich(molstoich,atomlist)
         mat = form_mat(basis,atomlist)
         print mat
 
@@ -651,7 +646,7 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
     ##################
 
     #COMPUTE AND PRINT delH###
-    E =  comp_energy(mol,basis,clist,E,theory,basisset,prog)
+    E =  comp_energy(molstoich,basis,clist,E,theory,basisset,prog)
     lines =  '\n        delHf(0K)'
     lines += '\nA.U. \t'
     for e in E[:1]:  lines += str(e) + '\t'
@@ -662,8 +657,9 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
     lines += '\n\n-------------------------------------------------\n\n'
     print lines
     ##########################
-    io.cd(pwd)
-    return E[0] * 627.503
+    hf0k = E[0] * 627.503 
+    io.db_store_sp_prop(str(hf0k),mol,'hf0k',None,prog,theory,basisset)
+    return hf0k
 
 if __name__ == '__main__': 
     """
