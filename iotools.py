@@ -328,15 +328,21 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False):
     return msg
 
 def db_head_path(db_location=None):
-
-    if db_location == None:
+    """
+    Returns default database path (in pacc) unless otherwise specified
+    """
+    if db_location == 'test':
         return '/home/elliott/testdirectory/'
+    if db_location == None:
+        return '/lcrc/project/PACC/databases/qtc_database/'
     else:
         return db_location
 
 
 def db_smiles_path(smiles, db_location = None):
-
+    """
+    Returns the path for a smiles molecule in a database
+    """
     import obtools as ob
     mol = ob.get_mol(smiles)
     directory = ob.get_smiles_path(mol)
@@ -347,11 +353,20 @@ def db_smiles_path(smiles, db_location = None):
 
 
 def prog_meth_bas_path(prog, method, basis):
-    return prog + '__' + method + '__' + basis + '/'
+    """
+    Our current directory structure is to combine program, method, and basis
+    with underscores (e.g., g09__ccsd__cc-pvdz)
+    """
+    return prog.lower() + '__' + method.lower() + '__' + basis.lower() + '/'
 
 
 def db_opt_path(prog, method, basis, db_location=None, smiles=None):
-
+    """
+    Get path to  optimization level of directory tree for a smiles molecule for
+    the prog, method, and basis of optimization if all is specified (db_location None will get pacc directory)
+    OR
+    Specify db_location and set smiles to None or even prog method and basis
+    """
     if smiles == None:
         directory = db_head_path(db_location)
     else:
@@ -362,7 +377,13 @@ def db_opt_path(prog, method, basis, db_location=None, smiles=None):
 
 
 def db_sp_path(prog, method, basis, db_location=None, smiles=None, optprog=None, optmethod=None, optbasis=None):
-    
+    """
+    Get the path to the single point level of directory for a smiles molecule for the optprog,
+    optmethod, and optbasis of optimization and prog, method, and basis single point
+    if all specified (db_location None will get pacc directory)
+    OR
+    Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
+    """
     directory = db_opt_path(optprog, optmethod, optbasis, db_location, smiles)
     if prog == None:
         if optprog == None:
