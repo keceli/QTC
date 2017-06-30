@@ -108,6 +108,15 @@ def write_file(s, filename='newfile'):
         f.write(s)
     return
 
+def append_file(s, filename='newfile'):
+
+    """
+    Appends s string to a file with teh given 'filename'.
+    """
+    with open(filename, 'a') as f:
+        f.write(s)
+    return
+
 
 def read_file(filename, aslines=False):
     """
@@ -379,7 +388,7 @@ def db_opt_path(prog, method, basis, db_location=None, smiles=None):
 def db_sp_path(prog, method, basis, db_location=None, smiles=None, optprog=None, optmethod=None, optbasis=None):
     """
     Get the path to the single point level of directory for a smiles molecule for the optprog,
-    optmethod, and optbasis of optimization and prog, method, and basis single point
+    optmethod, and optbasis of optimization and prog, method, and basis of single point
     if all specified (db_location None will get pacc directory)
     OR
     Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
@@ -393,7 +402,12 @@ def db_sp_path(prog, method, basis, db_location=None, smiles=None, optprog=None,
 
 
 def db_store_opt_prop(s, smiles, typ='zmat', db_location=None, prog=None, method=None, basis=None):
-
+    """
+    Store a property s of type typ ( zmat, xyz) in  optimization level of directory tree for a smiles molecule for
+    the prog, method, and basis of optimization if all is specified (db_location None will get pacc directory)
+    OR
+    Specify db_location and set smiles to None or even prog method and basis
+    """
     if prog == None:
         directory =  db_head_path(db_location)
     else:
@@ -404,18 +418,50 @@ def db_store_opt_prop(s, smiles, typ='zmat', db_location=None, prog=None, method
     return
 
 def db_get_opt_prop(smiles, typ='zmat', db_location=None, prog=None, method=None, basis=None):
-
+    """
+    Get a property s of type typ ( zmat, xyz) in  optimization level of directory tree for a smiles molecule for
+    the prog, method, and basis of optimization if all is specified (db_location None will get pacc directory)
+    OR
+    Specify db_location and set smiles to None or even prog method and basis
+    """
     if prog == None:
         directory =  db_head_path(db_location)
     else:
         directory =  db_opt_path(prog, method, basis, db_location, smiles)
-
     if check_file(join_path(directory, smiles + '.' + typ)):
         return read_file(join_path(directory, smiles + '.' + typ))
     return 
 
 def db_store_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
-       
+    """
+    Store a property s of type typ (energy = ene,  freqs = fr, projected freqs = pfr, 
+    anharmonic freqs = anfr, proj anharms = anpfr)  in the single point level of 
+    directory for a smiles molecule for the optprog, optmethod, and optbasis of 
+    optimization and prog, method, and basis single point if all specified 
+    (db_location None will get pacc directory)
+    OR
+    Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
+    """
+    if prog == None:
+        directory =  db_head_path(db_location)
+    elif optprog == None:
+        directory = db_sp_path(prog, method, basis, db_location, smiles, prog, method, basis)
+    else:
+        directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+    mkdir(directory) 
+    write_file(s, join_path(directory, smiles + '.' + typ))
+    return 
+    
+def db_append_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
+    """
+    Append a property s of type typ (energy = ene,  freqs = fr, projected freqs = pfr, 
+    anharmonic freqs = anfr, proj anharms = anpfr)  in the single point level of 
+    directory for a smiles molecule for the optprog, optmethod, and optbasis of 
+    optimization and prog, method, and basis single point if all specified 
+    (db_location None will get pacc directory)
+    OR
+    Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
+    """
     if prog == None:
         directory =  db_head_path(db_location)
     elif optprog == None:
@@ -424,10 +470,18 @@ def db_store_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=N
         directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
 
     mkdir(directory) 
-    write_file(s, join_path(directory, smiles + '.' + typ))
+    append_file(s, join_path(directory, smiles + '.' + typ))
     return 
-    
 def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
+    """
+    Get a prop of type typ (energy = ene,  freqs = fr, projected freqs = pfr, 
+    anharmonic freqs = anfr, proj anharms = anpfr)  in the single point level of 
+    directory for a smiles molecule for the optprog, optmethod, and optbasis of 
+    optimization and prog, method, and basis single point if all specified 
+    (db_location None will get pacc directory)
+    OR
+    Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
+    """
 
     if prog == None:
         directory =  db_head_path(db_location)
@@ -435,15 +489,49 @@ def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, 
         directory = db_sp_path(prog, method, basis, db_location, smiles, prog, method, basis)
     else:
         directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
-
     if check_file(join_path(directory, smiles + '.' + typ)):
         return read_file(join_path(directory, smiles + '.' + typ))
     return 
 
 def db_logfile_dir(db_location, smiles=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
+    """
+    Returns the path where logfiles should be stored for a computation 
+    """
     directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
     mkdir(join_path(directory, 'logfiles/')) 
     return  join_path(directory, 'logfiles/')
+
+def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
+    """ 
+    For a smiles species and the lines of a logfile will parse and store prog, method, basis
+    energy, zmat, xyz, and freqs. 
+    TODO: anharmonic, projected frequencies
+    """
+    import patools as pa
+
+    prog   =  pa.get_prog(lines)
+    method =  pa.method(  lines).lower().lstrip('r')
+    basis  =  pa.basisset(lines).lower()
+    energy =  str(pa.energy(lines) [1])
+    zmat   =  pa.zmat(    lines)     
+    xyz    =  pa.xyz(     lines) 
+    freqs  = ', '.join(freq for freq in pa.freqs(lines)[::-1])
+    
+    if prog == None or method == None or basis == None:
+        print 'Parsing error, check lines'
+        return 
+
+    if zmat != None:
+        db_store_opt_prop(zmat, species, 'zmat', None, prog, method, basis)
+    if xyz != None:
+       db_store_opt_prop(xyz, species, 'xyz', None, prog, method, basis)
+    if optprog == None:
+       optprog, optmethod, optbasis = prog, method, basis
+
+    db_store_sp_prop(energy, species, 'ene', None, prog, method, basis, optprog, optmethod, optbasis)
+    db_store_sp_prop(freqs,   species, 'fr', None, prog, method, basis, optprog, optmethod, optbasis)
+
+    return 
 
 if __name__ == "__main__":
     import doctest

@@ -36,8 +36,6 @@ To use this as a module in another script:
 
 """
 #  TO DO:
-#  Search directory structures for energies instead of/ alongside using test database
-#  Store energies when they are computed for basis setsOnce energy is computed for basis sets
 #  Select basis based on type of bonds
 
 def get_atomlist(mol):
@@ -177,24 +175,78 @@ def comp_coeff(mat,stoich):
     coeff = np.dot(mati,stoich)
 
     return coeff
-    
-#def update_dic(mol,dic):
-#    """
-#    Finds if we already have the energy for a molecule in our dictionary, and if not checks if we are in 
-#    its EStokTP directory that we can get that information from and adds it to the dictionary
-#    INPUT:
-#    mol   - molecule
-#    dic   - molecule/energy dictionary
-#    OUTPUT:
-#    dic   - updated molecule/energy dictionary
-#    """
-#    if mol in dic:
-#        return dic
-#    elif os.path.exists('geoms/reac1_l1.xyz'):
-#        lines = open('geoms/reac1_l1.xyz','r').read()
-#        E = float(lines.split('\n')[1])
-#        dic[mol] = E
-#        return dic
+
+#def select_better_basis(smiles, atomlist):    
+##test script to pick basis based on bond type:
+#
+#    count = len(atomlist)-1
+#    doublebond =[]
+#    triplebond =[]
+#    singlebond =[]
+#    branch = '' 
+#    
+#    if '(' in smiles:
+#        branches = smiles.split('(')
+#        branch = branches[0][-1] + branches[1].split(')')[0]
+#        smiles = branches[0] + branches[1].split(')')[1]
+#    if '=' in branch:
+#        frag = branch.split('=')
+#        for i in range(len(frag)-1):
+#            doublebond.append(frag[i][-1] + frag[i+1][0])
+#    if '#' in branch:
+#        frag = branch.split('#')
+#        for j in range(len(frag)-1):
+#             triplebond.append(frag[j][-1] + frag[j+1][0])
+#    if '=' in smiles:
+#        frag = smiles.split('=')
+#        for i in range(len(frag)-1):
+#            doublebond.append(frag[i][-1] + frag[i+1][0])
+#    if '#' in smiles:
+#        frag = smiles.split('#')
+#        for j in range(len(frag)-1):
+#             triplebond.append(frag[j][-1] + frag[j+1][0])
+#    
+#    if 'CC' in smiles:
+#        singlebond.append('CC')
+#    if 'CO' in smiles or 'OC' in smiles:
+#        singlebond.append('CO')
+#    if 'OO' in smiles:
+#        singlebond.append('OO')
+#    if 'CC' in branch:
+#        singlebond.append('CC')
+#    if 'CO' in branch or 'OC' in branch:
+#        singlebond.append('CO')
+#    if 'OO' in branch:
+#        singlebond.append('OO')
+#    if 'C' in smiles or 'C' in branch:
+#        singlebond.append('CH')
+#    if 'O' in smiles or 'O' in branch:
+#        singlebond.append('OH')
+#    if 'O' in smiles or 'O' in branch:
+#        singlebond.append('OH')
+#    singlebond.append('HH')
+#    basis = []
+#    for bond in doublebond:
+#        if 'CO' == bond:
+#            basis.append('C(=O)=O')
+#        if 'CC' == bond:
+#            basis.append('C=C')
+#        if 'SO' == bond:
+#            basis.append('O=S=O')
+#    for bond in singlebond:
+#        if 'CO' == bond:
+#            basis.append('CO')
+#        if 'CC' == bond:
+#            basis.append('CC')
+#        if 'OO' == bond:
+#            basis.append('[O][O]')
+#        if 'CH' == bond:
+#            basis.append('C')
+#        if 'OH' == bond:
+#            basis.append('O')
+#        if 'HH' == bond:
+#            basis.append('[H][H]')
+#    return basis[:count+1]
     
 def is_auto(item):
     """
@@ -227,7 +279,7 @@ def gettheory_fromlogfile(logfile):
     return the last method run in the logfile
     """
     lines = io.read_file(logfile)
-    return pa.method(lines) 
+    return pa.method(lines).lstrip('R').lstrip('r') 
 
 def getbasisset_fromlogfile(logfile):
     """
@@ -391,8 +443,12 @@ def build_molpro(mol, theory, basisset, directory=None):
             theory = 'dft'
         molp += theory.lower() + '\noptg\nENERGY=energy'
     else:
-        if 'ccsd' in theory.lower() or 'cisd' in theory.lower() or 'hf' in theory.lower() or 'mp' in theory.lower():
+        if 'ccsd' in theory.lower() or 'cisd' in theory.lower(): 
 	    molp += '!open shell input\nbasis=' + basisset + '\nhf\nu' + theory.lower() + '\noptg\nENERGY=energy'
+        elif 'hf' in theory.lower():
+	    molp += '!open shell input\nbasis=' + basisset + '\nuhf\noptg\nENERGY=energy'
+        elif 'mp' in theory.lower():
+	    molp += '!open shell input\nbasis=' + basisset + '\nrhf\n' + theory.lower() + '\noptg\nENERGY=energy'
         else:
             molp += '!open shell input\nbasis=' + basisset + '\ndft=['+theory.lower() + ']\nuhf\ndft\noptg\nENERGY=energy'
 
@@ -406,8 +462,7 @@ def run_gauss(filename):
     """
     Runs Gaussian on file: filename
     """
-    os.system('soft add +g09; g09 ' + filename)
-    
+    os.system('soft add +g09; g09 ' + filename.replace('(','\(').replace(')','\)').replace('[','\[').replace(']','\]'))
     return
 
 def run_molpro(filename):
@@ -444,6 +499,7 @@ def run_energy(mol, theory, basisset, prog, mol_is_smiles=True):
         print 'Running G09 on ' + stoich + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
         filename = build_gauss(dic, theory, basisset, directory)
         run_gauss(filename)
+        io.parse_all(mol, io.read_file(filename.replace('.inp','.log')))
         E = getenergy_fromlogfile(filename.replace('.inp', '.log'),theory.lstrip('R').lstrip('U'),'g09')
         print 'Energy found to be: ' + str(E)
         return E
@@ -452,6 +508,7 @@ def run_energy(mol, theory, basisset, prog, mol_is_smiles=True):
         print 'Running Molpro on ' + stoich + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
         filename = build_molpro(mol, theory, basisset, directory)
         run_molpro(filename)
+        io.parse_all(mol, io.read_file(filename.replace('.inp','.out')))
         E = getenergy_fromlogfile(filename.replace('.inp', '.out'),theory.lstrip('R').lstrip('U'),'molpro')
         print 'Energy found to be: ' + str(E)
         return E
@@ -480,7 +537,9 @@ def E_dic(bas,energORs,theory,basisset,prog):
     if prog.lower() in dic: 
         if theory.lower().lstrip('r') in dic[prog.lower()]:
             if basisset.lower() in dic[prog.lower()][theory.lower().lstrip('r')]:
-                return dic[prog.lower()][theory.lower().lstrip('r')][basisset.lower()][energORs]
+                E =  dic[prog.lower()][theory.lower().lstrip('r')][basisset.lower()][energORs]
+                print 'Energy ' + str(E) +  ' pulled from dictionary database' 
+                return E
 
     ### Check directory ###
 
@@ -525,7 +584,6 @@ def comp_energy(mol,basis,coefflist,E,theory,basisset,prog):
         zE  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
 
         var += (coefflist[i] * nest_2_dic(bas,'HeatForm','sigma') * 0.00038088   )**2
-        
         E    =  E_dic(bas, 'energy',theory,basisset,prog)
         zE  -=  coefflist[i] * E
         #var += (coefflist[i] * E * E_dic(bas,'sigma',theory,basisset,prog) )**2
@@ -547,7 +605,7 @@ def check(clist, basis,stoich,atomlist):
             break
     return statement
 
-def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/',db='tempdb',prog = 'auto', runE=False):
+def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/',db='tempdb',prog = 'auto', runE=False, mol_not_smiles=False):
    
     basis = basis.split()
     stoich_to_smiles = {'H2':'[H][H]','O2':'[O][O]','H2O':'O','NH3':'N','SO2':'O=S=O','CO2':'C(=O)=O',
@@ -569,36 +627,45 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
         theory += getbasisset_fromlogfile(logfile)
     theory, basisset = theory.split('/')
 
-
-    dire = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
-    enefile = io.join_path(dire, mol + '.ene')
-    if io.check_file(enefile):
-        E = float(io.read_file(enefile).strip())
-        print 'Energy ' + str(E) +  ' pulled from: ' + enefile
+    if not mol_not_smiles:
+        dire = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
+        enefile = io.join_path(dire, mol + '.ene')
         molstoich = ob.get_formula(ob.get_mol(mol))
 
-    elif runE:
-        E = run_energy(mol, theory, basisset, prog, True)
-        io.write_file(str(E), enefile)
-        print 'Energy ' + str(E) +  ' saved to: ' + enefile
-        molstoich = ob.get_formula(ob.get_mol(mol))
-    elif is_auto(E):
+        if io.check_file(enefile):
+            E = float(io.read_file(enefile).strip())
+            print 'Energy ' + str(E) +  ' pulled from: ' + enefile
+
+        elif runE:
+            dire = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
+            enefile = io.join_path(dire, mol + '.ene')
+            E = run_energy(mol, theory, basisset, prog, True)
+            io.write_file(str(E), enefile)
+            print 'Energy ' + str(E) +  ' saved to: ' + enefile
+    else:
+        molstoich = mol
+
+    if is_auto(E):
         E = getenergy_fromlogfile(logfile,theory)
-        
+    
     basprint = 'manually select basis'
     atomlist = get_atomlist(molstoich)
     basisselection = 0
     if is_auto(basis[0]):
         basis = select_basis(atomlist)
+        #if mol_not_smiles:
+        #    basis = select_basis(atomlist)
+        #else:
+        #    basis = select_better_basis(mol,atomlist)
         basisselection += 1
         basprint = 'automatically generate basis'
     elif basis[0] == 'basis.dat':
         basis = io.read_file('basis.dat').split()
         basprint = 'read basis from basis.dat'
-    lines =  ('\n---------------------------------------------------\n\n' +
+    lines =  ('\n___________________________________________________\n\n' +
               'HEAT OF FORMATION FOR: ' + mol + ' (' + molstoich + ')' +
               '\n      at ' + theory + '/' +  basisset + 
-              '\n\n---------------------------------------------------\n\n'
+              '\n\n___________________________________________________\n\n'
               + 'Electronic Energy is: ' +  str(E) + '\nYou have chosen to ' + 
               basprint + '\n\nBasis is: ' + ', '.join(basis))
     print lines 
@@ -654,13 +721,22 @@ def main(mol,logfile='geoms/reac1_l1.log', E=9999.9, basis='auto', theory='auto/
     for e in E[:1]:  lines += str(e/ .00038088) + '\t'
     lines += '\nkcal   \t'
     for e in E[:1]:  lines += str(e *  627.503) + '\t'
-    lines += '\n\n-------------------------------------------------\n\n'
-    print lines
     ##########################
     hf0k = E[0] * 627.503 
-    io.db_store_sp_prop(str(hf0k),mol,'hf0k',None,prog,theory,basisset)
+    if not mol_not_smiles:
+        if not io.check_file(dire + '/' + mol + '.hf0k'):
+            io.db_store_sp_prop('Energy (kcal)\tBasis\n----------------------------------\n',mol,'hf0k',None,prog,theory,basisset)
+        s = '\n' + str(hf0k) + '\t' + '  '.join(basis) 
+        io.db_append_sp_prop(s,mol,'hf0k',None,prog,theory,basisset)
+        
+        lines += '\n\nStored heats of formation:\n'
+        lines += '----------------------------------\n' 
+        lines += io.db_get_sp_prop(mol,'hf0k',None,prog,theory,basisset)
+    lines += '\n\n_________________________________________________\n\n'
+    print lines
     return hf0k
 
+       
 if __name__ == '__main__': 
     """
     Run heat of formation code
@@ -670,20 +746,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                             description="SARAH!!! you haven't done this yet!!!")
 
-    parser.add_argument('-s','--stoichiometry',      type=str,  default='auto')
-    parser.add_argument('-e','--electronic_energy',  type=float,default=9999.9)
-    parser.add_argument('-r','--run_energy',              action='store_true')
-    parser.add_argument('-b','--select_stoich_basis',type=str,  default='auto')
-    parser.add_argument('-B','--select_smiles_basis',type=str,  default='auto')
-    parser.add_argument('-t','--level_of_theory',    type=str,  default='auto/')
+    parser.add_argument('-m','--molecule',           type=str,   default='auto')
+
     parser.add_argument('-l','--logfile',            type=str,  default='geoms/reac1_l1.log')
-    parser.add_argument('-d','--database',           type=str,  default='testdb')
-    parser.add_argument('-p','--program',            type=str,  default='auto')
+
+    parser.add_argument('-b','--select_stoich_basis',type=str,   default='auto')
+    parser.add_argument('-B','--select_smiles_basis',type=str,   default='auto')
+
+    parser.add_argument('-t','--level_of_theory',    type=str,  default='auto/')
+    parser.add_argument('-e','--electronic_energy',  type=float, default=9999.9)
+    parser.add_argument('-p','--program',            type=str,   default='auto')
+
+    parser.add_argument('-d','--database',           type=str, default='testdb')
+    parser.add_argument('-s','--mol_not_smiles',            action='store_true')
+    parser.add_argument('-r','--run_energy',                action='store_true')
 
     ###########################
     args = parser.parse_args()
 
-    mol    = args.stoichiometry
+    mol    = args.molecule
     E      = args.electronic_energy
     runE   = args.run_energy
     basis  = args.select_stoich_basis
@@ -693,5 +774,6 @@ if __name__ == '__main__':
     logfile= args.logfile
     db     = args.database
     prog   = args.program
+    mol_not_smiles = args.mol_not_smiles
 
-    main(mol,logfile, E, basis, theory, db, prog, runE) 
+    main(mol,logfile, basis, E, theory, db, prog, runE, mol_not_smiles) 

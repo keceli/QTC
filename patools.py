@@ -40,7 +40,7 @@ def gaussian_basisset(lines):
 
     bas = 'Standard basis:\s*(\S*)'
     bas = re.findall(bas,lines)
-
+    bas[-1] = bas[-1].replace('(d)','*')
     return bas[-1]
 
 def gaussian_method(lines):
@@ -128,32 +128,28 @@ def gaussian_xyz_foresk(lines):
     return xyz 
     
 def gaussian_xyz(lines):
-    atom = lines.split('Distance matrix')[-1].split('Symm')[0]
-    if len(atom.split('\n')) > 8:
-        atom = atom.split(' 6 ')[0] + ' 6 ' + atom.split(' 6 ')[1]
-        atom = atom.split('\n')[2:-2]
-    else:
-        atom = atom.split('\n')[2:-1]
-    length = len(atom)
-    atoms  = []
-    for at in atom:
-        atoms.extend(at.split()[1])
+    atomnum = {'1':'H', '6':'C','8':'O'}
     xyz = ''
     if 'Eckart' in lines:
         lines = lines.split('Gaussian Orientation')[-1].split('Eckart')[0]
         lines = lines.split('\n')[5:-2]
         for i,line in enumerate(lines):
             line = line.split()
-            xyz += atoms[i] + '  ' + line[2] + '  ' + line[3] + '  ' + line[4] + '\n'
+            xyz += atomnum[line[1]]+ '  ' + line[2] + '  ' + line[3] + '  ' + line[4] + '\n'
     else:
-        lines = lines.split('Coordinates (Angstroms)')[-1].split(' Distance matrix')[0]
+        lines = lines.split('Coordinates (Angstroms)')[-1].split(' Distance matrix')[0].split(' Rotation')[0].split('Symm')[0]
         lines = lines.split('\n')[3:-2]
         for i,line in enumerate(lines):
             line = line.split()
-            xyz += ' ' + atoms[i] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
+            xyz += ' ' + atomnum[line[1]] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
     return xyz 
     
-     
+def gaussian_rotconsts(lines):
+    rot = 'Rotational constants\s*\(GHZ\):\s*([\s,\d,\.,\-]*)'     
+    rot = re.findall(rot,lines)
+    rot = rot[-1].split()
+    return rot 
+
 ##############################################
 ############      MOLPRO PARSER    ###########
 ##############################################
@@ -221,8 +217,7 @@ def  molpro_freqs(lines):
     return freqs
 
 def molpro_method(lines):
-    
-    method  = '1PROGRAM \* (\S*)'
+    method  = '1PROGRAM\s*\*\s*(\S*)'
     method  = re.findall(method,lines)
     if 'CCSD(T)' in lines:
         return 'CCSD(T)'
@@ -235,6 +230,7 @@ def molpro_basisset(lines):
 
     basis = 'basis=(\S*)' 
     basis  = re.findall(basis,lines)
+    basis[-1] = basis[-1].replace('(d)','*')
     return basis[-1]
       
 def molpro_zmat(lines):
