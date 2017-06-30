@@ -26,7 +26,7 @@ def get_listofstrings(array):
     return s
 
 
-def parse_output(s, smilesname, write=False):
+def parse_output(s, smilesname, write=False, store=False):
     package = get_output_package(s)
     if type(s) is list:
         lines = s
@@ -57,9 +57,18 @@ def parse_output(s, smilesname, write=False):
         parsed = True
     elif package == 'molpro':
         theory, energy = pa.molpro_energy(s)
+        calculation    = pa.molpro_calc(s)
+        basis          = pa.molpro_basisset(s)
+        zmat           = pa.molpro_zmat(s)
+        hrmfreq        = pa.molpro_freqs(s)
         parsed = True
     elif package == 'gaussian':
         theory, energy = pa.gaussian_energy(s)
+        calculation    = pa.gaussian_calc(s)
+        basis          = pa.gaussian_basisset(s)
+        zmat           = pa.gaussian_zmat(s)
+        xyz            = pa.gaussian_xyz(s)
+        hrmfreq        = pa.gaussian_freqs(s)
         parsed = True
     if parsed:
         if write:
@@ -90,6 +99,16 @@ def parse_output(s, smilesname, write=False):
                     if write:
                         fname = '{0}_{1}.ene'.format(theory,smilesname)
                         io.write_file(str(energy), fname)
+            if store:
+                if package == 'gaussian':
+                    package = 'g09'
+                io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, theory, basis)
+                if hrmfreq != None:
+                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreq[::-1]) , smilesname,  'hrm', None, package, theory, basis)
+                if xyz != None:
+                    io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, theory, basis)
+                if zmat != None:
+                    io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, theory, basis)
     return d
 
    

@@ -52,7 +52,8 @@ def gaussian_method(lines):
            return 'CCSD(T)'
        elif 'CCSD' in lines:
            return 'CCSD'
-    return method[-1]
+    method = method[-1].lstrip('r').lstrip('u').lstrip('R').lstrip('U')
+    return method
 
 def gaussian_energy(lines,method=''):
 
@@ -60,17 +61,20 @@ def gaussian_energy(lines,method=''):
         method = gaussian_method(lines)
     if 'CCSD' in method:
         method = method.replace('(','\(').replace(')','\)')
-        energ  = method + '=([\w,\.,\s,-]*)'
+        energ  = method + '=([u,U,r,R]*[\w,\.,\s,-]*)'
         energ  = re.findall(energ,lines.replace('\n','').replace(' ',''))
         return (method,float(energ[-1].replace('\n','').replace(' ','')))
     else:
-        energ = '(\S+)\s*A\.U\.'
+       # energ = '(\S+)\s*A\.U\.'
+        energ = 'E\([u,U,r,R]*' + method + '\)\s*=\s*([\d,\-,\.]*)'
         energ = re.findall(energ,lines)
         return (method, float(energ[-1]))
 
 def gaussian_opt_zmat_params(lines):
     
     params = ''
+    if not 'Optimized Parameters' in lines:
+        return None
     varis  = lines.split('Optimized Parameters')[1].split('--------------------------------------')
     if 'Definition' in varis[0]:
         varis = varis[1].split('\n')
@@ -91,8 +95,10 @@ def gaussian_zmat(lines):
     zmat  += 'Variables:\n'
     zmat   = zmat.replace('Charge = ','')
     zmat   = zmat.replace('Multiplicity =','')
-    zmat  += gaussian_opt_zmat_params(lines[1])
-    return zmat
+    optzmat= gaussian_opt_zmat_params(lines[1])
+    if optzmat == None:
+        return None
+    return zmat + optzmat
 
 def  gaussian_freqs(lines):
 
@@ -102,6 +108,12 @@ def  gaussian_freqs(lines):
     for line in freqlines:
         freqs.extend(line.split())
     return freqs
+
+def gaussian_calc(lines):
+    if 'Optimization complete' in lines:
+       return 'geometry optimization'
+    else:
+       return ''
 
 def gaussian_xyz_foresk(lines):
     atom = lines.split('Distance matrix')[-1].split('Symm')[0]
@@ -136,13 +148,15 @@ def gaussian_xyz(lines):
         for i,line in enumerate(lines):
             line = line.split()
             xyz += atomnum[line[1]]+ '  ' + line[2] + '  ' + line[3] + '  ' + line[4] + '\n'
+        return xyz
     else:
         lines = lines.split('Coordinates (Angstroms)')[-1].split(' Distance matrix')[0].split(' Rotation')[0].split('Symm')[0]
         lines = lines.split('\n')[3:-2]
         for i,line in enumerate(lines):
             line = line.split()
             xyz += ' ' + atomnum[line[1]] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
-    return xyz 
+        return xyz 
+    return None
     
 def gaussian_rotconsts(lines):
     rot = 'Rotational constants\s*\(GHZ\):\s*([\s,\d,\.,\-]*)'     
@@ -158,7 +172,7 @@ def molpro_energy(lines,method=''):
         method = molpro_method(lines)
     method = method.replace('(','\(').replace(')','\)')
     if 'OPTG' in lines:
-        energ = 'E\(' + method +'\) \/ Hartree\s*[\d,\-,\.]*\s*([\d,\-,\.]*)'
+        energ = 'E\([U,u,R,r]*' + method +'\) \/ Hartree\s*[\d,\-,\.]*\s*([\d,\-,\.]*)'
         energ  = re.findall(energ,lines)
         if len(energ) != 0:
             return (method, float(energ[-1].replace('\n','').replace(' ','')))
@@ -224,25 +238,43 @@ def molpro_method(lines):
     if method[-1] == 'DFT':
         method = 'dft=\[([\d,\w]*)\]'
         method  = re.findall(method,lines)
-    return method[-1]
+    method = method[-1].lstrip('r').lstrip('u').lstrip('R').lstrip('U')
+    return method
+
+def molpro_calc(lines):
+    if 'optg' in lines:
+       return 'geometry optimization'
+    else:
+       return ''
 
 def molpro_basisset(lines):
 
-    basis = 'basis=(\S*)' 
+    basis  = 'basis=(\S*)' 
     basis  = re.findall(basis,lines)
     basis[-1] = basis[-1].replace('(d)','*')
     return basis[-1]
-      
+
+def molpro_rotconsts(lines):
+
+    rot  = 'Rotational constants:\s*([\s,\d,\.,\-]*)' 
+    rot = re.findall(rot,lines)
+    rot = rot[-1].split()
+    return rot
+ 
 def molpro_zmat(lines):
     geolines = lines.split('geometry={')[1].split('}')[0].split('\n')[1:-1]
     zmat = '\n'.join(geolines) + '\n'
+    optzmat = False
     if 'OPTG' in lines:
+        optzmat = True
         lines = lines.split('END OF GEOMETRY OPTIMIZATION')[0].split('Variable')[-1].split('\n')
         lines = lines[3:-3]
         for line in lines:
             zmat += line.split()[0] + '   ' + line.split()[4] + '\n'
+    if optzmat:
+        return zmat
+    return None
 
-    return zmat
 ##############################################
 ############     EStokTP PARSER    ###########
 ##############################################
@@ -274,6 +306,8 @@ def method(lines):
         return gaussian_method(lines)
     if prog == 'molpro':
         return molpro_method(lines)
+    print 'program not recognized as g09 or molpro'
+    return
 
 def basisset(lines):
     prog = get_prog(lines)
@@ -281,6 +315,8 @@ def basisset(lines):
         return gaussian_basisset(lines)
     if prog == 'molpro':
         return molpro_basisset(lines)
+    print 'program not recognized as g09 or molpro'
+    return
 
 def energy(lines):
     prog = get_prog(lines)
@@ -288,6 +324,8 @@ def energy(lines):
         return gaussian_energy(lines)
     if prog == 'molpro':
         return molpro_energy(lines)
+    print 'program not recognized as g09 or molpro'
+    return
 
 def zmat(lines):
     prog = get_prog(lines)
@@ -295,6 +333,8 @@ def zmat(lines):
         return gaussian_zmat(lines)
     if prog == 'molpro':
         return molpro_zmat(lines)
+    print 'program not recognized as g09 or molpro'
+    return
 
 def freqs(lines):
     prog = get_prog(lines)
@@ -302,6 +342,8 @@ def freqs(lines):
         return gaussian_freqs(lines)
     if prog == 'molpro':
         return molpro_freqs(lines)
+    print 'program not recognized as g09 or molpro'
+    return
 
 def xyz(lines):
     prog = get_prog(lines)
@@ -309,3 +351,14 @@ def xyz(lines):
         return gaussian_xyz(lines)
     if prog == 'molpro':
         return ''
+    print 'program not recognized as g09 or molpro'
+    return
+
+def rotconsts(lines):
+    prog = get_prog(lines)
+    if prog == 'g09':
+        return gaussian_rotconsts(lines)
+    if prog == 'molpro':
+        return rotconsts(lines)
+    print 'program not recognized as g09 or molpro'
+    return
