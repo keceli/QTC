@@ -607,30 +607,34 @@ def check(clist, basis,stoich,atomlist):
 
 def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/',db='tempdb',prog = 'auto', runE=False, mol_not_smiles=False):
    
+
+    #Convert basis selection to smiles if it is mol. formula format
     basis = basis.split()
-    stoich_to_smiles = {'H2':'[H][H]','O2':'[O][O]','H2O':'O','NH3':'N','SO2':'O=S=O','CO2':'C(=O)=O',
+    stoich_to_smiles = {'H2':'[H][H]','O2':'[O][O]','H2O':'O','NH3':'N','SO2':'O=S=O','CO2':'C(=O)=O',  
                         'CH3CH3': 'CC', 'C2H6':'CC','CH3OH':'CO','CH4O':'CO','H2CO':'C=O','CH2O':'C=O','CH4':'C'}
     for n, bas in enumerate(basis):
         if bas in stoich_to_smiles:
             basis[n] = stoich_to_smiles[bas]
-    #AUTO SET NONUSERDEFINED PARAMETRS##
+
+    ####AUTO SET NONUSERDEFINED PARAMETERS FROM LOGFILE###
     if is_auto(prog):
         prog = pa.get_prog(io.read_file(logfile))
 
     if is_auto(mol):
         mol = getname_fromdirname() 
-        molstoich = ob.get_formula(ob.get_mol(mol))
+        molform = ob.get_formula(ob.get_mol(mol))
 
     if is_auto(theory) and io.check_file(logfile):
         theory  = gettheory_fromlogfile(logfile)
         theory += '/'
         theory += getbasisset_fromlogfile(logfile)
     theory, basisset = theory.split('/')
-
+    
+    #Search database for energy of mol and compute if its not there, unless told to parse it from logfile
     if not mol_not_smiles:
         dire = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
         enefile = io.join_path(dire, mol + '.ene')
-        molstoich = ob.get_formula(ob.get_mol(mol))
+        molform = ob.get_formula(ob.get_mol(mol))
 
         if io.check_file(enefile):
             E = float(io.read_file(enefile).strip())
@@ -643,13 +647,13 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
             io.write_file(str(E), enefile)
             print 'Energy ' + str(E) +  ' saved to: ' + enefile
     else:
-        molstoich = mol
-
+        molform = mol
     if is_auto(E):
         E = getenergy_fromlogfile(logfile,theory)
-    
+   
+    ####BASIS SELECTION#### 
     basprint = 'manually select basis'
-    atomlist = get_atomlist(molstoich)
+    atomlist = get_atomlist(molform)
     basisselection = 0
     if is_auto(basis[0]):
         basis = select_basis(atomlist)
@@ -663,7 +667,7 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
         basis = io.read_file('basis.dat').split()
         basprint = 'read basis from basis.dat'
     lines =  ('\n___________________________________________________\n\n' +
-              'HEAT OF FORMATION FOR: ' + mol + ' (' + molstoich + ')' +
+              'HEAT OF FORMATION FOR: ' + mol + ' (' + molform + ')' +
               '\n      at ' + theory + '/' +  basisset + 
               '\n\n___________________________________________________\n\n'
               + 'Electronic Energy is: ' +  str(E) + '\nYou have chosen to ' + 
@@ -677,23 +681,25 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
 
     #COMPUTE Atomlist, stoichlist, matrix, and coefficients
     atomlist = list(set(atomlist))
-    stoich = get_stoich(molstoich,atomlist)
+    stoich = get_stoich(molform,atomlist)
     mat = form_mat(basis,atomlist)
 
     for i in range(5):
         if np.linalg.det(mat) != 0:
              break
         print 'Matrix is singular -- select new basis'
-        atomlist = get_atomlist(molstoich)
-        basis = select_basis(atomlist,basisselection)
+        atomlist = get_atomlist(molform)
+        basis    = select_basis(atomlist,basisselection)
         basisselection += 1
-        print ('\n\nBasis is: ' + ', '.join(basis))
+
         for bas in basis:
             bas = ob.get_formula(ob.get_mol(bas))
             atomlist.extend(get_atomlist(bas))
+
         atomlist = list(set(atomlist))
-        stoich = get_stoich(molstoich,atomlist)
-        mat = form_mat(basis,atomlist)
+        stoich   = get_stoich(molform,atomlist)
+        mat      = form_mat(basis,atomlist)
+        print ('\n\nBasis is: ' + ', '.join(basis))
         print mat
 
     clist =  comp_coeff(mat,stoich)
@@ -713,7 +719,7 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
     ##################
 
     #COMPUTE AND PRINT delH###
-    E =  comp_energy(molstoich,basis,clist,E,theory,basisset,prog)
+    E =  comp_energy(molform,basis,clist,E,theory,basisset,prog)
     lines =  '\n        delHf(0K)'
     lines += '\nA.U. \t'
     for e in E[:1]:  lines += str(e) + '\t'
@@ -722,6 +728,7 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
     lines += '\nkcal   \t'
     for e in E[:1]:  lines += str(e *  627.503) + '\t'
     ##########################
+    
     hf0k = E[0] * 627.503 
     if not mol_not_smiles:
         if not io.check_file(dire + '/' + mol + '.hf0k'):
@@ -734,6 +741,7 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
         lines += io.db_get_sp_prop(mol,'hf0k',None,prog,theory,basisset)
     lines += '\n\n_________________________________________________\n\n'
     print lines
+
     return hf0k
 
        
@@ -751,7 +759,7 @@ if __name__ == '__main__':
     parser.add_argument('-l','--logfile',            type=str,  default='geoms/reac1_l1.log')
 
     parser.add_argument('-b','--select_stoich_basis',type=str,   default='auto')
-    parser.add_argument('-B','--select_smiles_basis',type=str,   default='auto')
+    parser.add_argument('-B','--select_smiles_basis',type=str,   default='auto')#Doesn't actually matter if you use b or B right now
 
     parser.add_argument('-t','--level_of_theory',    type=str,  default='auto/')
     parser.add_argument('-e','--electronic_energy',  type=float, default=9999.9)
