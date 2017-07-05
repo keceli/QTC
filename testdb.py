@@ -72,7 +72,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'CH3CH3', 
 'charge'  :  0,
 'mult'    : 1,
-'HeatForm': {0:-68.29, 298:-83.91, 'sigma':0.14},
+'HeatForm': {0:-68.29, 'sigma':0.14},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -79.84164, 'sigma':0,
                                    'zmat': '\n 0   1\n c1\n h2                   c1   R1\n h3                   c1   R2       h2   A2\n h4                   c1   R3       h2   A3       h3   D3       0\n h5                   c1   R4       h2   A4       h3   D4       0\nVariables:\n R1\t1.0889\n R2\t1.0889\n A2\t109.4712\n R3\t1.0889\n A3\t109.4712\n D3\t240.0\n R4\t1.0889\n A4\t109.4712\n D4\t120.0\n'}}
@@ -83,7 +83,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'CH3OH', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:-189.83, 298:-200.71, 'sigma':0.16},
+'HeatForm': {0:-189.83, 'sigma':0.16},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -115.73487, 'sigma':0}}
             }
@@ -93,7 +93,14 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'NH3', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:-38.562, 298:-45.554, 'sigma':0.057}
+'HeatForm': {0:-38.562, 'sigma':0.057}
+},
+
+{'_id'    : 'C=C', 
+'stoich'  : 'C2H6', 
+'charge'  : 0,
+'mult'    : 1,
+'HeatForm': {0:60.96, 'sigma':0.13}
 },
 
 {'_id'    : 'C=O', 
