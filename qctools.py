@@ -401,6 +401,9 @@ def run(s, parameters, mult=None):
     package = parameters['qcpackage']
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
+    method = parameters['qcmethod']
+    basis = parameters['qcbasis']
+    task = parameters['qctask']
     mol = ob.get_mol(s, make3D=True)
     msg = ''
     if mult is None:
@@ -408,7 +411,7 @@ def run(s, parameters, mult=None):
     else:
         ob.set_mult(mol, mult)
     tmp = io.read_file(template)
-    inptext = get_input(mol, tmp)
+    inptext = get_input(mol, tmp,method,basis,task)
     prefix = ob.get_smiles_filename(s) + '_' + package
     inpfile = prefix + '.inp'
     outfile = prefix + '.out'

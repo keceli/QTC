@@ -25,19 +25,6 @@ __logo__ = """
 For computation of accurate thermochemistry
 By ECP-PACC team                                  
 """
-
-# _mopacexe = 'mopac'
-# _nwchemexe = 'nwchem'
-# _gaussianexe = 'g09'
-# _messpfexe = 'messpf'
-# _thermpexe = 'thermp'
-# _pac99exe = 'pac99'
-# _qcmethod = 'pm3'
-# _qcpackage = 'mopac'
-# _runqc = False
-# _runthermo = False
-
-
 def get_args():
     """
     Returns args object that contains command line options.
@@ -72,10 +59,13 @@ def get_args():
                         help='Keyword string that can define package, method, basis, task i.e.: "gaussian/ccsd/cc-pvdz/opt, nwchem/ccsdt/cc-pvdz/energy,')
     parser.add_argument('-m', '--qcmethod', type=str,
                         default='',
-                        help='Quantum chemistry method to be used (obsolete, use --rundir)')
+                        help='Quantum chemistry method to be used')
     parser.add_argument('-b', '--qcbasis', type=str,
                         default='',
-                        help='Basis-set level in quantum chemistry calculations (obsolete, use --rundir)')
+                        help='Basis-set in quantum chemistry calculations')
+    parser.add_argument('-a', '--qctask', type=str,
+                        default='',
+                        help='Task for quantum chemistry calculations (opt,freq,energy)')
     parser.add_argument('-p', '--qcpackage', type=str,
                         default='',
                         help='Quantum chemistry package ("gausian","mopac","nwchem","qcscript") to be used')
@@ -143,22 +133,28 @@ def get_args():
     return parser.parse_args()
 
 
-def parse_qckeyword(keyword,calcindex=0):
+def parse_qckeyword(parameters,calcindex=0):
     """
     Returns package, method, basis, task, qcdirectory for a given qckeyword and calcindex.
-    >>> package, method, basis, task, qcdirectory = parse_qckeyword('nwchem/ccsd/cc-pvz/opt,molpro/uccsdt/cc-pvtz/energy',1)
+    >>> package, method, basis, task, qcdirectory = parse_qckeyword('nwchem/ccsd/cc-pvz/optimize,molpro/uccsdt/cc-pvtz/energy',1)
     >>> print('package, method, basis, task, qcdirectory = {0} {1} {2} {3} {4}'.format(package, method, basis, task, qcdirectory))
     
     """
-    keyword = keyword.replace('//','/opt,')
+    keyword = parameters['qckeyword']
+    keyword = keyword.replace('//','/optimize,')
     qcdirectory = ''
+    xyzdirectory = ''
     package = 'nwchem'
     calcs = keyword.split(',')
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
     if calcindex > 0:
-        package,method,basis,task,qcdirectory = parse_qckeyword(keyword)
-        qcdirectory = io.join_path(*[package,method,basis,task])
+        parse_qckeyword(parameters,calcindex=0)
+        package = parameters['qcpackage']
+        method = parameters['qcmethod'] 
+        basis = parameters['qcbasis'] 
+        task = parameters['qctask'] 
+        xyzdirectory = io.join_path(*[package,method,basis,task])
         if len(tokens) == 1:
             task = tokens[0]
         elif len(tokens) == 2:
@@ -173,16 +169,22 @@ def parse_qckeyword(keyword,calcindex=0):
             print('Cannot parse qckeyword: {0}'.format(keyword))
     else:
         if len(tokens) == 2:
-            task = 'opt'
+            task = 'optimize'
             method, basis = tokens  
         elif len(tokens) == 3:
-            task = 'opt'
+            task = 'optimize'
             package, method, basis = tokens
         elif len(tokens) == 4:
             package, method, basis, task = tokens
         else:
             print('Cannot parse qckeyword: {0}'.format(keyword))
-    return package, method, basis, task, qcdirectory
+    parameters['xyzdirectory'] = xyzdirectory
+    parameters['qcdirectory'] = io.join_path(*[parameters['xyzdirectory'],package,method,basis,task])
+    parameters['qcpackage'] = package
+    parameters['qcmethod'] = method
+    parameters['qcbasis'] = basis
+    parameters['qctask'] = task
+    return parameters 
 
 
 def run(s):
@@ -195,16 +197,21 @@ def run(s):
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
+    package = parameters['qcpackage']
     runthermo = parameters['runthermo']
     runanharmonic = parameters['anharmonic']
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan' ]          
+    if not parameters['qcexe']:
+        if package in available_packages:
+            parameters['qcexe'] = parameters[package]
     msg = "***************************************\n"
     msg += "{0}\n".format(s)
     mult = ob.get_mult(s)
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
-    smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='', geopath='')
+    smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
     if not parameters['qctemplate']:
-        templatename = 'template_' + package+'.' + package_suffixes[package]
+        templatename = 'template_' + package + '.' + package_suffixes[package]
         parameters['qctemplate'] = io.join_path(*['templates',templatename])    
     qcdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
     parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
@@ -374,10 +381,7 @@ if __name__ == "__main__":
     print("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     if ncalc > 0:
         for i in range(ncalc):
-            kw = parameters['qckeyword']
-            parameters['package'], parameters['method'], 
-            parameters['basis'], parameters['task'], parameters['qcdirectory'] = parse_qckeyword(kw, calcindex=i)
-
+            parse_qckeyword(parameters, calcindex=i)
             if nproc > 1:
                 pool = multiprocessing.Pool(nproc)
                 pool.map(run, mylist)
