@@ -75,9 +75,9 @@ def gaussian_opt_zmat_params(lines):
     params = ''
     if not 'Optimized Parameters' in lines:
         return None
-    varis  = lines.split('Optimized Parameters')[1].split('--------------------------------------')
+    varis  = lines.split('Optimized Parameters')[1].split('---------------------------------------')
     if 'Definition' in varis[0]:
-        varis = varis[1].split('\n')
+        varis = varis[2].split('\n')
         for var in varis[1:-1]:
             var = var.split()
             params += ' '+  var[1] + '\t' + var[3] + '\n'
@@ -95,7 +95,7 @@ def gaussian_zmat(lines):
     zmat  += 'Variables:\n'
     zmat   = zmat.replace('Charge = ','')
     zmat   = zmat.replace('Multiplicity =','')
-    optzmat= gaussian_opt_zmat_params(lines[1])
+    optzmat = gaussian_opt_zmat_params(lines[1])
     if optzmat == None:
         return None
     return zmat + optzmat

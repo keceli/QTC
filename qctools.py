@@ -430,6 +430,9 @@ def run(s, parameters, mult=None):
             elif package == 'nwchem':
                 command = [parameters['qcexe'], inpfile]
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
+            elif package == 'torsscan':
+                command = [parameters['torsscan'], inpfile] 
+                msg = io.execute(command,'tors.out')
             else:
                 command = [parameters['qcexe'], inpfile, outfile] 
                 msg = io.execute(command)

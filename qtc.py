@@ -104,6 +104,8 @@ def get_args():
                         help='Run thermochemistry calculations')
     parser.add_argument('-W', '--writefiles', action='store_true',
                         help='Write .xyz, .ene files')
+    parser.add_argument('-w', '--storefiles', action='store_true',
+                        help='Store .xyz, .ene files')
     parser.add_argument('-I', '--runinteractive', action='store_true',
                         help='Interactive mode for QTC')
     parser.add_argument('-O', '--overwrite', action='store_true',
@@ -122,6 +124,9 @@ def get_args():
     parser.add_argument('--gaussian', type=str,
                         default='g09',
                         help='Path for gaussian executable')
+    parser.add_argument('--torsscan', type=str,
+                        default='/home/elliott/Packages/TorsScan/torsional_scan.py',
+                        help='Path for torsscan executable')
     parser.add_argument('--messpf', type=str,
                         default='messpf',
                         help='Path for MESS partition function executable')
@@ -244,7 +249,7 @@ def run(s):
         return -1
     print(msg)
     msg = ''
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation' ]          
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan' ]          
     if runqc:
         if qcpackage in available_packages:
             print('Running {0}'.format(qcpackage))
@@ -265,7 +270,7 @@ def run(s):
     if parseqc:
         if io.check_file(qclog, timeout=1,verbose=False):
             out = io.read_file(qclog,aslines=False)
-            d = qc.parse_output(out,smilesname, parameters['writefiles'])
+            d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
             pprint(d)
                                    
     if runthermo:
@@ -340,6 +345,7 @@ if __name__ == "__main__":
     parameters['nwchem'] = io.get_path(args.nwchem,executable=True)
     parameters['gaussian'] = io.get_path(args.gaussian,executable=True)
     parameters['molpro'] = io.get_path(args.molpro,executable=True)
+    parameters['torsscan'] = io.get_path(args.torsscan,executable=False)
     parameters['messpf'] = io.get_path(args.messpf,executable=True)
     parameters['thermp'] = io.get_path(args.thermp,executable=True)
     parameters['pac99'] = io.get_path(args.pac99,executable=True)
