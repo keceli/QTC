@@ -1,19 +1,20 @@
 start QTC(UNIQUENAME)
-memory stack 2000 mb heap 200 mb global 1600 mb noverify
+memory stack 800 mb heap 200 mb global 700 mb noverify #modify based on available memory
 #task shell "mkdir ./tmp/QTC(UNIQUENAME)"
 #scratch_dir ./tmp/QTC(UNIQUENAME)
 ECHO
 geometry units angstrom 
-QTC(GEO)
+    QTC(GEO)
 end
 
 basis spherical
-    * library cc-pvdz file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
+    * library QTC(BASIS)  #file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
 end
 
 scf
     thresh 1.0e-12
-    nopen QTC(NOPEN)
+#    QTC(RHF_OR_UHF) # Default SCF type is RHF for singlets, ROHF for higher multiplicities. If UHF is required uncomment this line
+    nopen QTC(NOPEN) # Number of open shells, 0 for singlets, 1 for doublets and so on
 end
 
 mp2
@@ -25,12 +26,7 @@ tce
     thresh 1.0e-10
     freeze atomic
     diis 5
-   ccsd
-#   ccsd(2)
-#    ccsdt(2)_q
+   QTC(METHOD) # ccsd,ccsd(t),ccsd(2)_t, ccsd(2), ccsdt,ccsdt(2)_q,ccsdtq
 end
-
-task tce optimize
-#task tce energy
-task tce freq
+task tce QTC(TASK) # optimize, frequency or energy
 #task shell "rm -rf ./tmp/QTC(UNIQUENAME)"

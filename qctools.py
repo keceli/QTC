@@ -11,7 +11,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-06-23"
+__updated__ = "2017-07-06"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -389,7 +389,7 @@ def execute_mopac(inp, exe='mopac'):
     return msg
 
 
-def run(s, template, parameters, mult=None):
+def run(s, parameters, mult=None):
     """
     Runs nwchem, returns a string specifying the status of the calculation.
     nwchem inp.nw > nw.log
@@ -400,6 +400,7 @@ def run(s, template, parameters, mult=None):
     """
     package = parameters['qcpackage']
     overwrite = parameters['overwrite']
+    template = parameters['qctemplate']
     mol = ob.get_mol(s, make3D=True)
     msg = ''
     if mult is None:
@@ -673,9 +674,9 @@ def get_output_package(out,filename=False):
         p = None
     return p
 
-def get_input(x, template,method='CCSD',basis='cc-pvdz'):
+def get_input(x, template, method='CCSD', basis='cc-pvdz', task='opt'):
     """
-    Returns Gaussian input file text (str) based on a given template.
+    Returns input file text for a qc calculation based on a given template.
     """
     mol = ob.get_mol(x)
     mult = ob.get_multiplicity(mol)
@@ -687,6 +688,12 @@ def get_input(x, template,method='CCSD',basis='cc-pvdz'):
     zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
+    if nopen == 0:
+        scftype = 'RHF'
+        rhftype = 'RHF'
+    else:
+        scftype = 'UHF'
+        rhftype = 'ROHF'
     inp = template.replace("QTC(CHARGE)", str(charge))
     inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
     inp = inp.replace("QTC(NOPEN)", str(nopen))
@@ -698,6 +705,9 @@ def get_input(x, template,method='CCSD',basis='cc-pvdz'):
     inp = inp.replace("QTC(FORMULA)", formula)
     inp = inp.replace("QTC(METHOD)", method)
     inp = inp.replace("QTC(BASIS)", basis)
+    inp = inp.replace("QTC(TASK)", task)
+    inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
+    inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
     if "QTC(" in inp:
         print("Error in template file:\n" + inp)
         return

@@ -7,7 +7,7 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 from pprint import pprint
-__updated__ = "2017-06-23"
+__updated__ = "2017-07-06"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -64,6 +64,12 @@ def get_args():
     parser.add_argument('-n', '--nproc', type=int,
                         default=1,
                         help='Number of processors, default is one processor')
+    parser.add_argument('-c', '--qccalculation', type=str,
+                        default='',
+                        help='Type of quantum chemistry calculation: "optimization", "frequency", "energy", "anharmonic"')
+    parser.add_argument('-k', '--qckeyword', type=str,
+                        default='',
+                        help='Keyword string that can define package, method, basis, task i.e.: "gaussian/ccsd/cc-pvdz/opt, nwchem/ccsdt/cc-pvdz/energy,')
     parser.add_argument('-m', '--qcmethod', type=str,
                         default='',
                         help='Quantum chemistry method to be used (obsolete, use --rundir)')
@@ -132,6 +138,48 @@ def get_args():
     return parser.parse_args()
 
 
+def parse_qckeyword(keyword,calcindex=0):
+    """
+    Returns package, method, basis, task, qcdirectory for a given qckeyword and calcindex.
+    >>> package, method, basis, task, qcdirectory = parse_qckeyword('nwchem/ccsd/cc-pvz/opt,molpro/uccsdt/cc-pvtz/energy',1)
+    >>> print('package, method, basis, task, qcdirectory = {0} {1} {2} {3} {4}'.format(package, method, basis, task, qcdirectory))
+    
+    """
+    keyword = keyword.replace('//','/opt,')
+    qcdirectory = ''
+    package = 'nwchem'
+    calcs = keyword.split(',')
+    currentcalc = calcs[calcindex]
+    tokens = currentcalc.split('/')
+    if calcindex > 0:
+        package,method,basis,task,qcdirectory = parse_qckeyword(keyword)
+        qcdirectory = io.join_path(*[package,method,basis,task])
+        if len(tokens) == 1:
+            task = tokens[0]
+        elif len(tokens) == 2:
+            task = 'energy'
+            method, basis = tokens            
+        elif len(tokens) == 3:
+            task = 'energy'
+            package, method, basis = tokens            
+        elif len(tokens) == 4:
+            package, method, basis, task = tokens
+        else:
+            print('Cannot parse qckeyword: {0}'.format(keyword))
+    else:
+        if len(tokens) == 2:
+            task = 'opt'
+            method, basis = tokens  
+        elif len(tokens) == 3:
+            task = 'opt'
+            package, method, basis = tokens
+        elif len(tokens) == 4:
+            package, method, basis, task = tokens
+        else:
+            print('Cannot parse qckeyword: {0}'.format(keyword))
+    return package, method, basis, task, qcdirectory
+
+
 def run(s):
     """
     A driver function to run quantum chemistry and thermochemistry calculations based
@@ -150,8 +198,11 @@ def run(s):
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='', geopath='')
+    if not parameters['qctemplate']:
+        templatename = 'template_' + package+'.' + package_suffixes[package]
+        parameters['qctemplate'] = io.join_path(*['templates',templatename])    
     qcdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
-    qctemplate = io.get_path(parameters['qctemplate'])
+    parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     qcpackage = parameters['qcpackage']
     qcscript = io.get_path(parameters['qcscript'])
     qclog = smilesname + '_' + qcpackage + '.out'
@@ -197,14 +248,14 @@ def run(s):
     if runqc:
         if qcpackage in available_packages:
             print('Running {0}'.format(qcpackage))
-            msg += qc.run(s, qctemplate, parameters, mult)
+            msg += qc.run(s, parameters, mult)
         elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"
             geofile = smilesname + '.geo'
             geo = ob.get_geo(mol)
             io.write_file(geo, geofile)
             if io.check_file(geofile, 1):
-                msg += qc.run_qcscript(qcscript, qctemplate, geofile, mult)
+                msg += qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
         else:
             msg = '{0} package not implemented\n'.format(qcpackage)
             msg += 'Available packages are {0}'.format(available_packages)
@@ -260,21 +311,29 @@ if __name__ == "__main__":
     from sys import exit
     global parameters
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian' ]
+    package_suffixes = {'nwchem':'nw', 'molpro':'inp', 'mopac': 'mop', 'gaussian': 'gau'}
     start  = timer()
     args = get_args()
     parameters = vars(args)
-    if not parameters['qcpackage']:
+    package = parameters['qcpackage']
+    ncalc = 0
+    if parameters['qckeyword']:
+        ncalc = len(parameters['qckeyword'].split(','))
+    if not package:
         if not parameters['qctemplate']:
             if parameters['runqc']:
-                exit('Please specify template file with -t')
+                print('No template file specified with -t')
         else:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
-    if not parameters['qcexe']:
-        if parameters['qcpackage'] in available_packages:
-            parameters['qcexe'] = parameters[parameters['qcpackage']]
+    else:
+        if not parameters['qcexe']:
+            if package in available_packages:
+                parameters['qcexe'] = parameters[package]
+        if not parameters['qctemplate']:
+            templatename = 'template_' + package+'.' + package_suffixes[package]
+            parameters['qctemplate'] = io.join_path(*['templates',templatename])
     if parameters['writefiles']:
         parameters['parseqc'] = True
-    parameters['qctemplate'] = io.get_path(args.qctemplate)
     parameters['qcexe'] = io.get_path(args.qcexe,executable=True)
     parameters['qcscript'] = io.get_path(args.qcscript)
     parameters['mopac'] = io.get_path(args.mopac,executable=True)
@@ -307,11 +366,17 @@ if __name__ == "__main__":
     print("QTC: Number of species       = {0}".format(len(mylist)))
     init = timer()
     print("QTC: Initialization time (s) = {0:.2f}".format(init-start))
-    if nproc > 1:
-        pool = multiprocessing.Pool(nproc)
-        pool.map(run, mylist)
-    else:
-        results = map(run, mylist)
+    if ncalc > 0:
+        for i in range(ncalc):
+            kw = parameters['qckeyword']
+            parameters['package'], parameters['method'], 
+            parameters['basis'], parameters['task'], parameters['qcdirectory'] = parse_qckeyword(kw, calcindex=i)
+
+            if nproc > 1:
+                pool = multiprocessing.Pool(nproc)
+                pool.map(run, mylist)
+            else:
+                results = map(run, mylist)
     end = timer()
     print("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     print("QTC: Total time (s)          = {0:.2f}".format(end-start))
