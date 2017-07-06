@@ -90,7 +90,7 @@ def gaussian_opt_zmat_params(lines):
 
 def gaussian_zmat(lines):
 
-    lines  = lines.split('Z-matrix:')
+    lines  = lines.split('Z-matrix:\n')
     zmat   = lines[1].split('       Variables:')[0]
     zmat  += 'Variables:\n'
     zmat   = zmat.replace('Charge = ','')
@@ -286,7 +286,9 @@ def EStokTP_freqs(lines):
     lines -    lines from EStokTP output file (reac1_fr.me or reac1_unpfr.me)
     OUTPUT:
     freqs    - frequencies obtained from output file
-    """ 
+    """
+    import numpy as np
+ 
     lines  = lines.strip('\n')
     lines  = lines.split('[1/cm]')[1].split('Zero')[0] 
     lines  = lines.split()

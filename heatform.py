@@ -732,7 +732,7 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
     hf0k = E[0] * 627.503 
     if not mol_not_smiles:
         if not io.check_file(dire + '/' + mol + '.hf0k'):
-            io.db_store_sp_prop('Energy (kcal)\tBasis\n----------------------------------\n',mol,'hf0k',None,prog,theory,basisset)
+            io.db_store_sp_prop('Energy (kcal)\tBasis\n----------------------------------',mol,'hf0k',None,prog,theory,basisset)
         s = '\n' + str(hf0k) + '\t' + '  '.join(basis) 
         io.db_append_sp_prop(s,mol,'hf0k',None,prog,theory,basisset)
         
@@ -742,7 +742,7 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
     lines += '\n\n_________________________________________________\n\n'
     print lines
 
-    return hf0k
+    return hf0k, basis
 
        
 if __name__ == '__main__': 
