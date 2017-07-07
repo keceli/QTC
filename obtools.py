@@ -223,6 +223,14 @@ def get_xyz(x):
     return mol.write(format='xyz')
 
 
+def get_molpro_mol(logfile):
+    """
+    Returns xyz file from molpro logfile.
+    """
+    import pybel
+    return pybel.readfile('mpo',logfile).next()
+
+
 def get_gaussian_mol(logfile):
     """
     Returns mol file from gaussian logfile.
