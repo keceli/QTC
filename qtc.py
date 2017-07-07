@@ -7,8 +7,9 @@ import obtools as ob
 import qctools as qc
 import tctools as tc
 import dbtools as db
+import heatform as hf
 from pprint import pprint
-__updated__ = "2017-07-06"
+__updated__ = "2017-07-07"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -292,32 +293,13 @@ def run(s):
         d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
         xyz = next(db.gen_dict_extract('xyz',d))
         freqs = next(db.gen_dict_extract('harmonic frequencies',d))
-        if xyz is not None:
-            msg += "Optimized xyz in Angstroms:\n{0} \n".format(xyz)
-        else:
-            runthermo = False
-        if freqs is not None:
-            msg += "Harmonic frequencies in cm-1:\n {0} \n".format(freqs)
-        else:
-            runthermo = False        
-        if afreqs:
-            msg += "Anharmonic frequencies in cm-1:\n {0}\n".format(afreqs)
-        else:
-            runanharmonic = False        
-        if zpe:
-            msg += 'ZPE = {0} kcal/mol\n'.format(zpe)
-        else:
-            runthermo = False        
-        if deltaH is not None:
-            msg += 'deltaH = {0} kcal/mol\n'.format(deltaH)
-        else:
-            runthermo = False        
-        if xmat is not None:
-            msg += 'Xmat = {0} kcal/mol\n'.format(xmat)   
-        else:
-            runanharmonic = False        
-        if runthermo:    
-            msg += tc.write_chemkin_polynomial(mol, zpe, xyz, freqs, deltaH, parameters)
+        energy = next(db.gen_dict_extract('energy',d))
+        method = next(db.gen_dict_extract('method',d))
+        basis = next(db.gen_dict_extract('basis',d))
+        package = next(db.gen_dict_extract('package',d))
+        theory = '{0}/{1}'.format(method,basis)
+        hf0, hfset = hf.main(mol,E=energy,theory=theory,prog=package)       
+        msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters)
     io.cd(cwd)
     print(msg)
     return

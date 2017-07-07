@@ -18,7 +18,7 @@ MESS partition function code
 PAC99
 thermp
 """
-__updated__ = "2017-06-23"
+__updated__ = "2017-07-07"
 
 
 def get_stoichometry(formula,element):
@@ -342,7 +342,7 @@ def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp
     return msg
 
 
-def get_pf_input(mol,method,zpe,xyz,freqs):
+def get_pf_input(mol,method,xyz,freqs,zpe=0.):
     """
     Write input file for mess partition function program
     Temperature(step[K],size)        100.   30
@@ -492,7 +492,7 @@ def run_pac99(formula,pac99='pac99'):
     return msg
 
 
-def write_chemkin_polynomial(mol, zpe, xyz, freqs, deltaH,parameters):
+def write_chemkin_polynomial(mol, xyz, freqs, deltaH,parameters, zpe=0.):
     """
     A driver to perform all operations to write NASA polynomial in
     chemkin format. Assumes quantum chemistry calculation is performed.
@@ -501,7 +501,7 @@ def write_chemkin_polynomial(mol, zpe, xyz, freqs, deltaH,parameters):
     messpfoutput = 'pf.log'
     name = mol.formula
     tag = parameters['qcmethod']
-    inp = get_pf_input(mol, tag, zpe, xyz, freqs)
+    inp = get_pf_input(mol, tag, xyz, freqs, zpe=0.)
     io.write_file(inp, messpfinput)
     msg = 'Running {0} to generate partition function.\n'.format(parameters['messpf'])
     msg += io.execute([parameters['messpf'],messpfinput])
