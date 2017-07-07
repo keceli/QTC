@@ -7,8 +7,10 @@ You need to start a mongo session first with:
 mongod --logpath /Volumes/s/G/database_mongo/log --fork --dbpath /Volumes/s/G/database_mongo/
 """
 __updated__ = "2017-06-23"
-
-from pymongo import MongoClient
+try:
+    from pymongo import MongoClient
+except:
+    pass
 
 def start_mongo(dbpath,logpath,mongoexe='mongod'):
     """
