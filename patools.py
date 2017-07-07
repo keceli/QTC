@@ -160,7 +160,7 @@ def gaussian_geo(lines):
    
 def gaussian_xyz(lines):
     geo = gaussian_geo(lines) 
-    n   = str(len(geo.splitlines())-1)
+    n   = str(len(geo.splitlines()))
     xyz = n + '\n\n' +  geo
     return xyz
 
