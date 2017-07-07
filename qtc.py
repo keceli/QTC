@@ -322,8 +322,8 @@ if __name__ == "__main__":
     from timeit import default_timer as timer
     from sys import exit
     global parameters
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian' ]
-    package_suffixes = {'nwchem':'nw', 'molpro':'inp', 'mopac': 'mop', 'gaussian': 'gau'}
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian','torsscan']
+    package_suffixes = {'nwchem':'nw', 'molpro':'inp', 'mopac': 'mop', 'gaussian': 'gau', 'torsscan':'ts'}
     start  = timer()
     args = get_args()
     parameters = vars(args)
