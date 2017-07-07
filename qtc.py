@@ -211,8 +211,8 @@ def run(s):
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
     if not parameters['qctemplate']:
-        templatename = 'template_' + package + '.' + package_suffixes[package]
-        parameters['qctemplate'] = io.join_path(*['templates',templatename])    
+        templatename = package + '_template' + '.txt'
+        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename]) 
     qcdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
     parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     qcpackage = parameters['qcpackage']
@@ -320,14 +320,14 @@ def run(s):
 if __name__ == "__main__":
     from socket import gethostname
     from timeit import default_timer as timer
-    from sys import exit
+    import os
     global parameters
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian' ]
-    package_suffixes = {'nwchem':'nw', 'molpro':'inp', 'mopac': 'mop', 'gaussian': 'gau'}
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]
     start  = timer()
     args = get_args()
     parameters = vars(args)
     package = parameters['qcpackage']
+    parameters['qtcdirectory'] = os.path.realpath(__file__)
     ncalc = 0
     if parameters['qckeyword']:
         ncalc = len(parameters['qckeyword'].split(','))
@@ -342,8 +342,8 @@ if __name__ == "__main__":
             if package in available_packages:
                 parameters['qcexe'] = parameters[package]
         if not parameters['qctemplate']:
-            templatename = 'template_' + package+'.' + package_suffixes[package]
-            parameters['qctemplate'] = io.join_path(*['templates',templatename])
+            templatename = package + '_template' + '.txt'
+            parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
     if parameters['writefiles']:
         parameters['parseqc'] = True
     parameters['qcexe'] = io.get_path(args.qcexe,executable=True)
