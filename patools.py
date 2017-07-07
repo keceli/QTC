@@ -282,9 +282,18 @@ def molpro_zmat(lines):
     return None
 
 def molpro_geo(lines):
-    lines =  lines.split('Current geometry (xyz format')[-1].split('************')[0]
-    lines =  lines.split('\n')[4:]
-    return '\n'.join(lines)
+    lines =  lines.split('Current geometry (xyz format')
+    if len(lines) > 1:
+        lines = lines[-1].split('************')[0]
+        lines =  lines.split('\n')[4:]
+        return '\n'.join(lines)
+    else:
+        lines =  lines[0].split('Dump information in style XYZ')
+        if len(lines) > 1:
+            lines = lines[-1].split('************')[0]
+            lines =  lines.split('\n')[4:]
+            return '\n'.join(lines)
+    return
 
 def molpro_xyz(lines):
     lines =  lines.split('Current geometry (xyz format')
@@ -293,7 +302,7 @@ def molpro_xyz(lines):
         lines =  lines.split('\n')[2:]
         return '\n'.join(lines)
     else:
-        lines =  lines.split('Dump information in style XYZ')
+        lines =  lines[0].split('Dump information in style XYZ')
         if len(lines) > 1:
             lines = lines[-1].split('************')[0]
             lines =  lines.split('\n')[2:]
