@@ -710,6 +710,8 @@ def get_input(x, template, parameters):
             task = 'opt'
         elif task.lower().startswith('single'):
             task = ''
+        elif task.lower().startswith('energy'):
+            task = ''
         elif task.lower().startswith('freq'):
             task = 'freq'
         elif task.lower().startswith('anharm'):
