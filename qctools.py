@@ -433,8 +433,9 @@ def run(s, parameters, mult=None):
                 command = [parameters['qcexe'], inpfile]
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
                 logfile = prefix + '.log'
-                io.append_file(io.read_file(logfile),filename=outfile)
-                io.rm(logfile)
+                if io.check_file(logfile):
+                    io.append_file(io.read_file(logfile),filename=outfile)
+                    io.rm(logfile)
             else:
                 command = [parameters['qcexe'], inpfile, outfile] 
                 msg += io.execute(command)
@@ -714,14 +715,16 @@ def get_input(x, template, parameters):
         elif task.lower().startswith('freq'):
             task = 'freq'
         elif task.lower().startswith('anharm'):
-            task = 'freq=anharm'
+            task = 'freq=(anharm,vibrot)'
     elif package == 'molpro':
-        if nopen > 0:
-            if method.lower().startswith('ccsd'):
+        if method.lower().startswith('ccsd'):
+            if nopen > 0:
                 method = 'u'+method
         if task.lower().startswith('opt'):
             task = 'optg'
         elif task.lower().startswith('single'):
+            task = ''
+        elif task.lower().startswith('energy'):
             task = ''
         elif task.lower().startswith('freq'):
             task = 'frequencies'
