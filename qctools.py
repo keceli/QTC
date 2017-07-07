@@ -411,7 +411,7 @@ def run(s, parameters, mult=None):
     else:
         ob.set_mult(mol, mult)
     tmp = io.read_file(template)
-    inptext = get_input(mol, tmp,method,basis,task)
+    inptext = get_input(mol, tmp, parameters)
     prefix = ob.get_smiles_filename(s) + '_' + package
     inpfile = prefix + '.inp'
     outfile = prefix + '.out'
@@ -680,7 +680,7 @@ def get_output_package(out,filename=False):
         p = None
     return p
 
-def get_input(x, template, method='CCSD', basis='cc-pvdz', task='opt'):
+def get_input(x, template, parameters):
     """
     Returns input file text for a qc calculation based on a given template.
     """
@@ -694,6 +694,9 @@ def get_input(x, template, method='CCSD', basis='cc-pvdz', task='opt'):
     zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
+    method = parameters['qcmethod'] 
+    basis = parameters['qcbasis'] 
+    task = parameters['qctask'] 
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'
