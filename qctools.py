@@ -36,7 +36,7 @@ def parse_output(s, smilesname, write=False, store=False):
     else:
         print("First parameter in parse_output should be a string or list of strings")
     d = {}
-    [theory,calculation,xyz,basis] = ['na']*4
+    [method,calculation,xyz,basis] = ['na']*4
     nbasis = 0
     energy = 0
     energies = {}
@@ -45,25 +45,25 @@ def parse_output(s, smilesname, write=False, store=False):
     
     parsed = False
     if package == 'nwchem':
-        theory = get_nwchem_theory(s)
+        method = get_nwchem_method(s)
         calculation = get_nwchem_calculation(s)
         xyz = get_nwchem_xyz(lines)
         basisinfo = get_nwchem_basis(lines)
         basis = basisinfo['basis']
         nbasis = basisinfo['number of basis functions']
         energies = get_nwchem_energies(lines)
-        energy = energies[theory]
+        energy = energies[method]
         hrmfreqs = get_nwchem_frequencies(lines)
         parsed = True
     elif package == 'molpro':
-        theory, energy = pa.molpro_energy(s)
+        method, energy = pa.molpro_energy(s)
         calculation    = pa.molpro_calc(s)
         basis          = pa.molpro_basisset(s)
         zmat           = pa.molpro_zmat(s)
         hrmfreq        = pa.molpro_freqs(s)
         parsed = True
     elif package == 'gaussian':
-        theory, energy = pa.gaussian_energy(s)
+        method, energy = pa.gaussian_energy(s)
         calculation    = pa.gaussian_calc(s)
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
@@ -84,7 +84,7 @@ def parse_output(s, smilesname, write=False, store=False):
                 io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
         d = {package:
              {calculation:
-              {theory:
+              {method:
                {basis:{
                 'number of basis functions':nbasis,
                 'energy':energy,
@@ -93,22 +93,22 @@ def parse_output(s, smilesname, write=False, store=False):
                   'harmonic frequencies' : hrmfreqs}}}}}}
         if calculation == 'geometry optimization':
             for key,value in energies.iteritems():
-                if key is not theory:
-                    d[package][calculation][theory][basis]['geometry'].update({
+                if key is not method:
+                    d[package][calculation][method][basis]['geometry'].update({
                         'single point':{key:{basis:{'number of basis functions':nbasis,'energy':value}}}})
                     if write:
-                        fname = '{0}_{1}.ene'.format(theory,smilesname)
+                        fname = '{0}_{1}.ene'.format(method,smilesname)
                         io.write_file(str(energy), fname)
             if store:
                 if package == 'gaussian':
                     package = 'g09'
-                io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, theory, basis)
+                io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
                 if hrmfreq != None:
-                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreq[::-1]) , smilesname,  'hrm', None, package, theory, basis)
+                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreq[::-1]) , smilesname,  'hrm', None, package, method, basis)
                 if xyz != None:
-                    io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, theory, basis)
+                    io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
                 if zmat != None:
-                    io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, theory, basis)
+                    io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
     return d
 
    
@@ -1280,7 +1280,7 @@ def get_nwchem_calculation(inp, filename=False):
     return calc
     
     
-def get_nwchem_theory(inp, filename=False):
+def get_nwchem_method(inp, filename=False):
     if filename:
         inp = io.read_file(inp,aslines=False)
     nwdict = {
@@ -1296,12 +1296,12 @@ def get_nwchem_theory(inp, filename=False):
         9	:{'ccsdt(2)_q' : 'CCSDT(2)_Q total energy / hartree'},
         10	:{'ccsdtq'     : 'CCSDTQ total energy / hartree'}
     }
-    theory = 'unknown'
+    method = 'unknown'
     for i in range(10,-1,-1):
         if nwdict[i].values()[0] in inp:
-            theory = nwdict[i].keys()[0]
+            method = nwdict[i].keys()[0]
             break
-    return theory
+    return method
 
     
 def get_nwchem_basis(inp, filename=False):
