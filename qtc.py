@@ -6,6 +6,7 @@ import iotools as io
 import obtools as ob
 import qctools as qc
 import tctools as tc
+import dbtools as db
 from pprint import pprint
 __updated__ = "2017-07-06"
 __author__ = "Murat Keceli"
@@ -264,7 +265,7 @@ def run(s):
     if runqc:
         if qcpackage in available_packages:
             print('Running {0}/{1}/{2}/{3}'.format(qcpackage,qcmethod,qcbasis,qctask))
-            msg += qc.run(s, parameters, mult)
+            msg += qc.run(mol, parameters, mult)
         elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"
             geofile = smilesname + '.geo'
@@ -288,8 +289,9 @@ def run(s):
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
         msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qclog))
-        newmsg, xyz,freqs,zpe,deltaH,afreqs,xmat = qc.parse_qclog(qclog, qcpackage, anharmonic=runanharmonic)
-        msg += newmsg
+        d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
+        xyz = next(db.gen_dict_extract('xyz',d))
+        freqs = next(db.gen_dict_extract('harmonic frequencies',d))
         if xyz is not None:
             msg += "Optimized xyz in Angstroms:\n{0} \n".format(xyz)
         else:
