@@ -139,7 +139,7 @@ def gaussian_xyz_foresk(lines):
             xyz +=  atoms[i] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
     return xyz 
     
-def gaussian_xyz(lines):
+def gaussian_geo(lines):
     atomnum = {'1':'H', '6':'C','8':'O'}
     xyz = ''
     if 'Eckart' in lines:
@@ -157,7 +157,13 @@ def gaussian_xyz(lines):
             xyz += ' ' + atomnum[line[1]] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
         return xyz 
     return None
-    
+   
+def gaussian_xyz(lines):
+    geo = gaussian_geo(lines) 
+    n   = str(len(geo.split('\n'))
+    xyz = n + '\n\n' +  geo
+    return xyz
+
 def gaussian_rotconsts(lines):
     rot = 'Rotational constants\s*\(GHZ\):\s*([\s,\d,\.,\-]*)'     
     rot = re.findall(rot,lines)
