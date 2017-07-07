@@ -607,8 +607,10 @@ def check(clist, basis,stoich,atomlist):
             break
     return statement
 
+
 def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/',db='tempdb',prog = 'auto', runE=False, mol_not_smiles=False):
-   
+    if prog.startswith('gau'):
+        prog = 'g09'
 
     #Convert basis selection to smiles if it is mol. formula format
     basis = basis.split()
