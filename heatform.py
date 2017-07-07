@@ -294,6 +294,8 @@ def getenergy_fromlogfile(logfile,theory='',prog=''):
     the energy corresponding to a given method in logfile
     """
     lines = io.read_file(logfile)
+    print lines
+    print prog
     if prog == '':
         prog  = getprog_fromlogfile(lines)
     if prog == 'g09':
@@ -500,7 +502,7 @@ def run_energy(mol, theory, basisset, prog, mol_is_smiles=True):
         filename = build_gauss(dic, theory, basisset, directory)
         run_gauss(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.log')))
-        E = getenergy_fromlogfile(filename.replace('.inp', '.log'),theory.lstrip('R').lstrip('U'),'g09')
+        E = float(io.db_get_sp_prop(mol, 'ene', db_location=directory))
         print 'Energy found to be: ' + str(E)
         return E
 
@@ -509,7 +511,7 @@ def run_energy(mol, theory, basisset, prog, mol_is_smiles=True):
         filename = build_molpro(mol, theory, basisset, directory)
         run_molpro(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.out')))
-        E = getenergy_fromlogfile(filename.replace('.inp', '.out'),theory.lstrip('R').lstrip('U'),'molpro')
+        E = float(io.db_get_sp_prop(mol, 'ene', db_location=directory))
         print 'Energy found to be: ' + str(E)
         return E
 
