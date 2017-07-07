@@ -47,11 +47,11 @@ def gaussian_method(lines):
 
     method = 'Done:\s*E\((\w+)'
     method = re.findall(method,lines)
-    if method[-1].strip().upper() == 'CORR' or method[-1].strip().upper() == 'Z':
-       if 'CCSD(T)' in lines:
-           return 'CCSD(T)'
-       elif 'CCSD' in lines:
-           return 'CCSD'
+    #if method[-1].strip().upper() == 'CORR' or method[-1].strip().upper() == 'Z':
+    if 'CCSD(T)' in lines:
+        return 'CCSD(T)'
+    elif 'CCSD' in lines:
+        return 'CCSD'
     method = method[-1].lstrip('r').lstrip('u').lstrip('R').lstrip('U')
     return method
 
