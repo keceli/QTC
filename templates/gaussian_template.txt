@@ -1,7 +1,7 @@
 %mem=20GB
-#P ccsd/cc-pvdz opt int=ultrafine scf=verytight nosym freq
+#P QTC(METHOD)/QTC(BASIS) QTC(TASK) int=ultrafine scf=verytight nosym
 
-test
+QTC(SMILESNAME)
 
 0 QTC(MULTIPLICITY)
 QTC(ZMAT)

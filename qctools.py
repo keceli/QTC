@@ -694,9 +694,33 @@ def get_input(x, template, parameters):
     zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
+    package = parameters['qcpackage'] 
     method = parameters['qcmethod'] 
     basis  = parameters[ 'qcbasis']
-    task   = parameters[  'qctask'] 
+    task   = parameters[  'qctask']
+    if package == 'nwchem':
+        if task.lower().startswith('opt'):
+            task = 'optimize'
+        elif task.lower().startswith('single'):
+            task = 'energy'
+        elif task.lower().startswith('freq'):
+            task = 'freq'
+    elif package == 'gaussian':
+        if task.lower().startswith('opt'):
+            task = 'opt'
+        elif task.lower().startswith('single'):
+            task = ''
+        elif task.lower().startswith('freq'):
+            task = 'freq'
+        elif task.lower().startswith('anharm'):
+            task = 'freq=anharm'
+    elif package == 'molpro':
+        if task.lower().startswith('opt'):
+            task = 'optg'
+        elif task.lower().startswith('single'):
+            task = ''
+        elif task.lower().startswith('freq'):
+            task = 'freq'
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'

@@ -327,7 +327,7 @@ if __name__ == "__main__":
     args = get_args()
     parameters = vars(args)
     package = parameters['qcpackage']
-    parameters['qtcdirectory'] = os.path.realpath(__file__)
+    parameters['qtcdirectory'] = os.path.dirname(os.path.realpath(__file__))
     ncalc = 0
     if parameters['qckeyword']:
         ncalc = len(parameters['qckeyword'].split(','))
