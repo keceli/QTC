@@ -287,9 +287,12 @@ def molpro_geo(lines):
     return '\n'.join(lines)
 
 def molpro_xyz(lines):
-    lines =  lines.split('Current geometry (xyz format')[-1].split('************')[0]
-    lines =  lines.split('\n')[2:]
-    return '\n'.join(lines)
+    lines =  lines.split('Current geometry (xyz format')
+    if len(lines) > 1:
+        lines = lines[-1].split('************')[0]
+        lines =  lines.split('\n')[2:]
+        return '\n'.join(lines)
+    return
 ##############################################
 ############     EStokTP PARSER    ###########
 ##############################################
