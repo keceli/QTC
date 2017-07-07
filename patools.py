@@ -281,6 +281,15 @@ def molpro_zmat(lines):
         return zmat
     return None
 
+def molpro_geo(lines):
+    lines =  lines.split('Current geometry (xyz format')[-1].split('************')[0]
+    lines =  lines.split('\n')[4:]
+    return '\n'.join(lines)
+
+def molpro_xyz(lines):
+    lines =  lines.split('Current geometry (xyz format')[-1].split('************')[0]
+    lines =  lines.split('\n')[2:]
+    return '\n'.join(lines)
 ##############################################
 ############     EStokTP PARSER    ###########
 ##############################################
