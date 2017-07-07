@@ -367,6 +367,19 @@ def get_formats():
     return pybel.outformats
 
 
+def get_smiles(x):
+    """
+    Returns open-babel canonical smiles.
+    """
+    if type(x) is pybel.Molecule:
+        s = x.write(format='can').strip()
+    elif type(x) is str:
+        s = x.strip()
+    else:
+        s = 'smiles'
+    return s
+
+
 def get_smiles_filename(x):
     """
     Returns a suitable filename for a given pybel.Molecule object or a string.
@@ -380,16 +393,16 @@ def get_smiles_filename(x):
         s = x.strip()
     else:
         return 'filename'           
-    s = s.replace('\\','a')
-    s = s.replace('/','b')
-    s = s.replace(':','d')
-    s = s.replace('*','z')
-    s = s.replace('?','q')
-    s = s.replace('<','x')
-    s = s.replace('>','y')
-    s = s.replace('|','l')
-    s = s.replace('(','p')
-    s = s.replace(')','r')
+    s = s.replace('\\','-dbs-')
+    s = s.replace('/','-s-')
+    s = s.replace(':','__')
+    s = s.replace('*','-star-')
+    s = s.replace('?','-qm-')
+    s = s.replace('<','-la-')
+    s = s.replace('>','-ra-')
+    s = s.replace('|','-l-')
+    s = s.replace('(','_')
+    s = s.replace(')','_')
     return s
 
 
