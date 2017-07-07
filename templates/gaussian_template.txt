@@ -1,0 +1,8 @@
+%mem=20GB
+#P QTC(METHOD)/QTC(BASIS) QTC(TASK) int=ultrafine scf=verytight nosym
+
+QTC(SMILESNAME)
+
+0 QTC(MULTIPLICITY)
+QTC(ZMAT)
+

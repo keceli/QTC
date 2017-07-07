@@ -8,7 +8,7 @@ geometry units angstrom
 end
 
 basis spherical
-    * library QTC(BASIS)  #file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
+    * library QTC(BASIS)  file /soft/nwchem/builds/nwchem-6.5-intel-blues/data/libraries/
 end
 
 scf

@@ -130,6 +130,20 @@ def read_file(filename, aslines=False):
     return tmp
 
 
+def fix_path(path):
+    """
+    Returns a path with problematic characters replaced by safer ones.
+    """
+    path = path.replace(':','__')
+    path = path.replace('*','-star-')
+    path = path.replace('?','-qm-')
+    path = path.replace('<','-la-')
+    path = path.replace('>','-ra-')
+    path = path.replace('(','_')
+    path = path.replace(')','_')
+    return path
+
+
 def check_file(filename, timeout=0, verbose=False):
     """
     Returns True (False) if a file exists (doesn't exist).
