@@ -1,26 +1,14 @@
-memory,         200 ,m
+memory,         2000 ,m
 nosym
 geometry={
 QTC(GEO)
 }
-r2  =  1.4157
-r3  =  1.0928
-a3  =  109.53
-r4  =  1.0928
-a4  =  109.53
-d4  =  239.19
-r5  =  1.0925
-a5  =  108.98
-d5  =  119.59
-r6  =  0.9723
-a6  =  107.10
-d6  =  60.41
 
 SET,SPIN= QTC(NOPEN)
 
-!closed shell input
 basis=QTC(BASIS)
 hf
 QTC(METHOD)
-QTC(MOLPROTASK)
+QTC(TASK)
+put,xyz
 ENERGY=energy

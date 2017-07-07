@@ -293,13 +293,17 @@ def run(s):
         d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
         xyz = next(db.gen_dict_extract('xyz',d))
         freqs = next(db.gen_dict_extract('harmonic frequencies',d))
-        energy = next(db.gen_dict_extract('energy',d))
-        method = next(db.gen_dict_extract('method',d))
-        basis = next(db.gen_dict_extract('basis',d))
-        package = next(db.gen_dict_extract('package',d))
+        energy = float(next(db.gen_dict_extract('energy',d)))
+        method = parameters['qcmethod']
+        basis = parameters['qcbasis']
+        package = parameters['qcpackage']
         theory = '{0}/{1}'.format(method,basis)
-        hf0, hfset = hf.main(mol,E=energy,theory=theory,prog=package)       
-        msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters)
+        hf0, hfset = hf.main(s,E=energy,theory=theory,prog=package)
+        hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
+        hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
+        io.write_file(hftxt,s + '.hf0k')
+        if len(freqs) > 0:
+            msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters)
     io.cd(cwd)
     print(msg)
     return

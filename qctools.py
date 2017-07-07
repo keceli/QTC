@@ -57,10 +57,11 @@ def parse_output(s, smilesname, write=False, store=False):
         parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
+        xyz            = pa.molpro_xyz(s)
         calculation    = pa.molpro_calc(s)
         basis          = pa.molpro_basisset(s)
         zmat           = pa.molpro_zmat(s)
-        hrmfreq        = pa.molpro_freqs(s)
+        hrmfreqs       = pa.molpro_freqs(s)
         parsed = True
     elif package == 'gaussian':
         method, energy = pa.gaussian_energy(s)
@@ -68,7 +69,7 @@ def parse_output(s, smilesname, write=False, store=False):
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
         xyz            = pa.gaussian_xyz(s)
-        hrmfreq        = pa.gaussian_freqs(s)
+        hrmfreqs       = pa.gaussian_freqs(s)
         parsed = True
     if parsed:
         if write:
@@ -103,8 +104,8 @@ def parse_output(s, smilesname, write=False, store=False):
                 if package == 'gaussian':
                     package = 'g09'
                 io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
-                if hrmfreq != None:
-                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreq[::-1]) , smilesname,  'hrm', None, package, method, basis)
+                if hrmfreqs != None:
+                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
                 if xyz != None:
                     io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
                 if zmat != None:
@@ -391,12 +392,7 @@ def execute_mopac(inp, exe='mopac'):
 
 def run(s, parameters, mult=None):
     """
-    Runs nwchem, returns a string specifying the status of the calculation.
-    nwchem inp.nw > nw.log
-    NWChem writes output and error to stdout.
-    Generates .db (a binary file to restart a job) and .movecs (scf wavefunction) files in the run directory.
-    Generates many junk files in a scratch directory.
-    If scratch is not specified, these junk files are placed in the run directory.
+    Runs qc, returns a string specifying the status of the calculation.
     """
     package = parameters['qcpackage']
     overwrite = parameters['overwrite']
@@ -430,15 +426,18 @@ def run(s, parameters, mult=None):
         if io.check_file(inpfile, timeout=1):
             if package == 'extrapolation':
                 run_extrapolation(s, parameters)
-            elif package == 'nwchem':
+            elif package in  ['nwchem', 'torsscan']:
                 command = [parameters['qcexe'], inpfile]
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
-            elif package == 'torsscan':
-                command = [parameters['torsscan'], inpfile] 
-                msg = io.execute(command,'tors.out')
+            elif package in  ['molpro']:
+                command = [parameters['qcexe'], inpfile]
+                msg += io.execute(command,stdoutfile=outfile,merge=True)
+                logfile = prefix + '.log'
+                io.append_file(io.read_file(logfile),filename=outfile)
+                io.rm(logfile)
             else:
                 command = [parameters['qcexe'], inpfile, outfile] 
-                msg = io.execute(command)
+                msg += io.execute(command)
             if io.check_file(outfile, timeout=1):
                 msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
         else:
@@ -717,12 +716,15 @@ def get_input(x, template, parameters):
         elif task.lower().startswith('anharm'):
             task = 'freq=anharm'
     elif package == 'molpro':
+        if nopen > 0:
+            if method.lower().startswith('ccsd'):
+                method = 'u'+method
         if task.lower().startswith('opt'):
             task = 'optg'
         elif task.lower().startswith('single'):
             task = ''
         elif task.lower().startswith('freq'):
-            task = 'freq'
+            task = 'frequencies'
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'
