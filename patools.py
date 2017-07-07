@@ -1,7 +1,7 @@
 #!usr/bin/python
 
 import re
-
+import numpy as np
 """
 Module for parsing logfiles
 
