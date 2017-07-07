@@ -695,8 +695,8 @@ def get_input(x, template, parameters):
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     method = parameters['qcmethod'] 
-    basis = parameters['qcbasis'] 
-    task = parameters['qctask'] 
+    basis  = parameters[ 'qcbasis']
+    task   = parameters[  'qctask'] 
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'
