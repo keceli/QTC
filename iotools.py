@@ -357,8 +357,8 @@ def db_head_path(db_location=None):
     if db_location == 'test':
         return '/home/elliott/testdirectory/'
     if db_location == None:
-        #return '/home/snelliott/projects/anl/QTC/test'
-        return '/lcrc/project/PACC/databases/qtc_database/'
+        return '/home/elliott/Packages/QTC/hftest'
+        #return '/lcrc/project/PACC/databases/qtc_database/'
     else:
         return db_location
 
@@ -528,30 +528,33 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     prog   =  pa.get_prog(lines)
     method =  pa.method(  lines).lower().lstrip('r')
     basis  =  pa.basisset(lines).lower()
-    energy =  str(pa.energy(lines) [1])
-    zpve   =  str(pa.zpve(lines))
+    energy =  pa.energy(lines) [1]
+    zpve   =  pa.zpve(lines)
     zmat   =  pa.zmat(    lines)     
     xyz    =  pa.xyz(     lines) 
     geo    =  pa.geo(     lines) 
-    freqs  = ', '.join(freq for freq in pa.freqs(lines)[::-1])
+    freqs  =  pa.freqs(lines)
     
     if prog == None or method == None or basis == None:
         print 'Parsing error, check lines'
         return 
-
-    if zmat != None:
-        db_store_opt_prop(zmat, species, 'zmat', None, prog, method, basis)
-    if xyz != None:
-       db_store_opt_prop(xyz, species, 'xyz', None, prog, method, basis)
-    if geo != None:
-       db_store_opt_prop(geo, species, 'geo', None, prog, method, basis)
     if optprog == None:
        optprog, optmethod, optbasis = prog, method, basis
 
-    db_store_sp_prop(energy, species, 'ene', None, prog, method, basis, optprog, optmethod, optbasis)
-    db_store_sp_prop(freqs,  species, 'hrm', None, prog, method, basis, optprog, optmethod, optbasis)
-    db_store_sp_prop( zpve,  species,'zpve', None, prog, method, basis, optprog, optmethod, optbasis)
+    if zmat != None:
+        db_store_opt_prop(zmat, species, 'zmat', None, optprog, optmethod, optbasis)
+    if xyz != None:
+       db_store_opt_prop(xyz, species, 'xyz', None, optprog, optmethod, optbasis)
+    if geo != None:
+       db_store_opt_prop(geo, species, 'geo', None, optprog, optmethod, optbasis)
 
+    if energy != None:
+        db_store_sp_prop(str(energy), species, 'ene', None, prog, method, basis, optprog, optmethod, optbasis)
+    if freqs != None:
+        freqs  = ', '.join(freq for freq in freqs[::-1])
+        db_store_sp_prop(freqs,  species, 'hrm', None, prog, method, basis, optprog, optmethod, optbasis)
+    if zpve != None:
+        db_store_sp_prop(str( zpve),  species,'zpve', None, prog, method, basis, optprog, optmethod, optbasis)
     return 
 
 if __name__ == "__main__":
