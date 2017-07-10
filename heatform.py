@@ -345,7 +345,7 @@ def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, f
     gauss  = '%Mem=25GB\n%nproc=8\n'
     gauss += '#P ' + theory.lstrip('R').lstrip('U') + '/' +  basisset +  ' int=ultrafine scf=verytight nosym '
     if opt:
-        gauss += 'opt '
+        gauss += 'opt=internal '
     if freq:
         gauss += 'freq=VibRot '
     if anharm:
@@ -520,7 +520,7 @@ def run_opt(mol, prog, meth, bas, mol_is_smiles=True):
         return zmat
 
     elif prog == 'molpro':
-        print 'Running Molpro on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
+        print 'Running Molpro optimization on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
         filename = build_molpro(dic, meth, bas, directory=directory, opt=True)
         run_molpro(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.out')))
@@ -566,21 +566,19 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         freq = False
 
     if  propprog == 'g09':
-        print 'Running G09 on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
+        print 'Running G09 ' + entype + ' on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
         filename = build_gauss(dic, propmeth, propbas, zmat=zmat, directory=directory, freq=freq, anharm=anharm)
         run_gauss(filename)
-        io.parse_all(mol, io.read_file(filename.replace('.inp','.log')))
+        io.parse_all(mol, io.read_file(filename.replace('.inp','.log')), optprog, optmeth, optbas)
         E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
-        print '.{} Energy found to be: {}'.format(entype, E)
         return E
 
     elif proppprog == 'molpro':
-        print 'Running Molpro on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
-        filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq, anharm=anharm)
+        print 'Running Molpro ' + entype + ' on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
+        filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq,anharm=anharm)
         run_molpro(filename)
-        io.parse_all(mol, io.read_file(filename.replace('.inp','.out')))
+        io.parse_all(mol, io.read_file(filename.replace('.inp','.out')), optprog, optmeth, optbas)
         E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
-        print 'Energy found to be: ' + str(E)
         return E
 
 def E_dic(bas, opt, en, freq, runE=True, anharm=False):
@@ -635,7 +633,7 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
         E = float(io.read_file(enefile).strip())
         print 'Energy {:f} pulled from: {}'.format(E, enefile)
     elif runE:
-        E = run_energy(bas, optprog, optmethod, optbasis, enprog, enmethod, entbasis, 'ene')
+        E = run_energy(bas, optprog, optmethod, optbasis, enprog, enmethod, enbasis, 'ene')
         io.write_file(str(E), enefile)
         print 'Energy {:f} saved to: {}'.format(E,  enefile)
     
@@ -841,15 +839,16 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
     ##########################
     
     hf0k = E[0] * 627.503 
+    hfdire = io.db_sp_path(enprog, enmethod, enbasis, mol, None, optprog, optmethod, optbasis)
     if not mol_not_smiles:
-        if not io.check_file(dire + '/' + mol + '.hf0k'):
-            io.db_store_sp_prop('Energy (kcal)\tBasis\n----------------------------------',mol,'hf0k',None,prog,theory,basisset)
+        if not io.check_file(hfdire + '/' + mol + '.hf0k'):
+            io.db_store_sp_prop('Energy (kcal)\tBasis\n----------------------------------',mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
         s = '\n' + str(hf0k) + '\t' + '  '.join(basis) 
-        io.db_append_sp_prop(s,mol,'hf0k',None,prog,theory,basisset)
+        io.db_append_sp_prop(s,mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
         
         lines += '\n\nStored heats of formation:\n'
         lines += '----------------------------------\n' 
-        lines += io.db_get_sp_prop(mol,'hf0k',None,prog,theory,basisset)
+        lines += io.db_get_sp_prop(mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
     lines += '\n\n_________________________________________________\n\n'
     print lines
 

@@ -69,6 +69,7 @@ def gaussian_energy(lines,method=''):
         energ = 'E\([u,U,r,R]*' + method + '\)\s*=\s*([\d,\-,\.]*)'
         energ = re.findall(energ,lines)
         return (method, float(energ[-1]))
+    return 
 
 def gaussian_opt_zmat_params(lines):
     
@@ -107,14 +108,25 @@ def gaussian_freqs(lines):
     freqs = []
     for line in freqlines:
         freqs.extend(line.split())
-    return freqs
+    if len(freqs) > 0:
+        return freqs
+    return None
 
 def gaussian_zpve(lines):
 
     zpve = 'Zero\-point\s*correction=\s*([\d,\.,\-]*)'
     zpve = re.findall(zpve, lines)
-    return float(zpve[-1])
+    if len(zpve) > 0:
+        return float(zpve[-1])
+    return None 
 
+def gaussian_anzpve(lines):
+    zpve = 'ZPE\(anh\)=\s*([\d,\w,\+,\.,\-]*)'
+    zpve = re.findall(zpve, lines)
+    if len(zpve) > 0:
+        return float(zpve[-1].replace('D','E'))*.00038088
+    return
+ 
 def gaussian_calc(lines):
     if 'Optimization complete' in lines:
        return 'geometry optimization'
@@ -394,6 +406,7 @@ def zpve(lines):
         return molpro_zpve(lines)
     print 'program not recognized as g09 or molpro'
     return 
+
 
 def xyz(lines):
     prog = get_prog(lines)
