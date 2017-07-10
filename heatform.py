@@ -4,7 +4,8 @@ import re
 import numpy as np
 import os
 import sys
-sys.path.insert(0, '/home/elliott/Packages/QTC/')
+#sys.path.insert(0, '/home/elliott/Packages/QTC/')
+sys.path.insert(0, '/home/snelliott/projects/anl/QTC/')
 import iotools as io
 import patools as pa
 import obtools as ob
@@ -331,7 +332,7 @@ def get_gaussian_zmat(filename):
     lines  = io.read_file(filename)
     return pa.gaussian_zmat(lines)
 
-def build_gauss(mol, theory, basisset,directory=None):
+def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, freq=False, anharm=False):
     """
     Builds a Guassian optimization inputfile for a molecule
     INPUT:
@@ -342,13 +343,19 @@ def build_gauss(mol, theory, basisset,directory=None):
     None (but an inputfile now exists with name <stoich>.inp)
     """
     gauss  = '%Mem=25GB\n%nproc=8\n'
-    gauss += '#P ' + theory.lstrip('R').lstrip('U') + '/' +  basisset +  ' opt=internal int=ultrafine scf=verytight nosym\n'
+    gauss += '#P ' + theory.lstrip('R').lstrip('U') + '/' +  basisset +  ' int=ultrafine scf=verytight nosym '
+    if opt:
+        gauss += 'opt '
+    if freq:
+        gauss += 'freq=VibRot '
+    if anharm:
+        guass += 'freq=anharmonic '
+    gauss += '\n'
 
     gauss += '\nEnergy for HeatForm\n\n'
 
     meths = ['ccsdt','ccsd(t)','ccsd','m062x','b3lyp']
     bases = ['cc-pvqz','cc-pvtz','cc-pvdz','6-311+g(d,p)','6-31+g(d,p)']
-    zmat  = 'none'
     
     if type(mol) == dict:
         dic    = mol
@@ -386,7 +393,7 @@ def build_gauss(mol, theory, basisset,directory=None):
 
     return filename
 
-def build_molpro(mol, theory, basisset, directory=None):
+def build_molpro(mol, theory, basisset, zmat='none', directory=None, opt=False, freq=False,anharm=False):
     """
     Builds a Guassian optimization inputfile for a molecule
     INPUT:
@@ -409,20 +416,19 @@ def build_molpro(mol, theory, basisset, directory=None):
     molp  = 'memory,         200 ,m\nnosym\ngeometry={angstrom\n'
     meths = ['ccsdt','ccsd(t)','ccsd','m062x','b3lyp']
     bases = ['cc-pvqz','cc-pvtz','cc-pvdz','6-311+g(d,p)','6-31+g(d,p)']
-    zmat  = 'none'
     
-    if theory.lower().lstrip('r') in dic['g09']:
-        for j in range(len(bases)):
-            if bases[j] in dic['g09'][theory.lower().lstrip('r')]:
-                if zmat in dic['g09'][theory.lower().lstrip('r')][bases[j]]:
-                    zmat = dic['g09'][theory.lower().lstrip('r')][bases[j]]['zmat']
-    if zmat == 'none':
-        for i in range(len(meths)):
-            if meths[i] in dic['g09']:
-                for j in range(len(bases)):
-                    if bases[j]  in dic['g09'][meths[i]]:
-                        if 'zmat'in dic['g09'][meths[i]][bases[j]]:
-                            zmat =  dic['g09'][meths[i]][bases[j]]['zmat']
+    #if theory.lower().lstrip('r') in dic['g09']:
+    #    for j in range(len(bases)):
+    #        if bases[j] in dic['molpro'][theory.lower().lstrip('r')]:
+    #            if zmat in dic['molpro'][theory.lower().lstrip('r')][bases[j]]:
+    #                zmat = dic['molpro'][theory.lower().lstrip('r')][bases[j]]['zmat']
+    #if zmat == 'none':
+    #    for i in range(len(meths)):
+    #        if meths[i] in dic['molpro']:
+    #            for j in range(len(bases)):
+    #                if bases[j]  in dic['molpro'][meths[i]]:
+    #                    if 'zmat'in dic['molpro'][meths[i]][bases[j]]:
+    #                        zmat =  dic['molpro'][meths[i]][bases[j]]['zmat']
     if zmat == 'none':
         zmat = '\n\n' + ob.get_zmat(mol).replace('=', '') 
 
@@ -443,16 +449,24 @@ def build_molpro(mol, theory, basisset, directory=None):
         else:
             molp += 'dft=[' + theory.lower() + ']\n'
             theory = 'dft'
-        molp += theory.lower() + '\noptg\nENERGY=energy'
+        molp += theory.lower() 
     else:
         if 'ccsd' in theory.lower() or 'cisd' in theory.lower(): 
-	    molp += '!open shell input\nbasis=' + basisset + '\nhf\nu' + theory.lower() + '\noptg\nENERGY=energy'
+	    molp += '!open shell input\nbasis=' + basisset + '\nhf\nu' + theory.lower() 
         elif 'hf' in theory.lower():
-	    molp += '!open shell input\nbasis=' + basisset + '\nuhf\noptg\nENERGY=energy'
+	    molp += '!open shell input\nbasis=' + basisset + '\nuhf'
         elif 'mp' in theory.lower():
-	    molp += '!open shell input\nbasis=' + basisset + '\nrhf\n' + theory.lower() + '\noptg\nENERGY=energy'
+	    molp += '!open shell input\nbasis=' + basisset + '\nrhf\n' + theory.lower() 
         else:
-            molp += '!open shell input\nbasis=' + basisset + '\ndft=['+theory.lower() + ']\nuhf\ndft\noptg\nENERGY=energy'
+            molp += '!open shell input\nbasis=' + basisset + '\ndft=['+theory.lower() + ']\nuhf\ndft'
+    if opt:
+        molp += '\noptg'
+    if freq:
+        molp += '\nfrequencies'
+    if anharm:
+        molp += '\nlabel1\n{hf\nstart,atden}\n{mp2\ncphf,1}\n{surf,start1D=label1,sym=auto\n intensity,dipole=2}\nvscf\nvci'
+        #molp += ',pmp=3,version=1\nvci,pmp=3,version=2\nvci,pmp=3,version=3'
+    molp += '\nENERGY=energy'
 
     directory = io.db_logfile_dir(directory)
     filename  = io.join_path(directory, stoich + '.inp')
@@ -471,11 +485,11 @@ def run_molpro(filename):
     """
     Runs molpro on file: filename
     """
-    os.system('/home/elliott/bin/molprop ' + filename)
+    os.system('/home/elliott/bin/molprop ' + filename.replace('(','\(').replace(')','\)').replace('[','\[').replace(']','\]'))
     
     return
 
-def run_energy(mol, theory, basisset, prog, mol_is_smiles=True):
+def run_opt(mol, prog, meth, bas, mol_is_smiles=True):
     """
     Runs a g09 or molpro job for 
     INPUT:
@@ -495,27 +509,78 @@ def run_energy(mol, theory, basisset, prog, mol_is_smiles=True):
 
     dic    = mol      
     
-    directory = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
-
+    directory = io.db_opt_path(prog, meth, bas, None, mol)
+    
     if  prog == 'g09':
-        print 'Running G09 on ' + stoich + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
-        filename = build_gauss(dic, theory, basisset, directory)
+        print 'Running G09 optimiztion on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
+        filename = build_gauss(dic, meth, bas, directory=directory, opt=True)
         run_gauss(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.log')))
-        E = float(io.db_get_sp_prop(mol, 'ene', db_location=directory))
-        print 'Energy found to be: ' + str(E)
-        return E
+        zmat = io.db_get_opt_prop(mol, 'zmat', db_location=directory)
+        return zmat
 
     elif prog == 'molpro':
-        print 'Running Molpro on ' + stoich + ' at ' + theory.lstrip('R').lstrip('U') + '/' + basisset
-        filename = build_molpro(mol, theory, basisset, directory)
+        print 'Running Molpro on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
+        filename = build_molpro(dic, meth, bas, directory=directory, opt=True)
         run_molpro(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.out')))
-        E = float(io.db_get_sp_prop(mol, 'ene', db_location=directory))
+        zmat = io.db_get_opt_prop(mol, 'zmat', db_location=directory)
+        return zmat
+
+    return 
+
+def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entype, mol_is_smiles=True):
+    """
+    Runs a g09 or molpro job for 
+    INPUT:
+    stoich   - stoichiometry of molecule
+    theory   - theory energy should be listed or computed with
+    basisset - basis set energy should be listed or computed with
+    prog     - program an energy should be listed or computed with
+    OUTPUT:
+    E        - energy 
+    """
+    if mol_is_smiles:
+        dic    = ob.get_mol(mol)
+        stoich = ob.get_formula(mol)
+        
+    else:     #mol is dictionary
+        stoich = mol['stoich']
+
+    dic    = mol      
+    
+    optdir    = io.db_opt_path(optprog, optmeth,  optbas, None, mol)
+    coordfile = io.join_path(optdir, mol + '.zmat')
+    if io.check_file(coordfile):
+        zmat  = io.db_get_opt_prop(mol, 'zmat', db_location=optdir)
+    else:
+        zmat  = 'none'
+    directory = io.db_sp_path(propprog, propmeth, propbas, None, mol, optprog, optmeth, optbas)
+ 
+    if entype == 'zpve':
+        freq = True
+    else:
+        freq = False
+
+    if  propprog == 'g09':
+        print 'Running G09 on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
+        filename = build_gauss(dic, propmeth, propbas, zmat=zmat, directory=directory, freq=freq)
+        run_gauss(filename)
+        io.parse_all(mol, io.read_file(filename.replace('.inp','.log')))
+        E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
+        print '.{} Energy found to be: {}'.format(entype, E)
+        return E
+
+    elif proppprog == 'molpro':
+        print 'Running Molpro on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
+        filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq)
+        run_molpro(filename)
+        io.parse_all(mol, io.read_file(filename.replace('.inp','.out')))
+        E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
         print 'Energy found to be: ' + str(E)
         return E
 
-def E_dic(bas,energORs,theory,basisset,prog):
+def E_dic(bas, opt, en, freq, runE=True):
     """
     Checks a dictionary and directories for energy at a specified level of theory and basisset 
     Computes energy if it isn't in dictionary already
@@ -531,40 +596,59 @@ def E_dic(bas,energORs,theory,basisset,prog):
     
     ### Check dictionary ###
     from testdb import db
+    E, zpve = 0, 0
+    #dic = {}
+    #for dbdic in db:
+    #    if dbdic['_id'] == bas:
+    #      dic = dbdic  
 
-    for dic in db:
-        if dic['_id'] == bas:
-            break
-
-    if prog.lower() in dic: 
-        if theory.lower().lstrip('r') in dic[prog.lower()]:
-            if basisset.lower() in dic[prog.lower()][theory.lower().lstrip('r')]:
-                E =  dic[prog.lower()][theory.lower().lstrip('r')][basisset.lower()][energORs]
-                print 'Energy ' + str(E) +  ' pulled from dictionary database' 
-                return E
+    #if prog.lower() in dic: 
+    #    if theory.lower().lstrip('r') in dic[prog.lower()]:
+    #        if basisset.lower() in dic[prog.lower()][theory.lower().lstrip('r')]:
+    #            E =  dic[prog.lower()][theory.lower().lstrip('r')][basisset.lower()][entype]
+    #            print 'Energy ' + str(E) +  ' pulled from dictionary database' 
+    #            return E
 
     ### Check directory ###
+    optprog,  optmethod,  optbasis  =  opt[0],  opt[1],  opt[2]
+    enprog,    enmethod,   enbasis  =   en[0],   en[1],   en[2]
+    freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
 
-    dire = io.db_sp_path(prog, theory, basisset, None, bas, prog, theory, basisset)
-    enefile = io.join_path(dire, bas+ '.ene')
+    cdire      = io.db_opt_path(optprog, optmethod, optbasis, None, bas)
+    coordsfile = io.join_path(cdire, bas + '.zmat')
+    edire      = io.db_sp_path(enprog, enmethod, enbasis, None, bas, optprog, optmethod, optbasis)
+    enefile    = io.join_path(edire, bas + '.ene')
+    fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
+    zpvefile   = io.join_path(fdire, bas + '.zpve')
+
+    if not io.check_file(coordsfile) and runE:
+        E = run_opt(bas, optprog, optmethod, optbasis, True)
+
     if io.check_file(enefile):
         E = float(io.read_file(enefile).strip())
-        print 'Energy ' + str(E) +  ' pulled from: ' + enefile
-        return E
+        print 'Energy {:f} pulled from: {}'.format(E, enefile)
+    elif runE:
+        E = run_energy(bas, optprog, optmethod, optbasis, enprog, enmethod, entbasis, 'ene')
+        io.write_file(str(E), enefile)
+        print 'Energy {:f} saved to: {}'.format(E,  enefile)
+    
+    if io.check_file(zpvefile):
+        zpve= io.read_file(zpvefile).strip()
+        zpve= float(zpve)
+        print 'ZPVE  {:f} pulled from: {}'.format(zpve, zpvefile)
+    elif runE:
+        zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, 'zpve')
+        io.write_file(str(zpve), zpvefile)
+        print 'ZPVE  ' + str(zpve) +  ' saved to: ' + zpvefile
+    else:
+        print 'Zero point vibrational energy NOT accounted for'
+        zpve = 0
 
-    if energORs == 'energy':
-        E = run_energy(bas, theory, basisset, prog)
-        io.db_store_sp_prop(str(E), bas, 'ene', dire)
-        print 'Energy ' + str(E) +  ' saved to: ' + enefile
-        return E
-
-    elif energORs != 'energy':
-        return .001
     #print 'no energy for ' +  dic['stoich'] + ' at '+ theory + '/' + basisset 
-    print 'No electronic energy found -- ommitting its contribution'
-    return 0
+    #print 'No electronic energy found -- ommitting its contribution'
+    return  E + zpve
 
-def comp_energy(mol,basis,coefflist,E,theory,basisset,prog):
+def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq):
     """
     Uses the coefficients [a,b,c...] obtained from C = M^-1 S to find 
     delH(CxHyOz) = adelH(R1) + bdelH(R2) + cdelH(R3) + Eo(CxHyOz) - aEo(R1) - bEo(R2) -cEo(R3)
@@ -580,18 +664,17 @@ def comp_energy(mol,basis,coefflist,E,theory,basisset,prog):
     sigma     - uncertainty estimate (i.e., delH = lE +/- sigma)
    
     """
-    zE        = E
     var       = 0
     for i,bas in enumerate(basis):
-        zE  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
+        E  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
 
         var += (coefflist[i] * nest_2_dic(bas,'HeatForm','sigma') * 0.00038088   )**2
-        E    =  E_dic(bas, 'energy',theory,basisset,prog)
-        zE  -=  coefflist[i] * E
-        #var += (coefflist[i] * E * E_dic(bas,'sigma',theory,basisset,prog) )**2
+        e    =  E_dic(bas, opt, en, freq)
+        E   -=  coefflist[i] * e
+        #var += (coefflist[i] * e * E_dic(bas,'sigma',theory,basisset,prog) )**2
 
     sigma = np.sqrt(var)
-    return zE, sigma
+    return E, sigma
     
 def check(clist, basis,stoich,atomlist):
     """
@@ -607,10 +690,17 @@ def check(clist, basis,stoich,atomlist):
             break
     return statement
 
+def get_theory(level, loglines=''):
+    if is_auto(level):
+        prog     = pa.get_prog(loglines)
+        method   = pa.get_method(loglines)
+        basisset = pa.get_basis(loglines)
+    else:
+        prog, method, basisset = level.split('/')
+    return prog, method, basisset
 
-def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/',db='tempdb',prog = 'auto', runE=False, mol_not_smiles=False):
-    if prog.startswith('gau'):
-        prog = 'g09'
+def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlevel',enlevel='optlevel',anharm=False,runE=False, mol_not_smiles=False):
+
 
     #Convert basis selection to smiles if it is mol. formula format
     basis = basis.split()
@@ -621,40 +711,49 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
             basis[n] = stoich_to_smiles[bas]
 
     ####AUTO SET NONUSERDEFINED PARAMETERS FROM LOGFILE###
-    if is_auto(prog):
-        prog = pa.get_prog(io.read_file(logfile))
+    if logfile != '' and io.check_file(logfile):
+        loglines = io.read_file(logfile)
+    else: loglines = ''
+
+    optprog, optmethod, optbasis = get_theory(optlevel, loglines)
+    if freqlevel == 'optlevel':
+        freqprog, freqmethod, freqbasis = optprog, optmethod, optbasis
+    else:
+       freqprog, freqmethod, freqbasis = get_theory(freqlevel)
+    if enlevel == 'optlevel':
+        enprog, enmethod, enbasis = optprog, optmethod, optbasis
+    else:
+        enprog, enmethod, enbasis = get_theory(enlevel)
+
+    if optprog.startswith('gau'):
+        optprog = 'g09'
+    if freqprog.startswith('gau'):
+        freqprog = 'g09'
+    if enprog.startswith('gau'):
+        enprog  = 'g09'
+    optlevel  = [optprog,   optmethod,  optbasis]
+    freqlevel = [freqprog, freqmethod, freqbasis]
+    enlevel   = [enprog,     enmethod,   enbasis]
 
     if is_auto(mol):
         mol = getname_fromdirname() 
         molform = ob.get_formula(ob.get_mol(mol))
 
-    if is_auto(theory) and io.check_file(logfile):
-        theory  = gettheory_fromlogfile(logfile)
-        theory += '/'
-        theory += getbasisset_fromlogfile(logfile)
-    theory, basisset = theory.split('/')
-    
-    #Search database for energy of mol and compute if its not there, unless told to parse it from logfile
+    #Search database for coords, energy, and zpve of mol and compute if its not there, unless told to parse it from logfile
     if not mol_not_smiles:
-        dire = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
-        enefile = io.join_path(dire, mol + '.ene')
         molform = ob.get_formula(ob.get_mol(mol))
-
-        if io.check_file(enefile):
-            E = float(io.read_file(enefile).strip())
-            print 'Energy ' + str(E) +  ' pulled from: ' + enefile
-
-        elif runE:
-            dire = io.db_sp_path(prog, theory, basisset, None, mol, prog, theory, basisset)
-            enefile = io.join_path(dire, mol + '.ene')
-            E = run_energy(mol, theory, basisset, prog, True)
-            io.write_file(str(E), enefile)
-            print 'Energy ' + str(E) +  ' saved to: ' + enefile
+        E = E_dic(mol, optlevel, enlevel, freqlevel,runE)
     else:
         molform = mol
+
     if is_auto(E):
-        E = getenergy_fromlogfile(logfile,theory)
-   
+        E = pa.get_energy(loglines,enmethod)
+        zpve = get_zpve(loglines)
+        if zpve == None:
+            print 'Zero point vibrational energy NOT accounted for'
+            zpve = 0
+        E = E + zpve
+
     ####BASIS SELECTION#### 
     basprint = 'manually select basis'
     atomlist = get_atomlist(molform)
@@ -672,9 +771,10 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
         basprint = 'read basis from basis.dat'
     lines =  ('\n___________________________________________________\n\n' +
               'HEAT OF FORMATION FOR: ' + mol + ' (' + molform + ')' +
-              '\n      at ' + theory + '/' +  basisset + 
-              '\n\n___________________________________________________\n\n'
-              + 'Electronic Energy is: ' +  str(E) + '\nYou have chosen to ' + 
+              '\nat ' + optprog + '/' +  optmethod + '/' + optbasis  + 
+              '//' + enprog + '/' + enmethod + '/' + enbasis + 
+              '\n\n___________________________________________________\n\n' +
+              'Electronic Energy is: ' +  str(E) + '\nYou have chosen to ' + 
               basprint + '\n\nBasis is: ' + ', '.join(basis))
     print lines 
  
@@ -723,7 +823,7 @@ def main(mol,logfile='geoms/reac1_l1.log', basis='auto', E=9999.9, theory='auto/
     ##################
 
     #COMPUTE AND PRINT delH###
-    E =  comp_energy(molform,basis,clist,E,theory,basisset,prog)
+    E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel)
     lines =  '\n        delHf(0K)'
     lines += '\nA.U. \t'
     for e in E[:1]:  lines += str(e) + '\t'
@@ -765,9 +865,10 @@ if __name__ == '__main__':
     parser.add_argument('-b','--select_stoich_basis',type=str,   default='auto')
     parser.add_argument('-B','--select_smiles_basis',type=str,   default='auto')#Doesn't actually matter if you use b or B right now
 
-    parser.add_argument('-t','--level_of_theory',    type=str,  default='auto/')
-    parser.add_argument('-e','--electronic_energy',  type=float, default=9999.9)
-    parser.add_argument('-p','--program',            type=str,   default='auto')
+    parser.add_argument('-E','--electronic_energy',  type=float, default=9999.9)
+    parser.add_argument('-o','--optlevel',          type=str,   default='auto/')
+    parser.add_argument('-f','--freqlevel',       type=str,  default='optlevel')
+    parser.add_argument('-e','--energylevel',     type=str,  default='optlevel')
 
     parser.add_argument('-d','--database',           type=str, default='testdb')
     parser.add_argument('-s','--mol_not_smiles',            action='store_true')
@@ -781,11 +882,12 @@ if __name__ == '__main__':
     runE   = args.run_energy
     basis  = args.select_stoich_basis
     if basis == 'auto':
-        basis  = args.select_smiles_basis
-    theory = args.level_of_theory
+        basis = args.select_smiles_basis
+    optlevel  = args.optlevel
+    freqlevel = args.freqlevel
+    enlevel   = args.energylevel
     logfile= args.logfile
     db     = args.database
-    prog   = args.program
     mol_not_smiles = args.mol_not_smiles
 
-    main(mol,logfile, basis, E, theory, db, prog, runE, mol_not_smiles) 
+    main(mol,logfile=logfile, basis=basis, E=E, optlevel=optlevel, freqlevel=freqlevel, enlevel=enlevel, runE=runE, mol_not_smiles=mol_not_smiles) 

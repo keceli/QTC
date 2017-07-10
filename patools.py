@@ -100,7 +100,7 @@ def gaussian_zmat(lines):
         return None
     return zmat + optzmat
 
-def  gaussian_freqs(lines):
+def gaussian_freqs(lines):
 
     freqs = 'Frequencies --  (.+)'
     freqlines = re.findall(freqs, lines)
@@ -108,6 +108,12 @@ def  gaussian_freqs(lines):
     for line in freqlines:
         freqs.extend(line.split())
     return freqs
+
+def gaussian_zpve(lines):
+
+    zpve = 'Zero\-point\s*correction=\s*([\d,\.,\-]*)'
+    zpve = re.findall(zpve, lines)
+    return float(zpve[-1])
 
 def gaussian_calc(lines):
     if 'Optimization complete' in lines:
@@ -380,12 +386,30 @@ def freqs(lines):
     print 'program not recognized as g09 or molpro'
     return
 
+def zpve(lines):
+    prog = get_prog(lines)
+    if prog == 'g09':
+        return gaussian_zpve(lines)
+    if prog == 'molpro':
+        return molpro_zpve(lines)
+    print 'program not recognized as g09 or molpro'
+    return 
+
 def xyz(lines):
     prog = get_prog(lines)
     if prog == 'g09':
         return gaussian_xyz(lines)
     if prog == 'molpro':
-        return ''
+        return molpro_xyz(lines)
+    print 'program not recognized as g09 or molpro'
+    return
+
+def geo(lines):
+    prog = get_prog(lines)
+    if prog == 'g09':
+        return gaussian_geo(lines)
+    if prog == 'molpro':
+        return molpro_geo(lines)
     print 'program not recognized as g09 or molpro'
     return
 

@@ -357,6 +357,7 @@ def db_head_path(db_location=None):
     if db_location == 'test':
         return '/home/elliott/testdirectory/'
     if db_location == None:
+        #return '/home/snelliott/projects/anl/QTC/test'
         return '/lcrc/project/PACC/databases/qtc_database/'
     else:
         return db_location
@@ -448,8 +449,9 @@ def db_get_opt_prop(smiles, typ='zmat', db_location=None, prog=None, method=None
 
 def db_store_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
     """
-    Store a property s of type typ (energy = ene,  freqs = fr, projected freqs = pfr, 
-    anharmonic freqs = anfr, proj anharms = anpfr)  in the single point level of 
+    Store a property s of type typ (energy = ene,  freqs = hrm, projected freqs = phrm, 
+    anharmonic freqs = anhrm, proj anharms = panhrm, rotational constants =rc, zero-point
+    vibrational energy = zpve)  in the single point level of 
     directory for a smiles molecule for the optprog, optmethod, and optbasis of 
     optimization and prog, method, and basis single point if all specified 
     (db_location None will get pacc directory)
@@ -527,8 +529,10 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     method =  pa.method(  lines).lower().lstrip('r')
     basis  =  pa.basisset(lines).lower()
     energy =  str(pa.energy(lines) [1])
+    zpve   =  str(pa.zpve(lines))
     zmat   =  pa.zmat(    lines)     
     xyz    =  pa.xyz(     lines) 
+    geo    =  pa.geo(     lines) 
     freqs  = ', '.join(freq for freq in pa.freqs(lines)[::-1])
     
     if prog == None or method == None or basis == None:
@@ -539,11 +543,14 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
         db_store_opt_prop(zmat, species, 'zmat', None, prog, method, basis)
     if xyz != None:
        db_store_opt_prop(xyz, species, 'xyz', None, prog, method, basis)
+    if geo != None:
+       db_store_opt_prop(geo, species, 'geo', None, prog, method, basis)
     if optprog == None:
        optprog, optmethod, optbasis = prog, method, basis
 
     db_store_sp_prop(energy, species, 'ene', None, prog, method, basis, optprog, optmethod, optbasis)
-    db_store_sp_prop(freqs,   species, 'fr', None, prog, method, basis, optprog, optmethod, optbasis)
+    db_store_sp_prop(freqs,  species, 'hrm', None, prog, method, basis, optprog, optmethod, optbasis)
+    db_store_sp_prop( zpve,  species,'zpve', None, prog, method, basis, optprog, optmethod, optbasis)
 
     return 
 
