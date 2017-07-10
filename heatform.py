@@ -557,14 +557,17 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         zmat  = 'none'
     directory = io.db_sp_path(propprog, propmeth, propbas, None, mol, optprog, optmeth, optbas)
  
+    anharm = False
     if entype == 'zpve':
         freq = True
+        if 'an' in entype:
+            anharm = True
     else:
         freq = False
 
     if  propprog == 'g09':
         print 'Running G09 on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
-        filename = build_gauss(dic, propmeth, propbas, zmat=zmat, directory=directory, freq=freq)
+        filename = build_gauss(dic, propmeth, propbas, zmat=zmat, directory=directory, freq=freq, anharm=anharm)
         run_gauss(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.log')))
         E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
@@ -573,14 +576,14 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
 
     elif proppprog == 'molpro':
         print 'Running Molpro on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
-        filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq)
+        filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq, anharm=anharm)
         run_molpro(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.out')))
         E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
         print 'Energy found to be: ' + str(E)
         return E
 
-def E_dic(bas, opt, en, freq, runE=True):
+def E_dic(bas, opt, en, freq, runE=True, anharm=False):
     """
     Checks a dictionary and directories for energy at a specified level of theory and basisset 
     Computes energy if it isn't in dictionary already
@@ -619,7 +622,11 @@ def E_dic(bas, opt, en, freq, runE=True):
     edire      = io.db_sp_path(enprog, enmethod, enbasis, None, bas, optprog, optmethod, optbasis)
     enefile    = io.join_path(edire, bas + '.ene')
     fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
-    zpvefile   = io.join_path(fdire, bas + '.zpve')
+    if anharm:
+        zpvetype = 'anzpve'
+    else:
+        zpve     = 'zpve'
+    zpvefile   = io.join_path(fdire, bas + zpvetype)
 
     if not io.check_file(coordsfile) and runE:
         E = run_opt(bas, optprog, optmethod, optbasis, True)
@@ -637,7 +644,7 @@ def E_dic(bas, opt, en, freq, runE=True):
         zpve= float(zpve)
         print 'ZPVE  {:f} pulled from: {}'.format(zpve, zpvefile)
     elif runE:
-        zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, 'zpve')
+        zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, zpvetype)
         io.write_file(str(zpve), zpvefile)
         print 'ZPVE  ' + str(zpve) +  ' saved to: ' + zpvefile
     else:
@@ -742,7 +749,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
     #Search database for coords, energy, and zpve of mol and compute if its not there, unless told to parse it from logfile
     if not mol_not_smiles:
         molform = ob.get_formula(ob.get_mol(mol))
-        E = E_dic(mol, optlevel, enlevel, freqlevel,runE)
+        E = E_dic(mol, optlevel, enlevel, freqlevel,runE,anharm)
     else:
         molform = mol
 
@@ -873,6 +880,7 @@ if __name__ == '__main__':
     parser.add_argument('-d','--database',           type=str, default='testdb')
     parser.add_argument('-s','--mol_not_smiles',            action='store_true')
     parser.add_argument('-r','--run_energy',                action='store_true')
+    parser.add_argument('-a','--anharmonic',                action='store_true')
 
     ###########################
     args = parser.parse_args()
@@ -887,7 +895,8 @@ if __name__ == '__main__':
     freqlevel = args.freqlevel
     enlevel   = args.energylevel
     logfile= args.logfile
+    anharm = args.anharmonic
     db     = args.database
     mol_not_smiles = args.mol_not_smiles
-
-    main(mol,logfile=logfile, basis=basis, E=E, optlevel=optlevel, freqlevel=freqlevel, enlevel=enlevel, runE=runE, mol_not_smiles=mol_not_smiles) 
+  
+    main(mol,logfile=logfile, basis=basis, E=E, optlevel=optlevel, freqlevel=freqlevel, enlevel=enlevel, anharm=anharm, runE=runE, mol_not_smiles=mol_not_smiles) 
