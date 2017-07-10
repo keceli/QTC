@@ -349,7 +349,7 @@ def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, f
     if freq:
         gauss += 'freq=VibRot '
     if anharm:
-        guass += 'freq=anharmonic '
+        gauss += 'freq=anharmonic '
     gauss += '\n'
 
     gauss += '\nEnergy for HeatForm\n\n'
@@ -413,7 +413,7 @@ def build_molpro(mol, theory, basisset, zmat='none', directory=None, opt=False, 
         stoich = ob.get_formula(mol)
         mult   = ob.get_mult(mol)
 
-    molp  = 'memory,         200 ,m\nnosym\ngeometry={angstrom\n'
+    molp  = 'memory,         200 ,m\nnosym\n'
     meths = ['ccsdt','ccsd(t)','ccsd','m062x','b3lyp']
     bases = ['cc-pvqz','cc-pvtz','cc-pvdz','6-311+g(d,p)','6-31+g(d,p)']
     
@@ -429,16 +429,19 @@ def build_molpro(mol, theory, basisset, zmat='none', directory=None, opt=False, 
     #                if bases[j]  in dic['molpro'][meths[i]]:
     #                    if 'zmat'in dic['molpro'][meths[i]][bases[j]]:
     #                        zmat =  dic['molpro'][meths[i]][bases[j]]['zmat']
-    if zmat == 'none':
-        zmat = '\n\n' + ob.get_zmat(mol).replace('=', '') 
+    if zmat.startswith('geometry'):
+        molp += zmat
+    else:
+        if zmat == 'none':
+            zmat = '\n\n' + ob.get_zmat(mol).replace('=', '') 
 
-    zmat1 = '\n'.join(zmat.split('Variables:')[0].split('\n')[2:] )
-    zmat2 = '}\n'
+        zmat1 = '\n'.join(zmat.split('Variables:')[0].split('\n')[2:] )
+        zmat2 = '}\n'
 
-    for line in zmat.split('Variables:')[1].split('\n')[1:-1]:
-        zmat2 += line.split()[0] + '  =  ' + line.split()[1] + '\n'
+        for line in zmat.split('Variables:')[1].split('\n')[1:-1]:
+            zmat2 += line.split()[0] + '  =  ' + line.split()[1] + '\n'
 
-    molp += zmat1 + zmat2
+        molp += 'geometry={angstrom\n' + zmat1 + zmat2
     spin  = 1/2.*(mult -1) * 2
     molp += '\nSET,SPIN=     ' + str(spin) + '\n\n'
 
@@ -558,9 +561,11 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
     directory = io.db_sp_path(propprog, propmeth, propbas, None, mol, optprog, optmeth, optbas)
  
     anharm = False
-    if entype == 'zpve':
+    if 'zpve' in entype:
         freq = True
-        if 'an' in entype:
+        if ob.get_natom(ob.get_mol(mol)) < 3:
+            entype = 'zpve'
+        if 'an' in entype: 
             anharm = True
     else:
         freq = False
@@ -573,7 +578,7 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
         return E
 
-    elif proppprog == 'molpro':
+    elif propprog == 'molpro':
         print 'Running Molpro ' + entype + ' on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
         filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq,anharm=anharm)
         run_molpro(filename)
@@ -623,8 +628,8 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
     if anharm:
         zpvetype = 'anzpve'
     else:
-        zpve     = 'zpve'
-    zpvefile   = io.join_path(fdire, bas + zpvetype)
+        zpvetype = 'zpve'
+    zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
 
     if not io.check_file(coordsfile) and runE:
         E = run_opt(bas, optprog, optmethod, optbasis, True)
@@ -653,7 +658,7 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
     #print 'No electronic energy found -- ommitting its contribution'
     return  E + zpve
 
-def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq):
+def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm):
     """
     Uses the coefficients [a,b,c...] obtained from C = M^-1 S to find 
     delH(CxHyOz) = adelH(R1) + bdelH(R2) + cdelH(R3) + Eo(CxHyOz) - aEo(R1) - bEo(R2) -cEo(R3)
@@ -674,7 +679,7 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq):
         E  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
 
         var += (coefflist[i] * nest_2_dic(bas,'HeatForm','sigma') * 0.00038088   )**2
-        e    =  E_dic(bas, opt, en, freq)
+        e    =  E_dic(bas, opt, en, freq, anharm=anharm)
         E   -=  coefflist[i] * e
         #var += (coefflist[i] * e * E_dic(bas,'sigma',theory,basisset,prog) )**2
 
@@ -828,7 +833,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
     ##################
 
     #COMPUTE AND PRINT delH###
-    E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel)
+    E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)
     lines =  '\n        delHf(0K)'
     lines += '\nA.U. \t'
     for e in E[:1]:  lines += str(e) + '\t'

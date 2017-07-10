@@ -28,7 +28,7 @@ def get_prog(lines):
    
    if 'Gaussian' in lines:
        return 'g09'
-   elif 'molpro' in lines:
+   elif 'molpro' in lines or 'MOLPRO' in lines:
        return 'molpro'
    return
 
@@ -254,6 +254,13 @@ def  molpro_freqs(lines):
             freqs.extend(line.split())
     return freqs
 
+def molpro_zpve(lines):
+    zpve = 'Zero point energy:\s*([\d,\-,\.]*)'
+    zpve = re.findall(zpve, lines)
+    if len(zpve) > 0:
+        return float(zpve[-1])
+    return
+
 def molpro_method(lines):
     method  = '1PROGRAM\s*\*\s*(\S*)'
     method  = re.findall(method,lines)
@@ -286,15 +293,15 @@ def molpro_rotconsts(lines):
     return rot
  
 def molpro_zmat(lines):
-    geolines = lines.split('geometry={')[1].split('}')[0].split('\n')[1:-1]
-    zmat = '\n'.join(geolines) + '\n'
+    geolines =  lines.split('geometry={')[1].split('}')[0].split('\n')[1:-1]
+    zmat = 'geometry={angstrom \n' + '\n'.join(geolines) + '\n}\n'
     optzmat = False
     if 'OPTG' in lines:
         optzmat = True
         lines = lines.split('END OF GEOMETRY OPTIMIZATION')[0].split('Variable')[-1].split('\n')
         lines = lines[3:-3]
         for line in lines:
-            zmat += line.split()[0] + '   ' + line.split()[4] + '\n'
+            zmat += line.split()[0].lower() + ' =  ' + line.split()[4] + '\n'
     if optzmat:
         return zmat
     return None
@@ -407,6 +414,14 @@ def zpve(lines):
     print 'program not recognized as g09 or molpro'
     return 
 
+def anzpve(lines):
+    prog = get_prog(lines)
+    if prog == 'g09':
+        return gaussian_anzpve(lines)
+    if prog == 'molpro':
+       return #molpro_anzpve(lines)
+    print 'program not recognized as g09 or molpro'
+    return 
 
 def xyz(lines):
     prog = get_prog(lines)

@@ -397,7 +397,7 @@ def db_opt_path(prog, method, basis, db_location=None, smiles=None):
         directory = db_smiles_path(smiles, db_location)
     if method == None:
         return join_path(directory, 'sp/')
-    return join_path(directory, prog_meth_bas_path(prog, method, basis))
+    return join_path(directory, prog_meth_bas_path(prog, method, basis)).replace('(','_').replace(')','_')
 
 
 def db_sp_path(prog, method, basis, db_location=None, smiles=None, optprog=None, optmethod=None, optbasis=None):
@@ -413,7 +413,7 @@ def db_sp_path(prog, method, basis, db_location=None, smiles=None, optprog=None,
         if optprog == None:
             return db_head_path(db_location)
         return directory
-    return join_path(directory, prog_meth_bas_path(prog,method,basis))
+    return join_path(directory, prog_meth_bas_path(prog,method,basis)).replace('(','_').replace(')','_')
 
 
 def db_store_opt_prop(s, smiles, typ='zmat', db_location=None, prog=None, method=None, basis=None):
@@ -530,6 +530,7 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     basis  =  pa.basisset(lines).lower()
     energy =  pa.energy(lines) [1]
     zpve   =  pa.zpve(lines)
+    anzpve   =  pa.anzpve(lines)
     zmat   =  pa.zmat(    lines)     
     xyz    =  pa.xyz(     lines) 
     geo    =  pa.geo(     lines) 
@@ -555,6 +556,8 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
         db_store_sp_prop(freqs,  species, 'hrm', None, prog, method, basis, optprog, optmethod, optbasis)
     if zpve != None:
         db_store_sp_prop(str( zpve),  species,'zpve', None, prog, method, basis, optprog, optmethod, optbasis)
+    if anzpve != None:
+        db_store_sp_prop(str(anzpve), species,'anzpve', None, prog, method, basis, optprog, optmethod, optbasis)
     return 
 
 if __name__ == "__main__":
