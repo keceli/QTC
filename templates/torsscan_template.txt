@@ -1,8 +1,7 @@
 Restart at: 0
-(0 - beginning, 1 - reac/prod/ts.dat files already created, 
- 2 - estoktp/theory files already created, 3 - estoktp level 0 successfully completed
- 4 - estoktp level 1 successfully completed, 5 - estoktp 1D successfully completed, 
- 6 - estoktp MD successfully completed or not desired, 7 - )
+(0 - beginning, 1 - estoktp level 0 successfully completed
+ 2 - estoktp level 1 completed, 3 - estoktp 1D completed, 
+ 4 - estoktp MD completed, 5 - just run thermochemistry)
 
 ============
 Manual species input
@@ -15,13 +14,13 @@ No. of transition states: 0
 ============
 QTC options 
 ============
-Use QTC xyz: QTC(METHOD)/QTC(BASIS)/QTC(TASK)
+Use QTC xyz: QTC(TSPACKAGE)/QTC(TSMETHOD)/QTC(TSBASIS)
              False - make openbabel xyz from smiles
              prog/method/basis - uses xyz in database (recommended)
              logfilename.log - makes torsscan parse out xyz from logfile in cwd
              True - xyz in testchem form in cwd
 
-Use xyz as (start-starting geometry, 0-level0 geometry): 0
+Use xyz as (start-starting geometry, 0-level0 geometry): 1
 
 ==============
 BLUES options   

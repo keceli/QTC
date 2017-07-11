@@ -155,7 +155,7 @@ def parse_qckeyword(parameters,calcindex=0):
         package = parameters['qcpackage']
         method = parameters['qcmethod'] 
         basis = parameters['qcbasis'] 
-        task = parameters['qctask'] 
+        task = parameters['qctask']
         xyzdirectory = io.fix_path(io.join_path(*[package,method,basis,task]))
         if len(tokens) == 1:
             task = tokens[0]
@@ -169,6 +169,12 @@ def parse_qckeyword(parameters,calcindex=0):
             package, method, basis, task = tokens
         else:
             print('Cannot parse qckeyword: {0}'.format(keyword))
+        if package == 'torsscan':
+            if parameters['qcpackage'].startswith('gau'):
+                parameters['qcpackage'] = 'g09'
+            parameters['tspackage'] = parameters['qcpackage']
+            parameters[ 'tsmethod'] = parameters[ 'qcmethod']
+            parameters[  'tsbasis'] = parameters[  'qcbasis']
     else:
         if len(tokens) == 2:
             task = 'optimize'
@@ -297,8 +303,8 @@ def run(s):
         method = parameters['qcmethod']
         basis = parameters['qcbasis']
         package = parameters['qcpackage']
-        theory = '{0}/{1}'.format(method,basis)
-        hf0, hfset = hf.main(s,E=energy,theory=theory,prog=package)
+        optlevel = '{0}/{1}/{2}'.format(package, method, basis)
+        hf0, hfset = hf.main(s,E=energy,optlevel=optlevel)
         hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
         hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
         io.write_file(hftxt,s + '.hf0k')

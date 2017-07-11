@@ -77,12 +77,14 @@ def parse_output(s, smilesname, write=False, store=False):
             io.write_file(xyz, fname)
             fname = smilesname + '.ene'
             io.write_file(str(energy), fname)
-            if len(hrmfreqs) > 0:
-                fname = smilesname + '.hrm'
-                io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )
-            if len(anhrmfreqs) > 0:
-                fname = smilesname + '.anhrm'
-                io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
+            if hrmfreqs != None:
+                if len(hrmfreqs) > 0:
+                    fname = smilesname + '.hrm'
+                    io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )
+            if anhrmfreqs != None:
+                if len(anhrmfreqs) > 0:
+                    fname = smilesname + '.anhrm'
+                    io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
         d = {package:
              {calculation:
               {method:
@@ -695,9 +697,9 @@ def get_input(x, template, parameters):
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     package = parameters['qcpackage'] 
-    method = parameters['qcmethod'] 
-    basis  = parameters[ 'qcbasis']
-    task   = parameters[  'qctask']
+    method  = parameters[ 'qcmethod'] 
+    basis   = parameters[  'qcbasis']
+    task    = parameters[   'qctask']
     if package == 'nwchem':
         if task.lower().startswith('opt'):
             task = 'optimize'
@@ -728,6 +730,7 @@ def get_input(x, template, parameters):
             task = ''
         elif task.lower().startswith('freq'):
             task = 'frequencies'
+
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'
@@ -748,6 +751,10 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(TASK)", task)
     inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
     inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
+    if package == 'torsscan':
+        inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
+        inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
+        inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
     if "QTC(" in inp:
         print("Error in template file:\n" + inp)
         return
