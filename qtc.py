@@ -141,71 +141,6 @@ def get_args():
     return parser.parse_args()
 
 
-def parse_qckeyword(parameters,calcindex=0):
-    """
-    Returns package, method, basis, task, qcdirectory for a given qckeyword and calcindex.
-    >>> package, method, basis, task, qcdirectory = parse_qckeyword('nwchem/ccsd/cc-pvz/optimize,molpro/uccsdt/cc-pvtz/energy',1)
-    >>> print('package, method, basis, task, qcdirectory = {0} {1} {2} {3} {4}'.format(package, method, basis, task, qcdirectory))
-    
-    """
-    keyword = parameters['qckeyword']
-    keyword = keyword.replace('//','/optimize,')
-    qcdirectory = ''
-    xyzdirectory = ''
-    package = 'nwchem'
-    calcs = keyword.split(',')
-    currentcalc = calcs[calcindex]
-    tokens = currentcalc.split('/')
-    if calcindex > 0:
-        parse_qckeyword(parameters,calcindex=0)
-        package = parameters['qcpackage']
-        method = parameters['qcmethod'] 
-        basis = parameters['qcbasis'] 
-        task = parameters['qctask']
-        xyzdirectory = io.fix_path(io.join_path(*[package,method,basis,task]))
-        if len(tokens) == 1:
-            task = tokens[0]
-        elif len(tokens) == 2:
-            task = 'energy'
-            method, basis = tokens            
-        elif len(tokens) == 3:
-            task = 'energy'
-            package, method, basis = tokens            
-        elif len(tokens) == 4:
-            package, method, basis, task = tokens
-        else:
-            print('Cannot parse qckeyword: {0}'.format(keyword))
-        if package == 'torsscan':
-            if parameters['qcpackage'].startswith('gau'):
-                parameters['qcpackage'] = 'g09'
-            parameters['tspackage'] = parameters['qcpackage']
-            parameters[ 'tsmethod'] = parameters[ 'qcmethod']
-            parameters[  'tsbasis'] = parameters[  'qcbasis']
-    else:
-        if len(tokens) == 2:
-            task = 'optimize'
-            method, basis = tokens  
-        elif len(tokens) == 3:
-            task = 'optimize'
-            package, method, basis = tokens
-        elif len(tokens) == 4:
-            package, method, basis, task = tokens
-        else:
-            print('Cannot parse qckeyword: {0}'.format(keyword))
-    parameters['xyzpath'] = xyzdirectory
-    parameters['qcdirectory'] = io.fix_path(io.join_path(*[xyzdirectory,package,method,basis,task]))
-    parameters['qcpackage'] = package
-    parameters['qcmethod'] = method
-    parameters['qcbasis'] = basis
-    parameters['qctask'] = task
-    if task.startswith('opt'):
-        parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-    if 'freq' in task or 'anh' in task:
-        parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
-    if task.startswith('energ'):
-        parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)
-    return parameters 
-
 
 def run(s):
     """
@@ -280,7 +215,7 @@ def run(s):
         return -1
     print(msg)
     msg = ''
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan' ]          
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan', 'cbs', 'g09' ]          
     if runqc:
         if qcpackage in available_packages:
             print('Running {0}/{1}/{2}/{3}'.format(qcpackage,qcmethod,qcbasis,qctask))
@@ -398,7 +333,8 @@ if __name__ == "__main__":
         parameters['writefiles'] = True        
         parameters['parseqc'] = True
         for i in range(ncalc):
-            parse_qckeyword(parameters, calcindex=i)
+            parameters['calcindex'] = i
+            qc.parse_qckeyword(parameters, calcindex=i)
             if nproc > 1:
                 pool = multiprocessing.Pool(nproc)
                 pool.map(run, mylist)

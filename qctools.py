@@ -103,6 +103,73 @@ def get_input(x, template, parameters):
     return inp
 
 
+def parse_qckeyword(parameters,calcindex=0):
+    """
+    Returns package, method, basis, task, qcdirectory for a given qckeyword and calcindex.
+    >>> package, method, basis, task, qcdirectory = parse_qckeyword('nwchem/ccsd/cc-pvz/optimize,molpro/uccsdt/cc-pvtz/energy',1)
+    >>> print('package, method, basis, task, qcdirectory = {0} {1} {2} {3} {4}'.format(package, method, basis, task, qcdirectory))
+    
+    """
+    keyword = parameters['qckeyword']
+    keyword = keyword.replace('//','/optimize,')
+    qcdirectory = ''
+    xyzdirectory = ''
+    package = 'nwchem'
+    calcs = keyword.split(',')
+    currentcalc = calcs[calcindex]
+    tokens = currentcalc.split('/')
+    if calcindex > 0:
+        parse_qckeyword(parameters,calcindex=0)
+        package = parameters['qcpackage']
+        method = parameters['qcmethod'] 
+        basis = parameters['qcbasis'] 
+        task = parameters['qctask']
+        xyzdirectory = io.fix_path(io.join_path(*[package,method,basis,task]))
+        if len(tokens) == 1:
+            task = tokens[0]
+        elif len(tokens) == 2:
+            task = 'energy'
+            method, basis = tokens            
+        elif len(tokens) == 3:
+            task = 'energy'
+            package, method, basis = tokens            
+        elif len(tokens) == 4:
+            package, method, basis, task = tokens
+        else:
+            print('Cannot parse qckeyword: {0}'.format(keyword))
+        if package == 'torsscan':
+            if parameters['qcpackage'].startswith('gau'):
+                parameters['qcpackage'] = 'g09'
+            parameters['tspackage'] = parameters['qcpackage']
+            parameters[ 'tsmethod'] = parameters[ 'qcmethod']
+            parameters[  'tsbasis'] = parameters[  'qcbasis']
+    else:
+        if len(tokens) == 2:
+            task = 'optimize'
+            method, basis = tokens  
+        elif len(tokens) == 3:
+            task = 'optimize'
+            package, method, basis = tokens
+        elif len(tokens) == 4:
+            package, method, basis, task = tokens
+        else:
+            print('Cannot parse qckeyword: {0}'.format(keyword))
+    parameters['xyzpath'] = xyzdirectory
+    parameters['qcdirectory'] = io.fix_path(io.join_path(*[xyzdirectory,package,method,basis,task]))
+    parameters['qcpackage'] = package
+    parameters['qcmethod'] = method
+    parameters['qcbasis'] = basis
+    parameters['qctask'] = task
+    
+
+    if task.startswith('opt'):
+        parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+    if 'freq' in task or 'anh' in task:
+        parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
+    if task.startswith('energ'):
+        parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)
+    return parameters 
+
 
 def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     package = get_output_package(s)
@@ -531,8 +598,9 @@ def run(s, parameters, mult=None):
         if not io.check_file(inpfile, timeout=1) or overwrite:
             io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
-            if package.startswith('extra') or package.startswith('cbs'):
-                run_extrapolation(s, parameters)
+            if package.startswith('ext') or package.startswith('cbs'):
+                msg += run_extrapolation(s, parameters)
+                print(msg)
             elif package in  ['nwchem', 'torsscan']:
                 command = [parameters['qcexe'], inpfile]
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
@@ -552,7 +620,37 @@ def run(s, parameters, mult=None):
             msg += 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
     return msg
 
-def run_extrapolation(s, parameters):
+
+def run_extrapolation(s,parameters):
+    if parameters['qckeyword']:
+        run_extrapolation_keyword(s,parameters)
+    elif parameters['qctemplate']:
+        run_extrapolation_template(s, parameters)
+    else:
+        msg = 'Can not run extrapolation, you need to specify qckeyword with -k or qctemplate with -t. \n'
+    return msg
+
+
+def run_extrapolation_keyword(s, parameters):
+    keyword = parameters['qckeyword']
+    keyword = keyword.replace('//','/optimize,')
+    qcdirectory = parameters['qcdirectory']
+    smilesname = ob.get_smiles_filename(s)
+    calcs = keyword.split(',')
+    formulaline = calcs[-1].split('/')[-1]
+    print('Extrapolation formula: {}\n'.format(calcs[-1]))
+    ncalc = len(calcs) - 1
+    E = [0.] * ncalc
+    energy = 0
+    enefile = smilesname + '.ene'  
+    for i in range(ncalc):
+        parse_qckeyword(parameters, i)
+        E[i] = float(io.read_file(qcdirectory + enefile))     
+    exec(formulaline)
+    msg = ('Extrapolated energy: {}\n'.format(energy))
+    return msg
+
+def run_extrapolation_template(s, parameters):
     lines = io.read_file(parameters['qctemplate'],aslines=True)
     smilesname = ob.get_smiles_filename(s)
     filename = smilesname + '_cbs.ene'
