@@ -200,7 +200,7 @@ def parse_qckeyword(parameters,calcindex=0):
     parameters['qctask'] = task
     if task.startswith('opt'):
         parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-    if 'freq' in task:
+    if 'freq' in task or 'anh' in task:
         parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
     if task.startswith('energ'):
         parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)

@@ -153,10 +153,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         geo            = pa.gaussian_geo(s)
         hrmfreqs       = pa.gaussian_freqs(s)
         if len(hrmfreqs) > 0:
-            xmat           = get_gaussian_xmatrix(s, len(hrmfreqs))
-            if 'Not found' in xmat:
+            xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
+            if type(xmat) ==str:
                 xmat = None
-        print xmat
         parsed = True
     if parsed:
         if write:
