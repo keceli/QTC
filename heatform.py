@@ -385,6 +385,11 @@ def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, f
     if zmat == 'none':
         zmat = ob.get_zmat(mol)
         gauss += str(charge) + ' ' + str(mult) + '\n'
+    if zmat.startswith('geometry'):
+        zmat = zmat.replace('geometry={angstrom','')
+        zmat = zmat.replace('}','Variables:')
+        zmat = zmat.replace('=','')
+        zmat = str(charge) + '  ' + str(mult) + zmat
     gauss += zmat.lstrip('\n')
 
     directory = io.db_logfile_dir(directory)
@@ -603,6 +608,7 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
     ### Check dictionary ###
     from testdb import db
     E, zpve = 0, 0
+    zpvetype = 'zpve'
     #dic = {}
     #for dbdic in db:
     #    if dbdic['_id'] == bas:
@@ -616,47 +622,47 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
     #            return E
 
     ### Check directory ###
-    optprog,  optmethod,  optbasis  =  opt[0],  opt[1],  opt[2]
-    enprog,    enmethod,   enbasis  =   en[0],   en[1],   en[2]
-    freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
-
+    optprog, optmethod, optbasis  = opt[0], opt[1], opt[2]
+    enprog,   enmethod,  enbasis  =  en[0],  en[1],  en[2]
     cdire      = io.db_opt_path(optprog, optmethod, optbasis, None, bas)
-    coordsfile = io.join_path(cdire, bas + '.zmat')
     edire      = io.db_sp_path(enprog, enmethod, enbasis, None, bas, optprog, optmethod, optbasis)
+    coordsfile = io.join_path(cdire, bas + '.zmat')
     enefile    = io.join_path(edire, bas + '.ene')
-    fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
-    if anharm:
-        zpvetype = 'anzpve'
-    else:
-        zpvetype = 'zpve'
-    zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
-
-    if not io.check_file(coordsfile) and runE:
-        E = run_opt(bas, optprog, optmethod, optbasis, True)
+    if freq != None:
+        freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
+        fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
+        if anharm:
+            zpvetype = 'anzpve'
+        zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
 
     if io.check_file(enefile):
         E = float(io.read_file(enefile).strip())
         print 'Energy {:f} pulled from: {}'.format(E, enefile)
     elif runE:
+        if not io.check_file(coordsfile):
+            run_opt(bas, optprog, optmethod, optbasis, True)
         E = run_energy(bas, optprog, optmethod, optbasis, enprog, enmethod, enbasis, 'ene')
         io.write_file(str(E), enefile)
         print 'Energy {:f} saved to: {}'.format(E,  enefile)
-    
-    if io.check_file(zpvefile):
-        zpve= io.read_file(zpvefile).strip()
-        zpve= float(zpve)
-        print 'ZPVE  {:f} pulled from: {}'.format(zpve, zpvefile)
-    elif runE:
-        zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, zpvetype)
-        io.write_file(str(zpve), zpvefile)
-        print 'ZPVE  ' + str(zpve) +  ' saved to: ' + zpvefile
+
+    if freq != None:
+        if io.check_file(zpvefile):
+            zpve= io.read_file(zpvefile).strip()
+            zpve= float(zpve)
+            print 'ZPVE  {:f} pulled from: {}'.format(zpve, zpvefile)
+        elif runE:
+            if not io.check_file(coordsfile):
+                run_opt(bas, optprog, optmethod, optbasis, True)
+            zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, zpvetype)
+            io.write_file(str(zpve), zpvefile)
+            print 'ZPVE  ' + str(zpve) +  ' saved to: ' + zpvefile
     else:
         print 'Zero point vibrational energy NOT accounted for'
         zpve = 0
 
     #print 'no energy for ' +  dic['stoich'] + ' at '+ theory + '/' + basisset 
     #print 'No electronic energy found -- ommitting its contribution'
-    return  E + zpve
+    return  float(E) + float(zpve)
 
 def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm):
     """
@@ -703,14 +709,18 @@ def check(clist, basis,stoich,atomlist):
 def get_theory(level, loglines=''):
     if is_auto(level):
         prog     = pa.get_prog(loglines)
-        method   = pa.get_method(loglines)
-        basisset = pa.get_basis(loglines)
+        method   = pa.method(loglines)
+        basisset = pa.basisset(loglines)
     else:
         prog, method, basisset = level.split('/')
     return prog, method, basisset
 
 def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlevel',enlevel='optlevel',anharm=False,runE=False, mol_not_smiles=False):
 
+    optlevel = optlevel.replace('gaussian','g09')
+    if freqlevel != None:
+        freqlevel = freqlevel.replace('gaussian','g09')
+    enlevel = enlevel.replace('gaussian','g09')
 
     #Convert basis selection to smiles if it is mol. formula format
     basis = basis.split()
@@ -728,21 +738,16 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
     optprog, optmethod, optbasis = get_theory(optlevel, loglines)
     if freqlevel == 'optlevel':
         freqprog, freqmethod, freqbasis = optprog, optmethod, optbasis
-    else:
+    elif freqlevel != None:
        freqprog, freqmethod, freqbasis = get_theory(freqlevel)
     if enlevel == 'optlevel':
         enprog, enmethod, enbasis = optprog, optmethod, optbasis
     else:
         enprog, enmethod, enbasis = get_theory(enlevel)
 
-    if optprog.startswith('gau'):
-        optprog = 'g09'
-    if freqprog.startswith('gau'):
-        freqprog = 'g09'
-    if enprog.startswith('gau'):
-        enprog  = 'g09'
     optlevel  = [optprog,   optmethod,  optbasis]
-    freqlevel = [freqprog, freqmethod, freqbasis]
+    if freqlevel != None:
+        freqlevel = [freqprog, freqmethod, freqbasis]
     enlevel   = [enprog,     enmethod,   enbasis]
 
     if is_auto(mol):
