@@ -9,7 +9,7 @@ import tctools as tc
 import dbtools as db
 import heatform as hf
 from pprint import pprint
-__updated__ = "2017-07-07"
+__updated__ = "2017-07-12"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -68,9 +68,12 @@ def get_args():
     parser.add_argument('-a', '--qctask', type=str,
                         default='',
                         help='Task for quantum chemistry calculations (opt,freq,energy)')
-    parser.add_argument('-p', '--qcpackage', type=str,
+    parser.add_argument('-a', '--qcpackage', type=str,
                         default='',
                         help='Quantum chemistry package ("gausian","mopac","nwchem","qcscript") to be used')
+    parser.add_argument('-p', '--qcnproc', type=int,
+                        default=1,
+                        help='Number of processors for quantum chemistry calculations')
     parser.add_argument('-t', '--qctemplate', type=str,
                         default='',
                         help='Template for quantum chemistry input file')
@@ -341,6 +344,7 @@ if __name__ == "__main__":
     parameters = vars(args)
     package = parameters['qcpackage']
     parameters['qtcdirectory'] = os.path.dirname(os.path.realpath(__file__))
+    qcnproc = parameters['qcnproc']
     ncalc = 0
     if parameters['qckeyword']:
         ncalc = len(parameters['qckeyword'].split(','))
@@ -353,7 +357,13 @@ if __name__ == "__main__":
     else:
         if not parameters['qcexe']:
             if package in available_packages:
-                parameters['qcexe'] = parameters[package]
+                if qcnproc > 1:
+                    if package.lower().startswith('nwc'):
+                        parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
+                    elif package.lower().startswith('mol'):
+                        parameters['qcexe'] = 'molpro -n {0}'.format(qcnproc)
+                else:
+                    parameters['qcexe'] = parameters[package]
         if not parameters['qctemplate']:
             templatename = package + '_template' + '.txt'
             parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])

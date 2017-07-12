@@ -11,19 +11,91 @@ try:
 except:
     pass
 
-__updated__ = "2017-07-06"
+__updated__ = "2017-07-12"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
+def get_input(x, template, parameters):
+    """
+    Returns input file text for a qc calculation based on a given template.
+    """
+    mol = ob.get_mol(x)
+    mult = ob.get_multiplicity(mol)
+    nopen = mult - 1
+    charge = ob.get_charge(mol)
+    formula = ob.get_formula(mol)
+    geo = ob.get_geo(mol)
+    xyz = ob.get_xyz(mol)
+    zmat = ob.get_zmat(mol)
+    uniquename = ob.get_inchi_key(mol, mult)
+    smilesname = ob.get_smiles_filename(mol)
+    package = parameters['qcpackage'] 
+    method  = parameters[ 'qcmethod'] 
+    basis   = parameters[  'qcbasis']
+    task    = parameters[   'qctask']
+    nproc   = parameters[  'qcnproc']
+    if package == 'nwchem':
+        if task.lower().startswith('opt'):
+            task = 'optimize'
+        elif task.lower().startswith('single'):
+            task = 'energy'
+        elif task.lower().startswith('freq'):
+            task = 'freq'
+    elif package == 'gaussian':
+        if task.lower().startswith('opt'):
+            task = 'opt'
+        elif task.lower().startswith('single'):
+            task = ''
+        elif task.lower().startswith('energy'):
+            task = ''
+        elif task.lower().startswith('freq'):
+            task = 'freq'
+        elif task.lower().startswith('anharm'):
+            task = 'freq=(anharm,vibrot)'
+    elif package == 'molpro':
+        if method.lower().startswith('ccsd'):
+            if nopen > 0:
+                method = 'u'+method
+        if task.lower().startswith('opt'):
+            task = 'optg'
+        elif task.lower().startswith('single'):
+            task = ''
+        elif task.lower().startswith('energy'):
+            task = ''
+        elif task.lower().startswith('freq'):
+            task = 'frequencies'
 
-def get_listofstrings(array):
-    """
-    Return a list of strings from a given array
-    """
-    n = len(array)
-    s = ['']*n
-    for i in range(n):
-        s[i] = '{0}\n'.format(array[i])
-    return s
+    if nopen == 0:
+        scftype = 'RHF'
+        rhftype = 'RHF'
+    else:
+        scftype = 'UHF'
+        rhftype = 'ROHF'
+    inp = template.replace("QTC(CHARGE)", str(charge))
+    inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
+    inp = inp.replace("QTC(NOPEN)", str(nopen))
+    inp = inp.replace("QTC(UNIQUENAME)", uniquename)
+    inp = inp.replace("QTC(SMILESNAME)", smilesname)
+    inp = inp.replace("QTC(ZMAT)", zmat)
+    inp = inp.replace("QTC(GEO)", geo)
+    inp = inp.replace("QTC(XYZ)", xyz)
+    inp = inp.replace("QTC(FORMULA)", formula)
+    inp = inp.replace("QTC(METHOD)", method)
+    inp = inp.replace("QTC(BASIS)", basis)
+    inp = inp.replace("QTC(TASK)", task)
+    inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
+    inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
+    inp = inp.replace("QTC(NPROC)", nproc)
+    if package == 'torsscan':
+        inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
+        inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
+        inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
+        parameters['runthermo'] = False
+    if "QTC(" in inp:
+        print("Error in template file:\n" + inp)
+        return
+    return inp
+
 
 
 def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
@@ -133,6 +205,17 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if zmat != None:
                 io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
     return d
+
+
+def get_listofstrings(array):
+    """
+    Return a list of strings from a given array
+    """
+    n = len(array)
+    s = ['']*n
+    for i in range(n):
+        s[i] = '{0}\n'.format(array[i])
+    return s
 
    
 def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
@@ -416,12 +499,9 @@ def run(s, parameters, mult=None):
     """
     Runs qc, returns a string specifying the status of the calculation.
     """
-    package = parameters['qcpackage']
+    package = parameters['qcpackage'].lower()
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
-    method = parameters['qcmethod']
-    basis = parameters['qcbasis']
-    task = parameters['qctask']
     mol = ob.get_mol(s, make3D=True)
     msg = ''
     if mult is None:
@@ -446,7 +526,7 @@ def run(s, parameters, mult=None):
         if not io.check_file(inpfile, timeout=1) or overwrite:
             io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
-            if package == 'extrapolation':
+            if package.startswith('extra') or package.startswith('cbs'):
                 run_extrapolation(s, parameters)
             elif package in  ['nwchem', 'torsscan']:
                 command = [parameters['qcexe'], inpfile]
