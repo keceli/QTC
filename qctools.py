@@ -84,7 +84,7 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(TASK)", task)
     inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
     inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
-    inp = inp.replace("QTC(NPROC)", nproc)
+    inp = inp.replace("QTC(NPROC)", str(nproc))
     if package == 'torsscan':
         inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
