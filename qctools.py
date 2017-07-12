@@ -93,7 +93,7 @@ def get_input(x, template, parameters):
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         parameters['runthermo'] = False
         if parameters['freqlevel'] != None:
-            inp = inp.replace('QTC(ANHARMLOC)', parameters['freqlevel'])
+            inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
         else:
             inp = inp.replace('QTC(ANHARMLOC)', 'false')
         parameters['runthermo'] = False
