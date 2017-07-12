@@ -1,7 +1,7 @@
 Restart at: 0
 (0 - beginning, 1 - estoktp level 0 successfully completed
  2 - estoktp level 1 completed, 3 - estoktp 1D completed, 
- 4 - estoktp MD completed, 5 - just run thermochemistry)
+ 4 - estoktp MD completed, 5 - just run thermo)
 
 ============
 Manual species input
@@ -20,7 +20,7 @@ Use QTC xyz: QTC(TSPACKAGE)/QTC(TSMETHOD)/QTC(TSBASIS)
              logfilename.log - makes torsscan parse out xyz from logfile in cwd
              True - xyz in testchem form in cwd
 
-Use xyz as (start-starting geometry, 0-level0 geometry): 1
+Use xyz as (start-starting geometry, 0-level0 geometry): 0
 
 ==============
 BLUES options   
@@ -52,7 +52,7 @@ Irc            :               :
 =============
 THERMO options
 =============
-Perform all thermochemistry? (default true): true
+Perform all thermochemistry? (default true): QTC(THERMO)
 Anharmonic (0 for level0 theory, 1 for level1 theory, false for off): false
 Overwrite anharmonic: false
 Basis for heat of formation: auto 
