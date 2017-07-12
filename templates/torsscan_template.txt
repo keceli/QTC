@@ -53,9 +53,9 @@ Irc            :               :
 THERMO options
 =============
 Perform all thermochemistry? (default true): QTC(THERMO)
-Anharmonic (0 for level0 theory, 1 for level1 theory, false for off): false
+Anharmonic (0 for level0 theory, 1 for level1 theory, false for off): QTC(ANHARMLOC)
 Overwrite anharmonic: false
-Basis for heat of formation: auto 
+Basis for heat of formation: QTC(HFBASIS) 
 Parse all: True
 
 

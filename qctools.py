@@ -42,7 +42,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     energies = {}
     hrmfreqs = []
     anhrmfreqs = []
-    
+    xmat=None 
     parsed = False
     if package == 'nwchem':
         method = get_nwchem_method(s)
@@ -74,6 +74,11 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         xyz            = pa.gaussian_xyz(s)
         geo            = pa.gaussian_geo(s)
         hrmfreqs       = pa.gaussian_freqs(s)
+        if len(hrmfreqs) > 0:
+            xmat           = get_gaussian_xmatrix(s, len(hrmfreqs))
+            if 'Not found' in xmat:
+                xmat = None
+        print xmat
         parsed = True
     if parsed:
         if write:
@@ -118,6 +123,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                     opt1 = 'g09'
                 io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
                 io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
+                if xmat != None:
+                    io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
                 io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
             if xyz != None:
                 io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
@@ -768,8 +775,13 @@ def get_input(x, template, parameters):
         inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
         inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         parameters['runthermo'] = False
+        if parameters['freqlevel'] != None:
+            inp = inp.replace('QTC(ANHARMLOC)', parameters['freqlevel'])
+        else:
+            inp = inp.replace('QTC(ANHARMLOC)', 'false')
     if "QTC(" in inp:
         print("Error in template file:\n" + inp)
         return
@@ -1001,7 +1013,7 @@ def get_gaussian_xmatrix(s,nfreq):
         iline = io.get_line_number(key2,lines=lines)
         iline += 2
     line = lines[iline]
-    if iline < 0:
+    if iline < 3:
         return 'Not found: {0}'.format(key)
     while line.strip():
         cols = line.split()

@@ -86,6 +86,9 @@ def get_args():
     parser.add_argument('-o', '--qcoutput', type=str,
                         default='',
                         help='Path for the qc output file')
+    parser.add_argument('-B', '--hfbasis', type=str,
+                        default='auto',
+                        help='Heat of formation basis molecules')
     parser.add_argument('-Q', '--runqc', action='store_true',
                         help='Run quantum chemistry calculation')
     parser.add_argument('-P', '--parseqc', action='store_true',
