@@ -68,7 +68,7 @@ def get_args():
     parser.add_argument('-a', '--qctask', type=str,
                         default='',
                         help='Task for quantum chemistry calculations (opt,freq,energy)')
-    parser.add_argument('-a', '--qcpackage', type=str,
+    parser.add_argument('-z', '--qcpackage', type=str,
                         default='',
                         help='Quantum chemistry package ("gausian","mopac","nwchem","qcscript") to be used')
     parser.add_argument('-p', '--qcnproc', type=int,
@@ -200,7 +200,7 @@ def parse_qckeyword(parameters,calcindex=0):
     parameters['qctask'] = task
     if task.startswith('opt'):
         parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-    if task.startswith('freq'):
+    if 'freq' in task:
         parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
     if task.startswith('energ'):
         parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)
