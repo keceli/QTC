@@ -26,7 +26,7 @@ def get_listofstrings(array):
     return s
 
 
-def parse_output(s, smilesname, write=False, store=False):
+def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     package = get_output_package(s)
     if type(s) is list:
         lines = s
@@ -57,7 +57,9 @@ def parse_output(s, smilesname, write=False, store=False):
         parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
+        zpve           = pa.molpro_zpve(s)
         xyz            = pa.molpro_xyz(s)
+        geo            = pa.molpro_geo(s)
         calculation    = pa.molpro_calc(s)
         basis          = pa.molpro_basisset(s)
         zmat           = pa.molpro_zmat(s)
@@ -65,10 +67,12 @@ def parse_output(s, smilesname, write=False, store=False):
         parsed = True
     elif package == 'gaussian':
         method, energy = pa.gaussian_energy(s)
+        zpve           = pa.gaussian_zpve(s)
         calculation    = pa.gaussian_calc(s)
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
         xyz            = pa.gaussian_xyz(s)
+        geo            = pa.gaussian_geo(s)
         hrmfreqs       = pa.gaussian_freqs(s)
         parsed = True
     if parsed:
@@ -77,23 +81,22 @@ def parse_output(s, smilesname, write=False, store=False):
             io.write_file(xyz, fname)
             fname = smilesname + '.ene'
             io.write_file(str(energy), fname)
-            if hrmfreqs != None:
-                if len(hrmfreqs) > 0:
-                    fname = smilesname + '.hrm'
-                    io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )
-            if anhrmfreqs != None:
-                if len(anhrmfreqs) > 0:
-                    fname = smilesname + '.anhrm'
-                    io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
-        d = {package:
-             {calculation:
-              {method:
-               {basis:{
-                'number of basis functions':nbasis,
-                'energy':energy,
-                 'geometry':{
-                  'xyz':xyz,
-                  'harmonic frequencies' : hrmfreqs}}}}}}
+            if len(hrmfreqs) > 0:
+                fname = smilesname + '.hrm'
+                io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )
+            if len(anhrmfreqs) > 0:
+                fname = smilesname + '.anhrm'
+                io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
+        d = {optlevel:
+             {package:
+              {calculation:
+               {method:
+                {basis:{
+                 'number of basis functions':nbasis,
+                 'energy':energy,
+                  'geometry':{
+                   'xyz':xyz,
+                   'harmonic frequencies' : hrmfreqs}}}}}}}
         if calculation == 'geometry optimization':
             for key,value in energies.iteritems():
                 if key is not method:
@@ -102,16 +105,26 @@ def parse_output(s, smilesname, write=False, store=False):
                     if write:
                         fname = '{0}_{1}.ene'.format(method,smilesname)
                         io.write_file(str(energy), fname)
-            if store:
-                if package == 'gaussian':
-                    package = 'g09'
+        if store:
+            if package == 'gaussian':
+                package = 'g09'
+            if optlevel == 'sp':
                 io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
-                if hrmfreqs != None:
-                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
-                if xyz != None:
-                    io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
-                if zmat != None:
-                    io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
+                io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
+                io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
+            else:
+                opt1, opt2, opt3 = optlevel.split('/')
+                if opt1.startswith('gau'):
+                    opt1 = 'g09'
+                io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
+                io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
+                io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
+            if xyz != None:
+                io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
+            if geo != None:
+                io.db_store_opt_prop(geo, smilesname,  'geo', None, package, method, basis)
+            if zmat != None:
+                io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
     return d
 
    
@@ -755,6 +768,8 @@ def get_input(x, template, parameters):
         inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
         inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
+        parameters['runthermo'] = False
     if "QTC(" in inp:
         print("Error in template file:\n" + inp)
         return

@@ -110,7 +110,7 @@ def gaussian_freqs(lines):
         freqs.extend(line.split())
     if len(freqs) > 0:
         return freqs
-    return None
+    return []
 
 def gaussian_zpve(lines):
 
@@ -252,7 +252,7 @@ def  molpro_freqs(lines):
     for line in freqlines:
         if line.split()[0].strip() != '0.00': 
             freqs.extend(line.split())
-    return freqs
+    return []
 
 def molpro_zpve(lines):
     zpve = 'Zero point energy:\s*([\d,\-,\.]*)'

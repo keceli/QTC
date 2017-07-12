@@ -192,6 +192,12 @@ def parse_qckeyword(parameters,calcindex=0):
     parameters['qcmethod'] = method
     parameters['qcbasis'] = basis
     parameters['qctask'] = task
+    if task.startswith('opt'):
+        parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+    if task.startswith('freq'):
+        parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
+    if task.startswith('energ'):
+        parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)
     return parameters 
 
 
@@ -289,7 +295,7 @@ def run(s):
     if parseqc:
         if io.check_file(qclog, timeout=1,verbose=False):
             out = io.read_file(qclog,aslines=False)
-            d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
+            d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
             pprint(d)
                                    
     if runthermo:
@@ -303,8 +309,14 @@ def run(s):
         method = parameters['qcmethod']
         basis = parameters['qcbasis']
         package = parameters['qcpackage']
-        optlevel = '{0}/{1}/{2}'.format(package, method, basis)
-        hf0, hfset = hf.main(s,E=energy,optlevel=optlevel)
+        optlevel  = parameters['optlevel']
+        enlevel   = optlevel
+        freqlevel = None
+        if 'enlevel' in parameters:
+            enlevel   = parameters['enlevel']
+        if 'freqlevel' in parameters:
+            freqlevel   = parameters['freqlevel']
+        hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,freqlevel=freqlevel)
         hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
         hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
         io.write_file(hftxt,s + '.hf0k')
@@ -356,6 +368,7 @@ if __name__ == "__main__":
         mylist = mylist[beginindex:endindex]
     else:
         mylist = mylist[beginindex:]        
+    parameters['optlevel']='sp'
     print(__logo__)
     print("QTC: Date and time           = {0}".format(io.get_date()))
     print("QTC: Last update             = {0}".format(__updated__))
