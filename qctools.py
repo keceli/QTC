@@ -89,7 +89,13 @@ def get_input(x, template, parameters):
         inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
         inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
+        parameters['runthermo'] = False
+        if parameters['freqlevel'] != None:
+            inp = inp.replace('QTC(ANHARMLOC)', parameters['freqlevel'])
+        else:
+            inp = inp.replace('QTC(ANHARMLOC)', 'false')
         parameters['runthermo'] = False
     if "QTC(" in inp:
         print("Error in template file:\n" + inp)
@@ -781,92 +787,6 @@ def get_output_package(out,filename=False):
     else:
         p = None
     return p
-
-def get_input(x, template, parameters):
-    """
-    Returns input file text for a qc calculation based on a given template.
-    """
-    mol = ob.get_mol(x)
-    mult = ob.get_multiplicity(mol)
-    nopen = mult - 1
-    charge = ob.get_charge(mol)
-    formula = ob.get_formula(mol)
-    geo = ob.get_geo(mol)
-    xyz = ob.get_xyz(mol)
-    zmat = ob.get_zmat(mol)
-    uniquename = ob.get_inchi_key(mol, mult)
-    smilesname = ob.get_smiles_filename(mol)
-    package = parameters['qcpackage'] 
-    method  = parameters[ 'qcmethod'] 
-    basis   = parameters[  'qcbasis']
-    task    = parameters[   'qctask']
-    if package == 'nwchem':
-        if task.lower().startswith('opt'):
-            task = 'optimize'
-        elif task.lower().startswith('single'):
-            task = 'energy'
-        elif task.lower().startswith('freq'):
-            task = 'freq'
-    elif package == 'gaussian':
-        if task.lower().startswith('opt'):
-            task = 'opt'
-        elif task.lower().startswith('single'):
-            task = ''
-        elif task.lower().startswith('energy'):
-            task = ''
-        elif task.lower().startswith('freq'):
-            task = 'freq'
-        elif task.lower().startswith('anharm'):
-            task = 'freq=(anharm,vibrot)'
-    elif package == 'molpro':
-        if method.lower().startswith('ccsd'):
-            if nopen > 0:
-                method = 'u'+method
-        if task.lower().startswith('opt'):
-            task = 'optg'
-        elif task.lower().startswith('single'):
-            task = ''
-        elif task.lower().startswith('energy'):
-            task = ''
-        elif task.lower().startswith('freq'):
-            task = 'frequencies'
-
-    if nopen == 0:
-        scftype = 'RHF'
-        rhftype = 'RHF'
-    else:
-        scftype = 'UHF'
-        rhftype = 'ROHF'
-    inp = template.replace("QTC(CHARGE)", str(charge))
-    inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
-    inp = inp.replace("QTC(NOPEN)", str(nopen))
-    inp = inp.replace("QTC(UNIQUENAME)", uniquename)
-    inp = inp.replace("QTC(SMILESNAME)", smilesname)
-    inp = inp.replace("QTC(ZMAT)", zmat)
-    inp = inp.replace("QTC(GEO)", geo)
-    inp = inp.replace("QTC(XYZ)", xyz)
-    inp = inp.replace("QTC(FORMULA)", formula)
-    inp = inp.replace("QTC(METHOD)", method)
-    inp = inp.replace("QTC(BASIS)", basis)
-    inp = inp.replace("QTC(TASK)", task)
-    inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
-    inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
-    if package == 'torsscan':
-        inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
-        inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
-        inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
-        inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
-        inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
-        parameters['runthermo'] = False
-        if parameters['freqlevel'] != None:
-            inp = inp.replace('QTC(ANHARMLOC)', parameters['freqlevel'])
-        else:
-            inp = inp.replace('QTC(ANHARMLOC)', 'false')
-    if "QTC(" in inp:
-        print("Error in template file:\n" + inp)
-        return
-    return inp
-
 
 def get_package(templatename):
     """
