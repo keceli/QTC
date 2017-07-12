@@ -187,7 +187,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     energies = {}
     hrmfreqs = []
     anhrmfreqs = []
-    xmat=None 
+    xmat= []
     parsed = False
     if package == 'nwchem':
         method = get_nwchem_method(s)
@@ -221,8 +221,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         hrmfreqs       = pa.gaussian_freqs(s)
         if len(hrmfreqs) > 0:
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
-            if type(xmat) ==str:
-                xmat = None
+            if type(xmat) == str:
+                xmat = []
         parsed = True
     if parsed:
         if write:
@@ -245,7 +245,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                  'energy':energy,
                   'geometry':{
                    'xyz':xyz,
-                   'harmonic frequencies' : hrmfreqs}}}}}}}
+                   'harmonic frequencies' : hrmfreqs,
+                   'xmat': xmat }}}}}}}
         if calculation == 'geometry optimization':
             for key,value in energies.iteritems():
                 if key is not method:
@@ -267,7 +268,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                     opt1 = 'g09'
                 io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
                 io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
-                if xmat != None:
+                if len(xmat) > 0:
                     io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
                 io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
             if xyz != None:

@@ -247,6 +247,7 @@ def run(s):
         xyz = next(db.gen_dict_extract('xyz',d))
         freqs = next(db.gen_dict_extract('harmonic frequencies',d))
         energy = float(next(db.gen_dict_extract('energy',d)))
+        xmat   = next(db.gen_dict_extract('xmat',d))
         method = parameters['qcmethod']
         basis = parameters['qcbasis']
         package = parameters['qcpackage']
@@ -263,7 +264,7 @@ def run(s):
         hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
         io.write_file(hftxt,s + '.hf0k')
         if len(freqs) > 0:
-            msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters)
+            msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters,xmat=xmat)
     io.cd(cwd)
     print(msg)
     return

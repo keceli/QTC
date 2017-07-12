@@ -342,7 +342,7 @@ def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp
     return msg
 
 
-def get_pf_input(mol,method,xyz,freqs,zpe=0.):
+def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[]):
     """
     Write input file for mess partition function program
     Temperature(step[K],size)        100.   30
@@ -383,6 +383,12 @@ def get_pf_input(mol,method,xyz,freqs,zpe=0.):
     inp += 'End\n'
     inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),freqmethod)
     inp += ' '.join(freqs) + '\n'
+    if len(xmat) > 0:
+        inp += ' Anharmonicities[1/cm]\n'
+        for i in range( len(xmat)):
+            for j in range(i+1):
+                inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
+        inp += ' End\n'
     inp += 'ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpe,tagmethod)
     inp += 'ElectronicLevels[1/cm]  1\n'
     inp += '0 {0}\n'.format(multiplicity)
@@ -492,7 +498,7 @@ def run_pac99(formula,pac99='pac99'):
     return msg
 
 
-def write_chemkin_polynomial(mol, xyz, freqs, deltaH,parameters, zpe=0.):
+def write_chemkin_polynomial(mol, xyz, freqs, deltaH,parameters, xmat=[], zpe=0.):
     """
     A driver to perform all operations to write NASA polynomial in
     chemkin format. Assumes quantum chemistry calculation is performed.
@@ -501,7 +507,7 @@ def write_chemkin_polynomial(mol, xyz, freqs, deltaH,parameters, zpe=0.):
     messpfoutput = 'pf.log'
     name = mol.formula
     tag = parameters['qcmethod']
-    inp = get_pf_input(mol, tag, xyz, freqs, zpe=0.)
+    inp = get_pf_input(mol, tag, xyz, freqs, xmat=xmat, zpe=0.)
     io.write_file(inp, messpfinput)
     msg = 'Running {0} to generate partition function.\n'.format(parameters['messpf'])
     msg += io.execute([parameters['messpf'],messpfinput])
