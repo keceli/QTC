@@ -360,7 +360,7 @@ def db_head_path(db_location=None):
         #return '/home/elliott/Packages/QTC/hftest'
         return '/lcrc/project/PACC/databases/qtc_database/'
     else:
-        return db_location
+        return fix_path(db_location)
 
 
 def db_smiles_path(smiles, db_location = None):
@@ -381,7 +381,7 @@ def prog_meth_bas_path(prog, method, basis):
     Our current directory structure is to combine program, method, and basis
     with underscores (e.g., g09__ccsd__cc-pvdz)
     """
-    return prog.lower() + '__' + method.lower() + '__' + basis.lower() + '/'
+    return fix_path(prog.lower()) + '__' + fix_path(method.lower()) + '__' + fix_path(basis.lower()) + '/'
 
 
 def db_opt_path(prog, method, basis, db_location=None, smiles=None):
@@ -501,8 +501,6 @@ def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, 
 
     if prog == None:
         directory =  db_head_path(db_location)
-    elif optprog == None:
-        directory = db_sp_path(prog, method, basis, db_location, smiles, prog, method, basis)
     else:
         directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
     if check_file(join_path(directory, smiles + '.' + typ)):
