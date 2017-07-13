@@ -9,7 +9,8 @@ import tctools as tc
 import dbtools as db
 import heatform as hf
 from pprint import pprint
-__updated__ = "2017-07-12"
+
+__updated__ = "2017-07-13"
 __author__ = "Murat Keceli"
 __logo__ = """
 ***************************************
@@ -58,7 +59,7 @@ def get_args():
                         help='Type of quantum chemistry calculation: "optimization", "frequency", "energy", "anharmonic"')
     parser.add_argument('-k', '--qckeyword', type=str,
                         default='',
-                        help='Keyword string that can define package, method, basis, task i.e.: "gaussian/ccsd/cc-pvdz/opt, nwchem/ccsdt/cc-pvdz/energy,')
+                        help='Keyword string that can define package, method, basis, task i.e.: "opt/ccsd/cc-pvdz/gaussian, nwchem/ccsdt/cc-pvdz/energy,')
     parser.add_argument('-m', '--qcmethod', type=str,
                         default='',
                         help='Quantum chemistry method to be used')
@@ -152,26 +153,30 @@ def run(s):
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
-    package = parameters['qcpackage']
+    package = parameters['qcpackage'].lower()
     runthermo = parameters['runthermo']
     runanharmonic = parameters['anharmonic']
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan' ]          
-    if package in available_packages:
-        parameters['qcexe'] = parameters[package]
+    qcnproc = parameters['qcnproc']
+    if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
+        if qcnproc > 1:
+            if package.startswith('nwc'):
+                parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
+            elif package.startswith('mol'):
+                parameters['qcexe'] = 'molpro -n {0}'.format(qcnproc)
+        else:
+            parameters['qcexe'] = parameters[package]
     msg = "***************************************\n"
     msg += "{0}\n".format(s)
     mult = ob.get_mult(s)
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
+    parameters['smilesdir'] = smilesdir
     templatename = package + '_template' + '.txt'
     parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename]) 
     qcdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
     parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     qcpackage = parameters['qcpackage']
-    qcmethod = parameters['qcmethod']
-    qcbasis = parameters['qcbasis']
-    qctask = parameters['qctask']
     qcscript = io.get_path(parameters['qcscript'])
     qclog = smilesname + '_' + qcpackage + '.out'
     xyzpath = parameters['xyzpath']
@@ -205,8 +210,8 @@ def run(s):
         mol = ob.set_xyz(mol, coords)
     print(msg)
     msg = ''
-    io.mkdir(qcdirectory)
     cwd = io.pwd()
+    io.mkdir(qcdirectory)
     if io.check_dir(qcdirectory, 1):
         io.cd(qcdirectory)
         msg += "cd '{0}'\n".format(qcdirectory)
@@ -218,7 +223,7 @@ def run(s):
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan', 'cbs', 'g09' ]          
     if runqc:
         if qcpackage in available_packages:
-            print('Running {0}/{1}/{2}/{3}'.format(qcpackage,qcmethod,qcbasis,qctask))
+            print('Running qc...')
             msg += qc.run(mol, parameters, mult)
         elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"
@@ -293,21 +298,10 @@ if __name__ == "__main__":
     if parameters['qckeyword']:
         ncalc = len(parameters['qckeyword'].split(','))
     if not package:
-        if not parameters['qctemplate']:
-            if parameters['runqc']:
-                print('No template file specified with -t')
-        else:
+        if  parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
     else:
-        if not parameters['qcexe']:
-            if package in available_packages:
-                if qcnproc > 1:
-                    if package.lower().startswith('nwc'):
-                        parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
-                    elif package.lower().startswith('mol'):
-                        parameters['qcexe'] = 'molpro -n {0}'.format(qcnproc)
-                else:
-                    parameters['qcexe'] = parameters[package]
+
         if not parameters['qctemplate']:
             templatename = package + '_template' + '.txt'
             parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
