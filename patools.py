@@ -249,10 +249,12 @@ def  molpro_freqs(lines):
     freqs = 'Wavenumbers \[cm-1\]   (.+)'
     freqlines = re.findall(freqs, lines)
     freqs = []
+    if freqlines == []:
+        return []
     for line in freqlines:
         if line.split()[0].strip() != '0.00': 
             freqs.extend(line.split())
-    return []
+    return freqs
 
 def molpro_zpve(lines):
     zpve = 'Zero point energy:\s*([\d,\-,\.]*)'
@@ -446,7 +448,7 @@ def rotconsts(lines):
     if prog == 'g09':
         return gaussian_rotconsts(lines)
     if prog == 'molpro':
-        return rotconsts(lines)
+        return molpro_rotconsts(lines)
     print 'program not recognized as g09 or molpro'
     return
 
