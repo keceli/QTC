@@ -145,7 +145,7 @@ def parse_qckeyword(parameters,calcindex=0):
                 method = parameters['qcmethod'] 
                 basis = parameters['qcbasis'] 
                 task = parameters['qctask']
-            xyzdirectory = io.fix_path(io.join_path(*[package,method,basis,task]))
+            xyzdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
             if len(tokens) == 1:
                 task = tokens[0]
             elif len(tokens) == 2:
@@ -153,9 +153,9 @@ def parse_qckeyword(parameters,calcindex=0):
                 method, basis = tokens            
             elif len(tokens) == 3:
                 task = 'energy'
-                package, method, basis = tokens            
+                method, basis, package = tokens            
             elif len(tokens) == 4:
-                package, method, basis, task = tokens
+                task, method, basis, package = tokens
             else:
                 print('Cannot parse qckeyword: {0}'.format(keyword))
             if package == 'torsscan':
@@ -175,7 +175,7 @@ def parse_qckeyword(parameters,calcindex=0):
                 package, method, basis, task = tokens
             else:
                 print('Cannot parse qckeyword: {0}'.format(keyword))
-        qcdirectory = io.fix_path(io.join_path(*[xyzdirectory,package,method,basis,task]))
+        qcdirectory = io.fix_path(io.join_path(*[xyzdirectory,task,method,basis,package]))
 
     if task.startswith('opt'):
         xyzdirectory='' 
@@ -186,7 +186,7 @@ def parse_qckeyword(parameters,calcindex=0):
     parameters['qcbasis'] = basis
     parameters['qctask'] = task
     if task.startswith('opt'):
-        parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+        parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis) #MKNOTE: Sarah do we need to update these? I guess not.
     elif 'freq' in task or 'anh' in task:
         parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
     elif task.startswith('energ'):

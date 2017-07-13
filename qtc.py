@@ -59,7 +59,7 @@ def get_args():
                         help='Type of quantum chemistry calculation: "optimization", "frequency", "energy", "anharmonic"')
     parser.add_argument('-k', '--qckeyword', type=str,
                         default='',
-                        help='Keyword string that can define package, method, basis, task i.e.: "gaussian/ccsd/cc-pvdz/opt, nwchem/ccsdt/cc-pvdz/energy,')
+                        help='Keyword string that can define package, method, basis, task i.e.: "opt/ccsd/cc-pvdz/gaussian, nwchem/ccsdt/cc-pvdz/energy,')
     parser.add_argument('-m', '--qcmethod', type=str,
                         default='',
                         help='Quantum chemistry method to be used')
