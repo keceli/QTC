@@ -170,9 +170,9 @@ def parse_qckeyword(parameters,calcindex=0):
                 method, basis = tokens  
             elif len(tokens) == 3:
                 task = 'optimize'
-                package, method, basis = tokens
+                method, basis, task = tokens
             elif len(tokens) == 4:
-                package, method, basis, task = tokens
+                task, method, basis, package = tokens
             else:
                 print('Cannot parse qckeyword: {0}'.format(keyword))
         qcdirectory = io.fix_path(io.join_path(*[xyzdirectory,task,method,basis,package]))
