@@ -157,8 +157,7 @@ def run(s):
     runthermo = parameters['runthermo']
     runanharmonic = parameters['anharmonic']
     qcnproc = parameters['qcnproc']
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan' ]          
-    if package in available_packages:
+    if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
         if qcnproc > 1:
             if package.startswith('nwc'):
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
