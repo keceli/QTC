@@ -384,12 +384,12 @@ def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, f
 
     if zmat == 'none':
         zmat = ob.get_zmat(mol)
-        gauss += str(charge) + ' ' + str(mult) + '\n'
+        #gauss += str(charge) + ' ' + str(mult) + '\n'
     if zmat.startswith('geometry'):
         zmat = zmat.replace('geometry={angstrom','')
         zmat = zmat.replace('}','Variables:')
         zmat = zmat.replace('=','')
-        zmat = str(charge) + '  ' + str(mult) + zmat
+    zmat = str(charge) + '  ' + str(mult) + zmat
     gauss += zmat.lstrip('\n')
 
     directory = io.db_logfile_dir(directory)
