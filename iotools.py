@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 
-__updated__ = "2017-06-23"
+__updated__ = "2017-07-13"
 
 
 def get_date():
@@ -357,8 +357,7 @@ def db_head_path(db_location=None):
     if db_location == 'test':
         return '/home/elliott/testdirectory/'
     if db_location == None:
-        return '/home/elliott/Packages/QTC/demo/db'
-        #return '/lcrc/project/PACC/databases/qtc_database/'
+        return '/lcrc/project/PACC/databases/qtc_database/'
     else:
         return fix_path(db_location)
 
