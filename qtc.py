@@ -9,6 +9,7 @@ import tctools as tc
 import dbtools as db
 import heatform as hf
 from pprint import pprint
+
 __updated__ = "2017-07-13"
 __author__ = "Murat Keceli"
 __logo__ = """
@@ -158,14 +159,13 @@ def run(s):
     qcnproc = parameters['qcnproc']
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan' ]          
     if package in available_packages:
-        if not parameters['qcexe']:
-            if qcnproc > 1:
-                if package.startswith('nwc'):
-                    parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
-                elif package.startswith('mol'):
-                    parameters['qcexe'] = 'molpro -n {0}'.format(qcnproc)
-            else:
-                parameters['qcexe'] = parameters[package]
+        if qcnproc > 1:
+            if package.startswith('nwc'):
+                parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
+            elif package.startswith('mol'):
+                parameters['qcexe'] = 'molpro -n {0}'.format(qcnproc)
+        else:
+            parameters['qcexe'] = parameters[package]
     msg = "***************************************\n"
     msg += "{0}\n".format(s)
     mult = ob.get_mult(s)
