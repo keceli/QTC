@@ -357,8 +357,8 @@ def db_head_path(db_location=None):
     if db_location == 'test':
         return '/home/elliott/testdirectory/'
     if db_location == None:
-        #return '/home/elliott/Packages/QTC/newtest/db'
-        return '/lcrc/project/PACC/databases/qtc_database/'
+        return '/home/elliott/Packages/QTC/newtest/db'
+        #return '/lcrc/project/PACC/databases/qtc_database/'
     else:
         return fix_path(db_location)
 

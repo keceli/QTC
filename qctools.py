@@ -100,10 +100,11 @@ def get_input(x, template, parameters):
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         parameters['runthermo'] = False
-        if parameters['freqlevel'] != None and False: #SARAH FIX THIS LATER
-            inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
-        else:
-            inp = inp.replace('QTC(ANHARMLOC)', 'false')
+        #if parameters['freqlevel'] != None: #SARAH FIX THIS LATER
+        #    inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
+        #else:
+        #    inp = inp.replace('QTC(ANHARMLOC)', 'false')
+        inp = inp.replace('QTC(ANHARMLOC)', 'false')
         parameters['runthermo'] = False
     if "QTC(" in inp:
         print("Error in template file:\n" + inp)
