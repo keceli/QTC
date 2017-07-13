@@ -162,7 +162,7 @@ def run(s):
             if package.startswith('nwc'):
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
             elif package.startswith('mol'):
-                parameters['qcexe'] = 'molpro -n {0}'.format(qcnproc)
+                parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
         else:
             parameters['qcexe'] = parameters[package]
     msg = "***************************************\n"
