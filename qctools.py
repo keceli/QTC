@@ -102,10 +102,10 @@ def get_input(x, template, parameters):
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         parameters['runthermo'] = False
-        #if parameters['freqlevel'] != None: #SARAH FIX THIS LATER
-        #    inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
-        #else:
-        #    inp = inp.replace('QTC(ANHARMLOC)', 'false')
+        if parameters['anharmonic'] == True:
+            inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
+        else:
+            inp = inp.replace('QTC(ANHARMLOC)', 'false')
         inp = inp.replace('QTC(ANHARMLOC)', 'false')
         parameters['runthermo'] = False
     if "QTC(" in inp:
@@ -178,10 +178,10 @@ def parse_qckeyword(parameters,calcindex=0):
                 task, method, basis, package = tokens
             else:
                 print('Cannot parse qckeyword: {0}'.format(keyword))
+        if task.startswith('opt'):
+            xyzdirectory='' 
         qcdirectory = io.fix_path(io.join_path(*[xyzdirectory,task,method,basis,package]))
 
-    if task.startswith('opt'):
-        xyzdirectory='' 
     parameters['xyzpath'] = xyzdirectory
     parameters['qcdirectory'] = qcdirectory
     parameters['qcpackage'] = package
@@ -192,6 +192,8 @@ def parse_qckeyword(parameters,calcindex=0):
     parameters['parseqc'] = True
     parameters['writefiles'] = True
     parameters['storefiles'] = True
+    if task.startswith('an'):
+        parameters['anharmonic']=True
     if task.startswith('opt'):
         parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis) #MKNOTE: Sarah do we need to update these? I guess not.
     elif 'freq' in task or 'anh' in task:

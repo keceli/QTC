@@ -267,7 +267,8 @@ def run(s):
             if 'freqlevel' in parameters:
                 freqlevel   = parameters['freqlevel']
             hfbasis = parameters['hfbasis']
-            hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,freqlevel=freqlevel, basis=hfbasis)
+            hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,
+                                freqlevel=freqlevel, basis=hfbasis,anharm=parameters['anharmonic'])
             hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
             io.write_file(hftxt,s + '.hf0k')
