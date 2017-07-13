@@ -243,28 +243,35 @@ def run(s):
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
         msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qclog))
-        d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
-        xyz = next(db.gen_dict_extract('xyz',d))
-        freqs = next(db.gen_dict_extract('harmonic frequencies',d))
-        energy = float(next(db.gen_dict_extract('energy',d)))
-        xmat   = next(db.gen_dict_extract('xmat',d))
-        method = parameters['qcmethod']
-        basis = parameters['qcbasis']
-        package = parameters['qcpackage']
-        optlevel  = parameters['optlevel']
-        enlevel   = optlevel
-        freqlevel = None
-        if 'enlevel' in parameters:
-            enlevel   = parameters['enlevel']
-        if 'freqlevel' in parameters:
-            freqlevel   = parameters['freqlevel']
-        hfbasis = parameters['hfbasis']
-        hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,freqlevel=freqlevel, basis=hfbasis)
-        hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
-        hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
-        io.write_file(hftxt,s + '.hf0k')
-        if len(freqs) > 0:
-            msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters,xmat=xmat)
+        if parameters['qcpackage'] == 'torsscan':
+            msg += io.read_file(io.get_path(qclog))
+        else:
+            d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
+            xyz = next(db.gen_dict_extract('xyz',d))
+            freqs = next(db.gen_dict_extract('harmonic frequencies',d))
+            energy = float(next(db.gen_dict_extract('energy',d)))
+            xmat   = next(db.gen_dict_extract('xmat',d))
+            method = parameters['qcmethod']
+            basis = parameters['qcbasis']
+            package = parameters['qcpackage']
+            optlevel  = parameters['optlevel']
+            enlevel   = optlevel
+            freqlevel = None
+            if 'enlevel' in parameters:
+                enlevel   = parameters['enlevel']
+            if 'freqlevel' in parameters:
+                freqlevel   = parameters['freqlevel']
+            hfbasis = parameters['hfbasis']
+            hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,freqlevel=freqlevel, basis=hfbasis)
+            hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
+            hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
+            io.write_file(hftxt,s + '.hf0k')
+            if len(freqs) > 0:
+                msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters,xmat=xmat)
+                if io.check_file('thermp.out'):
+                    import patools as pa
+                    lines = io.read_file('thermp.out')
+                    msg += 'delHf(298) = {} kcal'.format(pa.get_298(lines))
     io.cd(cwd)
     print(msg)
     return

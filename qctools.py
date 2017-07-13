@@ -86,13 +86,21 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
     inp = inp.replace("QTC(NPROC)", str(nproc))
     if package == 'torsscan':
-        inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
-        inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
-        inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
+        if optpackage != 'molpro' or optpackage.startswith('g'):
+            optpackage = 'g09'
+        if optpackage.startswith('gau'):
+            optpackage = 'g09'
+        #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
+        #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
+        #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        inp = inp.replace("QTC(TSPACKAGE)", optpackage)
+        inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
+        inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         parameters['runthermo'] = False
-        if parameters['freqlevel'] != None:
+        if parameters['freqlevel'] != None and False: #SARAH FIX THIS LATER
             inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
         else:
             inp = inp.replace('QTC(ANHARMLOC)', 'false')
@@ -119,11 +127,17 @@ def parse_qckeyword(parameters,calcindex=0):
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
     if calcindex > 0:
-        parse_qckeyword(parameters,calcindex=0)
-        package = parameters['qcpackage']
-        method = parameters['qcmethod'] 
-        basis = parameters['qcbasis'] 
-        task = parameters['qctask']
+        if parameters['optlevel'] != 'sp':
+            package = parameters['optlevel'].split('/')[0]
+            method  = parameters['optlevel'].split('/')[1]
+            basis   = parameters['optlevel'].split('/')[2]
+            task    = 'opt'
+        else:
+            parse_qckeyword(parameters,calcindex=0)
+            package = parameters['qcpackage']
+            method = parameters['qcmethod'] 
+            basis = parameters['qcbasis'] 
+            task = parameters['qctask']
         xyzdirectory = io.fix_path(io.join_path(*[package,method,basis,task]))
         if len(tokens) == 1:
             task = tokens[0]
@@ -155,18 +169,19 @@ def parse_qckeyword(parameters,calcindex=0):
         else:
             print('Cannot parse qckeyword: {0}'.format(keyword))
     parameters['xyzpath'] = xyzdirectory
+    if task.startswith('opt'):
+        xyzdirectory=''
     parameters['qcdirectory'] = io.fix_path(io.join_path(*[xyzdirectory,package,method,basis,task]))
     parameters['qcpackage'] = package
     parameters['qcmethod'] = method
     parameters['qcbasis'] = basis
     parameters['qctask'] = task
-    
-
     if task.startswith('opt'):
         parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-    if 'freq' in task or 'anh' in task:
+    elif 'freq' in task or 'anh' in task:
         parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
-    if task.startswith('energ'):
+    elif task.startswith('energ'):
+    #else:
         parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)
     return parameters 
 
@@ -202,6 +217,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
+        method = method.replace('\(','(').replace('\)',')')  #will figureout source of this later
         zpve           = pa.molpro_zpve(s)
         xyz            = pa.molpro_xyz(s)
         geo            = pa.molpro_geo(s)

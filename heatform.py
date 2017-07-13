@@ -438,9 +438,9 @@ def build_molpro(mol, theory, basisset, zmat='none', directory=None, opt=False, 
         molp += zmat
     else:
         if zmat == 'none':
-            zmat = '\n\n' + ob.get_zmat(mol).replace('=', '') 
+            zmat = '\n' + ob.get_zmat(mol).replace('=', '') 
 
-        zmat1 = '\n'.join(zmat.split('Variables:')[0].split('\n')[2:] )
+        zmat1 = '\n'.join(zmat.split('Variables:')[0].split('\n')[1:] )
         zmat2 = '}\n'
 
         for line in zmat.split('Variables:')[1].split('\n')[1:-1]:
@@ -486,14 +486,14 @@ def run_gauss(filename):
     """
     Runs Gaussian on file: filename
     """
-    os.system('soft add +g09; g09 ' + filename.replace('(','\(').replace(')','\)').replace('[','\[').replace(']','\]'))
+    os.system('soft add +g09; g09 ' + filename.replace('[','\[').replace(']','\]'))
     return
 
 def run_molpro(filename):
     """
     Runs molpro on file: filename
     """
-    os.system('/home/elliott/bin/molprop ' + filename.replace('(','\(').replace(')','\)').replace('[','\[').replace(']','\]'))
+    os.system('/home/elliott/bin/molprop ' + filename.replace('[','\[').replace(']','\]'))
     
     return
 
@@ -520,7 +520,7 @@ def run_opt(mol, prog, meth, bas, mol_is_smiles=True):
     directory = io.db_opt_path(prog, meth, bas, None, mol)
     
     if  prog == 'g09':
-        print 'Running G09 optimiztion on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
+        print 'Running G09 optimization on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
         filename = build_gauss(dic, meth, bas, directory=directory, opt=True)
         run_gauss(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.log')))
@@ -718,9 +718,12 @@ def get_theory(level, loglines=''):
 def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlevel',enlevel='optlevel',anharm=False,runE=False, mol_not_smiles=False):
 
     optlevel = optlevel.replace('gaussian','g09')
+    optlevel = optlevel.replace('\(','(').replace('\)',')')
     if freqlevel != None:
         freqlevel = freqlevel.replace('gaussian','g09')
+        freqlevel = freqlevel.replace('\(','(').replace('\)',')')
     enlevel = enlevel.replace('gaussian','g09')
+    enlevel = enlevel.replace('\(','(').replace('\)',')')
 
     #Convert basis selection to smiles if it is mol. formula format
     basis = basis.split()

@@ -41,7 +41,7 @@ No. of steps on the PES: 4
    Module      :    Program    :      Theory
 ------------------------------------------------
 Opt            :               : 
-Opt_1          : QTC(METHOD)   : QTC(BASIS)/QTC(TASK)
+Opt_1          : QTC(TSPACKAGE): QTC(TSMETHOD)/QTC(TSBASIS)
 1dTau          : QTC(METHOD)   : QTC(BASIS)/QTC(TASK)
 MdTau          :               :
 Symm           :               :
@@ -53,7 +53,7 @@ Irc            :               :
 THERMO options
 =============
 Perform all thermochemistry? (default true): QTC(THERMO)
-Anharmonic (0 for level0 theory, 1 for level1 theory, false for off): QTC(ANHARMLOC)
+Anharmonic (0 for level0 theory, 1 for level1 theory, false for off, or prog/meth/bas): QTC(ANHARMLOC)
 Overwrite anharmonic: false
 Basis for heat of formation: QTC(HFBASIS) 
 Parse all: True

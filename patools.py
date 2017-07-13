@@ -449,3 +449,9 @@ def rotconsts(lines):
         return rotconsts(lines)
     print 'program not recognized as g09 or molpro'
     return
+
+def get_298(lines):
+    deltaH298 = ' h298 final\s*([\d,\-,\.]*)'
+    return re.findall(deltaH298,lines)[-1] 
+    
+ 
