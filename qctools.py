@@ -185,6 +185,10 @@ def parse_qckeyword(parameters,calcindex=0):
     parameters['qcmethod'] = method
     parameters['qcbasis'] = basis
     parameters['qctask'] = task
+    parameters['runqc'] = True
+    parameters['parseqc'] = True
+    parameters['writefiles'] = True
+    parameters['storefiles'] = True
     if task.startswith('opt'):
         parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis) #MKNOTE: Sarah do we need to update these? I guess not.
     elif 'freq' in task or 'anh' in task:
