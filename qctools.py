@@ -33,6 +33,8 @@ def get_input(x, template, parameters):
     basis   = parameters[  'qcbasis']
     task    = parameters[   'qctask']
     nproc   = parameters[  'qcnproc']
+    if task.startswith('gau'):
+        task = 'g09'
     if package == 'nwchem':
         if task.lower().startswith('opt'):
             task = 'optimize'
