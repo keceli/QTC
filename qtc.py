@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import argparse
 import multiprocessing
-
 import iotools as io
 import obtools as ob
 import qctools as qc
@@ -11,7 +10,7 @@ import heatform as hf
 from pprint import pprint
 
 __updated__ = "2017-07-13"
-__author__ = "Murat Keceli"
+__authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
 
@@ -145,17 +144,14 @@ def get_args():
 
 def run(s):
     """
-    A driver function to run quantum chemistry and thermochemistry calculations based
-    on command line options:
-    --qcmethod
-    --qcpackage
+    A driver function to run quantum chemistry and thermochemistry calculations.
+    It updates parameters dictionary.
     """
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
     package = parameters['qcpackage'].lower()
     runthermo = parameters['runthermo']
-    runanharmonic = parameters['anharmonic']
     qcnproc = parameters['qcnproc']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
         if qcnproc > 1:
@@ -165,6 +161,15 @@ def run(s):
                 parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
         else:
             parameters['qcexe'] = parameters[package]
+    if not package:
+        if parameters['qctemplate']:
+            parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
+    elif not package.startswith('extrap'):
+        if not parameters['qctemplate']:
+            templatename = package + '_template' + '.txt'
+            parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
+    if parameters['writefiles']:
+        parameters['parseqc'] = True
     msg = "***************************************\n"
     msg += "{0}\n".format(s)
     mult = ob.get_mult(s)
@@ -172,37 +177,13 @@ def run(s):
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
     parameters['smilesdir'] = smilesdir
-    templatename = package + '_template' + '.txt'
-    parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename]) 
-    qcdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
+    workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
     parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     qcpackage = parameters['qcpackage']
     qcscript = io.get_path(parameters['qcscript'])
-    qclog = smilesname + '_' + qcpackage + '.out'
+    qcoutput = smilesname + '_' + qcpackage + '.out'
     xyzpath = parameters['xyzpath']
-    xyzfile = None  
-    if xyzpath:
-        if io.check_file(xyzpath):
-            xyzfile = xyzpath
-            msg += "xyz file found in {0}".format(xyzfile)
-        elif io.check_file(io.join_path(*(smilesdir,xyzpath))):
-            xyzfile = io.join_path(*(smilesdir,xyzpath))
-            msg += "xyz file found in {0}".format(xyzfile)
-        elif io.check_dir(xyzpath):
-            try:
-                xyzfile = next(io.find_files(xyzpath, '*.xyz'))
-                msg += "xyz file found in {0}".format(xyzfile)
-            except StopIteration:
-                msg += "xyz file not found in {0}".format(xyzpath)
-        elif io.check_dir(io.join_path(*(smilesdir,xyzpath))):
-            xyzpath = io.join_path(*(smilesdir,xyzpath))
-            try:
-                xyzfile = next(io.find_files(xyzpath, '*.xyz'))
-            except StopIteration:
-                msg += "xyz file not found in {0}".format(xyzpath)        
-        else:
-            msg += "xyz path not found {0}".format(xyzpath)
-            return msg
+    xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
     if xyzfile:
         msg += "Using xyz file in '{0}'\n".format(xyzfile)
         xyz = io.read_file(xyzfile)
@@ -211,16 +192,16 @@ def run(s):
     print(msg)
     msg = ''
     cwd = io.pwd()
-    io.mkdir(qcdirectory)
-    if io.check_dir(qcdirectory, 1):
-        io.cd(qcdirectory)
-        msg += "cd '{0}'\n".format(qcdirectory)
+    io.mkdir(workdirectory)
+    if io.check_dir(workdirectory, 1):
+        io.cd(workdirectory)
+        msg += "cd '{0}'\n".format(workdirectory)
     else:
-        msg += ('I/O error, {0} directory not found.\n'.format(qcdirectory))
+        msg += ('I/O error, {0} directory not found.\n'.format(workdirectory))
         return -1
     print(msg)
     msg = ''
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan', 'cbs', 'g09' ]          
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan']          
     if runqc:
         if qcpackage in available_packages:
             print('Running qc...')
@@ -239,25 +220,23 @@ def run(s):
         print(msg)
         msg = ''
     if parseqc:
-        if io.check_file(qclog, timeout=1,verbose=False):
-            out = io.read_file(qclog,aslines=False)
+        if io.check_file(qcoutput, timeout=1,verbose=False):
+            out = io.read_file(qcoutput,aslines=False)
             d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
             pprint(d)
                                    
     if runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
-        msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qclog))
+        msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qcoutput))
         if parameters['qcpackage'] == 'torsscan':
-            msg += io.read_file(io.get_path(qclog))
+            msg += io.read_file(io.get_path(qcoutput))
         else:
             d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
             xyz = next(db.gen_dict_extract('xyz',d))
             freqs = next(db.gen_dict_extract('harmonic frequencies',d))
             energy = float(next(db.gen_dict_extract('energy',d)))
             xmat   = next(db.gen_dict_extract('xmat',d))
-            method = parameters['qcmethod']
-            basis = parameters['qcbasis']
             package = parameters['qcpackage']
             optlevel  = parameters['optlevel']
             enlevel   = optlevel
@@ -282,32 +261,22 @@ def run(s):
     print(msg)
     return
 
-    
-if __name__ == "__main__":
+
+def main():
     from socket import gethostname
     from timeit import default_timer as timer
     import os
     global parameters
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]
     start  = timer()
     args = get_args()
     parameters = vars(args)
-    package = parameters['qcpackage']
-    parameters['qtcdirectory'] = os.path.dirname(os.path.realpath(__file__))
-    qcnproc = parameters['qcnproc']
-    ncalc = 0
     if parameters['qckeyword']:
         ncalc = len(parameters['qckeyword'].split(','))
-    if not package:
-        if  parameters['qctemplate']:
-            parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
     else:
-
-        if not parameters['qctemplate']:
-            templatename = package + '_template' + '.txt'
-            parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
-    if parameters['writefiles']:
-        parameters['parseqc'] = True
+        ncalc = 1
+    parameters['qtcdirectory'] = os.path.dirname(os.path.realpath(__file__))
+    parameters['number_of_calculations'] = ncalc
+    parameters['optlevel'] = 'sp' #TODO
     beginindex = args.first
     endindex = args.last
     inp = args.input
@@ -320,7 +289,6 @@ if __name__ == "__main__":
         mylist = mylist[beginindex:endindex]
     else:
         mylist = mylist[beginindex:]        
-    parameters['optlevel']='sp'
     print(__logo__)
     print("QTC: Date and time           = {0}".format(io.get_date()))
     print("QTC: Last update             = {0}".format(__updated__))
@@ -332,19 +300,20 @@ if __name__ == "__main__":
     print("QTC: Number of species       = {0}".format(len(mylist)))
     init = timer()
     print("QTC: Initialization time (s) = {0:.2f}".format(init-start))
-    if ncalc > 0:
-        parameters['writefiles'] = True        
-        parameters['parseqc'] = True
-        for i in range(ncalc):
-            parameters['calcindex'] = i
+    for i in range(ncalc):
+        parameters['calcindex'] = i
+        if parameters['qckeyword']:
             qc.parse_qckeyword(parameters, calcindex=i)
-            if nproc > 1:
-                pool = multiprocessing.Pool(nproc)
-                pool.map(run, mylist)
-            else:
-                results = map(run, mylist)
+        if nproc > 1:
+            pool = multiprocessing.Pool(nproc)
+            pool.map(run, mylist)
+        else:
+            map(run, mylist)
     end = timer()
     print("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     print("QTC: Total time (s)          = {0:.2f}".format(end-start))
     print("QTC: Date and time           = {0}".format(io.get_date()))
+
+if __name__ == "__main__":
+    main()
 
