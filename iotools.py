@@ -357,7 +357,8 @@ def db_head_path(db_location=None):
     if db_location == 'test':
         return '/home/elliott/testdirectory/'
     if db_location == None:
-        return '/lcrc/project/PACC/databases/qtc_database/'
+        return '/home/elliott/Packages/QTC/demo/db'
+        #return '/lcrc/project/PACC/databases/qtc_database/'
     else:
         return fix_path(db_location)
 
@@ -378,7 +379,7 @@ def db_smiles_path(smiles, db_location = None):
 def prog_meth_bas_path(prog, method, basis):
     """
     Our current directory structure is to combine program, method, and basis
-    with underscores (e.g., g09__ccsd__cc-pvdz)
+    with underscores (e.g., gaussian__ccsd__cc-pvdz)
     """
     return fix_path(prog.lower()) + '__' + fix_path(method.lower()) + '__' + fix_path(basis.lower()) + '/'
 
@@ -538,9 +539,8 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
         return 
     if optprog == None:
        optprog, optmethod, optbasis = prog, method, basis
-
     if zmat != None:
-        db_store_opt_prop(zmat, species, 'zmat', None, optprog, optmethod, optbasis)
+       db_store_opt_prop(zmat, species, 'zmat', None, optprog, optmethod, optbasis)
     if xyz != None:
        db_store_opt_prop(xyz, species, 'xyz', None, optprog, optmethod, optbasis)
     if geo != None:

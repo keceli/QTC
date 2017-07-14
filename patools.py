@@ -27,7 +27,7 @@ Key:
 def get_prog(lines):
    
    if 'Gaussian' in lines:
-       return 'g09'
+       return 'gaussian'
    elif 'molpro' in lines or 'MOLPRO' in lines:
        return 'molpro'
    return
@@ -364,92 +364,92 @@ def EStokTP_freqs(lines):
 
 def method(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_method(lines)
     if prog == 'molpro':
         return molpro_method(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return
 
 def basisset(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_basisset(lines)
     if prog == 'molpro':
         return molpro_basisset(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return
 
 def energy(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_energy(lines)
     if prog == 'molpro':
         return molpro_energy(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return
 
 def zmat(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_zmat(lines)
     if prog == 'molpro':
         return molpro_zmat(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return
 
 def freqs(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_freqs(lines)
     if prog == 'molpro':
         return molpro_freqs(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return
 
 def zpve(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_zpve(lines)
     if prog == 'molpro':
         return molpro_zpve(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return 
 
 def anzpve(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_anzpve(lines)
     if prog == 'molpro':
        return #molpro_anzpve(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return 
 
 def xyz(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_xyz(lines)
     if prog == 'molpro':
         return molpro_xyz(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return
 
 def geo(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_geo(lines)
     if prog == 'molpro':
         return molpro_geo(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return
 
 def rotconsts(lines):
     prog = get_prog(lines)
-    if prog == 'g09':
+    if prog == 'gaussian':
         return gaussian_rotconsts(lines)
     if prog == 'molpro':
         return molpro_rotconsts(lines)
-    print 'program not recognized as g09 or molpro'
+    print 'program not recognized as gaussian or molpro'
     return
 
 def get_298(lines):

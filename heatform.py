@@ -71,46 +71,35 @@ def select_basis(atomlist,attempt=0):
     i= 0
     if 'N' in atomlist and i <= count:
         basis.append('N')
-        #basis.append('NH3')
         i += 1
     if 'S' in atomlist and i<= count:
-        #basis.append('SO2') 
         basis.append('O=S=O') 
         i += 1
     if 'H' in atomlist  and i<= count and attempt < 1:
-        #basis.append('H2')
         basis.append('[H][H]')
         i += 1
     elif 'H' in atomlist and 'C' not in atomlist and i<= count and attempt < 2:
-        #basis.append('H2')
         basis.append('[H][H]')
         i += 1
     if 'O' in atomlist and i<= count and attempt < 2:
-        #basis.append('O2')
         basis.append('[O][O]')
         i += 1
     if 'C' in atomlist and i<= count and attempt < 3:
-        #basis.append('CH4')
         basis.append('C')
         i += 1
     if 'O' in atomlist and 'H' in atomlist and  i<= count and attempt  < 3:
-        #basis.append('H2O')
         basis.append('O')
         i += 1
     if 'C' in atomlist and 'O' in atomlist and  i<= count and attempt < 4:
-        #basis.append('CO2')
         basis.append('C(=O)=O')
         i += 1
     if 'C' in atomlist and 'O' in atomlist and  i<= count and attempt < 4:
-        #basis.append('H2CO')
         basis.append('C=O')
         i += 1
     if 'C' in atomlist and 'O' in atomlist and  i<= count:
-        #basis.append('CH3OH')
         basis.append('CO')
         i += 1
     if 'C' in atomlist and i<= count:
-        #basis.append('CH3CH3')
         basis.append('CC')
         i += 1
     return basis
@@ -268,46 +257,6 @@ def getname_fromdirname():
     cwd = os.getcwd()
     return cwd.split('/')[-1]
 
-###FOR IF WE ARE USING A LOGFILE
-def getprog_fromlogfile(lines):
-    """
-    returns name of program for the lines of a logfile
-    """ 
-    return pa.get_prog(lines)
-
-def gettheory_fromlogfile(logfile):
-    """
-    return the last method run in the logfile
-    """
-    lines = io.read_file(logfile)
-    return pa.method(lines).lstrip('R').lstrip('r') 
-
-def getbasisset_fromlogfile(logfile):
-    """
-    returns basisset used in logfile
-    """
-    lines = io.read_file(logfile)
-    return pa.basisset(lines)
-
-def getenergy_fromlogfile(logfile,theory='',prog=''):
-    """
-    Returns by default final energy solved for in logfile, or 
-    the energy corresponding to a given method in logfile
-    """
-    lines = io.read_file(logfile)
-    print lines
-    print prog
-    if prog == '':
-        prog  = getprog_fromlogfile(lines)
-    if prog == 'g09':
-       return pa.gaussian_energy(lines,theory)[1]
-    elif prog == 'molpro':
-       return pa.molpro_energy(lines,theory)[1]
-    elif prog == None:
-       return pa.molpro_energy(lines,theory)[1]
-    print 'no energy found for this molecule, please use -e to manually set it'
-    return
-
 def nest_2_dic(bas,key1,key2):
     """
     Returns a dictionary value that requires two key values (is in singly nested loop )
@@ -363,29 +312,15 @@ def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, f
         stoich = dic['stoich']
         charge = dic['charge']
         mult   = dic['mult']
+        #zmat   = dic['zmat']
     else:
-        dic = {'g09':'nope'}
         stoich = ob.get_formula(mol)
         mult   = ob.get_multiplicity(mol)
         charge = ob.get_charge(mol)
 
-    if theory.lower().lstrip('r') in dic['g09']:
-        for j in range(len(bases)):
-            if bases[j] in dic['g09'][theory.lower().lstrip('r')]:
-                if zmat in dic['g09'][theory.lower().lstrip('r')][bases[j]]:
-                    zmat = dic['g09'][theory.lower().lstrip('r')][bases[j]]['zmat']
     if zmat == 'none':
-        for i in range(len(meths)):
-            if meths[i] in dic['g09']:
-                for j in range(len(bases)):
-                    if bases[j]  in dic['g09'][meths[i]]:
-                        if 'zmat'in dic['g09'][meths[i]][bases[j]]:
-                            zmat =  dic['g09'][meths[i]][bases[j]]['zmat']
-
-    if zmat == 'none':
-        zmat = ob.get_zmat(mol)
-        #gauss += str(charge) + ' ' + str(mult) + '\n'
-    if zmat.startswith('geometry'):
+        zmat = '\n' + ob.get_zmat(mol)
+    elif zmat.startswith('geometry'):
         zmat = zmat.replace('geometry={angstrom','')
         zmat = zmat.replace('}','Variables:')
         zmat = zmat.replace('=','')
@@ -422,18 +357,6 @@ def build_molpro(mol, theory, basisset, zmat='none', directory=None, opt=False, 
     meths = ['ccsdt','ccsd(t)','ccsd','m062x','b3lyp']
     bases = ['cc-pvqz','cc-pvtz','cc-pvdz','6-311+g(d,p)','6-31+g(d,p)']
     
-    #if theory.lower().lstrip('r') in dic['g09']:
-    #    for j in range(len(bases)):
-    #        if bases[j] in dic['molpro'][theory.lower().lstrip('r')]:
-    #            if zmat in dic['molpro'][theory.lower().lstrip('r')][bases[j]]:
-    #                zmat = dic['molpro'][theory.lower().lstrip('r')][bases[j]]['zmat']
-    #if zmat == 'none':
-    #    for i in range(len(meths)):
-    #        if meths[i] in dic['molpro']:
-    #            for j in range(len(bases)):
-    #                if bases[j]  in dic['molpro'][meths[i]]:
-    #                    if 'zmat'in dic['molpro'][meths[i]][bases[j]]:
-    #                        zmat =  dic['molpro'][meths[i]][bases[j]]['zmat']
     if zmat.startswith('geometry'):
         molp += zmat
     else:
@@ -519,7 +442,7 @@ def run_opt(mol, prog, meth, bas, mol_is_smiles=True):
     
     directory = io.db_opt_path(prog, meth, bas, None, mol)
     
-    if  prog == 'g09':
+    if  prog == 'gaussian':
         print 'Running G09 optimization on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
         filename = build_gauss(dic, meth, bas, directory=directory, opt=True)
         run_gauss(filename)
@@ -575,7 +498,7 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
     else:
         freq = False
 
-    if  propprog == 'g09':
+    if  propprog == 'gaussian':
         print 'Running G09 ' + entype + ' on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
         filename = build_gauss(dic, propmeth, propbas, zmat=zmat, directory=directory, freq=freq, anharm=anharm)
         run_gauss(filename)
@@ -596,20 +519,21 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
     Checks a dictionary and directories for energy at a specified level of theory and basisset 
     Computes energy if it isn't in dictionary already
     INPUT:
-    bas      - smiles string of molecule or basis moleule
-    energORs - are we checking for the energy or its uncertainty (uncertainty broken)
-    theory   - theory energy should be listed or computed with
-    basisset - basis set energy should be listed or computed with
-    prog     - program an energy should be listed or computed with
+    bas   - smiles string of molecule or basis moleule
+    opt   - optlevel  (prog/method/basis)
+    en    - enlevel   (prog/method/basis)
+    freq  - freqlevel (prog/method/basis)
+    runE  - should execute package if energies are not found
+    anharm- anharmonic frequencies? True or False
     OUTPUT:
-    E        - energy 
+    E     - energy 
     """
     
     ### Check dictionary ###
     from testdb import db
     E, zpve = 0, 0
     zpvetype = 'zpve'
-    #dic = {}
+    #Check dictionary    
     #for dbdic in db:
     #    if dbdic['_id'] == bas:
     #      dic = dbdic  
@@ -622,38 +546,53 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
     #            return E
 
     ### Check directory ###
-    optprog, optmethod, optbasis  = opt[0], opt[1], opt[2]
-    enprog,   enmethod,  enbasis  =  en[0],  en[1],  en[2]
-    cdire      = io.db_opt_path(optprog, optmethod, optbasis, None, bas)
-    edire      = io.db_sp_path(enprog, enmethod, enbasis, None, bas, optprog, optmethod, optbasis)
-    coordsfile = io.join_path(cdire, bas + '.zmat')
-    enefile    = io.join_path(edire, bas + '.ene')
-    if freq != None:
-        freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
-        fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
-        if anharm:
-            zpvetype = 'anzpve'
-        zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
+    if len(en) > 1:
+         optprog, optmethod, optbasis  = opt[0], opt[1], opt[2]
+         enprog,   enmethod,  enbasis  =  en[0],  en[1],  en[2]
+         cdire      = io.db_opt_path(optprog, optmethod, optbasis, None, bas)
+         edire      = io.db_sp_path(enprog, enmethod, enbasis, None, bas, optprog, optmethod, optbasis)
+         coordsfile = io.join_path(cdire, bas + '.zmat')
+         enefile    = io.join_path(edire, bas + '.ene')
 
+         if freq != None:
+             freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
+             fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
+             if anharm:
+                 zpvetype = 'anzpve'
+             zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
+    else:
+        enefile  = io.join_path(ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
+        runE=False
+        if freq != None:
+             freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
+             opttask, optmethod, optbasis, optprog = opt.split('/')
+             fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
+             if anharm:
+                 zpvetype = 'anzpve'
+             zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
+    print enefile
     if io.check_file(enefile):
-        E = float(io.read_file(enefile).strip())
-        print 'Energy {:f} pulled from: {}'.format(E, enefile)
+        E = io.read_file(enefile).strip()
+        print 'Energy {} pulled from: {}'.format(E, enefile)
+        E = float(E)
     elif runE:
         if not io.check_file(coordsfile):
             run_opt(bas, optprog, optmethod, optbasis, True)
         E = run_energy(bas, optprog, optmethod, optbasis, enprog, enmethod, enbasis, 'ene')
+        io.mkdir(edire)
         io.write_file(str(E), enefile)
-        print 'Energy {:f} saved to: {}'.format(E,  enefile)
+        print 'Energy {} saved to: {}'.format(E,  enefile)
 
     if freq != None:
         if io.check_file(zpvefile):
             zpve= io.read_file(zpvefile).strip()
             zpve= float(zpve)
-            print 'ZPVE  {:f} pulled from: {}'.format(zpve, zpvefile)
+            print 'ZPVE  {} pulled from: {}'.format(zpve, zpvefile)
         elif runE:
             if not io.check_file(coordsfile):
                 run_opt(bas, optprog, optmethod, optbasis, True)
             zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, zpvetype)
+            io.mkdir(fdire)
             io.write_file(str(zpve), zpvefile)
             print 'ZPVE  ' + str(zpve) +  ' saved to: ' + zpvefile
     else:
@@ -676,21 +615,36 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm):
     coefflist - coefficients [a,b,c,d...] described above
     E         - electronic energy of molecule
     OUTPUTS:
-    zE        - 0K heat of formation of molecule
-    sigma     - uncertainty estimate (i.e., delH = lE +/- sigma)
+    E        - 0K heat of formation of molecule
    
     """
-    var       = 0
     for i,bas in enumerate(basis):
         E  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
-
-        var += (coefflist[i] * nest_2_dic(bas,'HeatForm','sigma') * 0.00038088   )**2
         e    =  E_dic(bas, opt, en, freq, anharm=anharm)
         E   -=  coefflist[i] * e
-        #var += (coefflist[i] * e * E_dic(bas,'sigma',theory,basisset,prog) )**2
 
-    sigma = np.sqrt(var)
-    return E, sigma
+    return E
+
+#def E_hfbasis_in_directory(mol,basis,coefflist,E,opt, en, freq, anharm):
+#    """
+#    Uses the coefficients [a,b,c...] obtained from C = M^-1 S to find 
+#    delH(CxHyOz) = adelH(R1) + bdelH(R2) + cdelH(R3) + Eo(CxHyOz) - aEo(R1) - bEo(R2) -cEo(R3)
+#    where Rn are our basis molecules, delH(Rn) are their heats of formation, and Eo(Rn) are their
+#    electronic energies computed at the same level of theory as Eo(CxHyOz)
+#    INPUTS:
+#    mol       - molecule named stoichiometrically
+#    basis     - selected basis molecule list
+#    coefflist - coefficients [a,b,c,d...] described above
+#    E         - electronic energy of molecule
+#    OUTPUTS:
+#    E        - 0K heat of formation of molecule
+#   
+#    """
+#    for i,bas in enumerate(basis):
+#        E  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
+#        e    =  E_dic(bas, opt, en, freq, dirispacc = False)
+#        E   -=  coefflist[i] * e
+#    return E
     
 def check(clist, basis,stoich,atomlist):
     """
@@ -706,110 +660,75 @@ def check(clist, basis,stoich,atomlist):
             break
     return statement
 
-def get_theory(level, loglines=''):
+def get_progmethbasis(level, loglines='', optlevel=''):
+
+    level = update_level(level)
+    if level == None:
+        return None
     if is_auto(level):
         prog     = pa.get_prog(loglines)
         method   = pa.method(loglines)
         basisset = pa.basisset(loglines)
+    elif level == 'optlevel':
+        return get_progmethbasis(optlevel, loglines)
     else:
         prog, method, basisset = level.split('/')
-    return prog, method, basisset
+    return [prog, method, basisset]
 
-def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlevel',enlevel='optlevel',anharm=False,runE=False, mol_not_smiles=False):
+def update_level(level):
+    if level != None:
+        level = level.replace('\(','(').replace('\)',')')
+    return level
 
-    optlevel = optlevel.replace('gaussian','g09')
-    optlevel = optlevel.replace('\(','(').replace('\)',')')
-    if freqlevel != None:
-        freqlevel = freqlevel.replace('gaussian','g09')
-        freqlevel = freqlevel.replace('\(','(').replace('\)',')')
-    enlevel = enlevel.replace('gaussian','g09')
-    enlevel = enlevel.replace('\(','(').replace('\)',')')
+def convert_to_smiles(basis):
 
-    #Convert basis selection to smiles if it is mol. formula format
-    basis = basis.split()
     stoich_to_smiles = {'H2':'[H][H]','O2':'[O][O]','H2O':'O','NH3':'N','SO2':'O=S=O','CO2':'C(=O)=O',  
                         'CH3CH3': 'CC', 'C2H6':'CC','CH3OH':'CO','CH4O':'CO','H2CO':'C=O','CH2O':'C=O','CH4':'C'}
     for n, bas in enumerate(basis):
         if bas in stoich_to_smiles:
             basis[n] = stoich_to_smiles[bas]
+    return basis
 
-    ####AUTO SET NONUSERDEFINED PARAMETERS FROM LOGFILE###
-    if logfile != '' and io.check_file(logfile):
-        loglines = io.read_file(logfile)
-    else: loglines = ''
+def AU_to_kcal(E, printout=True):
+    if printout:
+        lines =  '\n        delHf(0K)'
+        lines += '\nA.U. \t'
+        lines += str(E) + '\t'
+        lines += '\nkJ   \t'
+        lines += str(E/ .00038088) + '\t'
+        lines += '\nkcal   \t'
+        lines += str(E *  627.503) + '\t'
+        print lines
+    hf0k = E * 627.503
+    return hf0k 
 
-    optprog, optmethod, optbasis = get_theory(optlevel, loglines)
-    if freqlevel == 'optlevel':
-        freqprog, freqmethod, freqbasis = optprog, optmethod, optbasis
-    elif freqlevel != None:
-       freqprog, freqmethod, freqbasis = get_theory(freqlevel)
-    if enlevel == 'optlevel':
-        enprog, enmethod, enbasis = optprog, optmethod, optbasis
-    else:
-        enprog, enmethod, enbasis = get_theory(enlevel)
-
-    optlevel  = [optprog,   optmethod,  optbasis]
-    if freqlevel != None:
-        freqlevel = [freqprog, freqmethod, freqbasis]
-    enlevel   = [enprog,     enmethod,   enbasis]
-
-    if is_auto(mol):
-        mol = getname_fromdirname() 
-        molform = ob.get_formula(ob.get_mol(mol))
-
-    #Search database for coords, energy, and zpve of mol and compute if its not there, unless told to parse it from logfile
-    if not mol_not_smiles:
-        molform = ob.get_formula(ob.get_mol(mol))
-        E = E_dic(mol, optlevel, enlevel, freqlevel,runE,anharm)
-    else:
-        molform = mol
-
-    if is_auto(E):
-        E = pa.get_energy(loglines,enmethod)
-        zpve = get_zpve(loglines)
-        if zpve == None:
-            print 'Zero point vibrational energy NOT accounted for'
-            zpve = 0
-        E = E + zpve
-
+def comp_coefficients(molform, basis='auto'):
     ####BASIS SELECTION#### 
     basprint = 'manually select basis'
     atomlist = get_atomlist(molform)
     basisselection = 0
     if is_auto(basis[0]):
         basis = select_basis(atomlist)
-        #if mol_not_smiles:
-        #    basis = select_basis(atomlist)
-        #else:
-        #    basis = select_better_basis(mol,atomlist)
         basisselection += 1
         basprint = 'automatically generate basis'
     elif basis[0] == 'basis.dat':
         basis = io.read_file('basis.dat').split()
         basprint = 'read basis from basis.dat'
-    lines =  ('\n___________________________________________________\n\n' +
-              'HEAT OF FORMATION FOR: ' + mol + ' (' + molform + ')' +
-              '\nat ' + optprog + '/' +  optmethod + '/' + optbasis  + 
-              '//' + enprog + '/' + enmethod + '/' + enbasis + 
-              '\n\n___________________________________________________\n\n' +
-              'Electronic Energy is: ' +  str(E) + '\nYou have chosen to ' + 
-              basprint + '\n\nBasis is: ' + ', '.join(basis))
-    print lines 
- 
+
     for bas in basis:
          bas = ob.get_formula(ob.get_mol(bas))
          atomlist.extend(get_atomlist(   bas))
-    ####################################
 
     #COMPUTE Atomlist, stoichlist, matrix, and coefficients
     atomlist = list(set(atomlist))
     stoich = get_stoich(molform,atomlist)
     mat = form_mat(basis,atomlist)
 
+    ##Pick a new basis if current one produces singular matrix
     for i in range(5):
         if np.linalg.det(mat) != 0:
              break
-        print 'Matrix is singular -- select new basis'
+        basprint += '\nMatrix is singular -- select new basis'
         atomlist = get_atomlist(molform)
         basis    = select_basis(atomlist,basisselection)
         basisselection += 1
@@ -821,37 +740,112 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
         atomlist = list(set(atomlist))
         stoich   = get_stoich(molform,atomlist)
         mat      = form_mat(basis,atomlist)
-        print ('\n\nBasis is: ' + ', '.join(basis))
-        print mat
+        basprint +='\n\nBasis is: ' + ', '.join(basis)
+        #basprint +='\n'.join(['\t'.join([{}.format(el) for el in line] for line in mat])
+    basprint += '\n  ' + molform + '\t\t' 
+    basprint += '\t'.join([ob.get_formula(bas) for bas in basis])
+    for i in range(len(mat)):
+       basprint += '\n' + atomlist[i] + '  '
+       basprint += str(stoich[i]) + '    \t'
+       for el in mat[i]:
+           basprint += str(el) + '\t'
 
     clist =  comp_coeff(mat,stoich)
-    ######################################################
-     
+    return clist, basis, basprint
+
+def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = True):
+    
+    basis = basis.split()
+    qckeys = qckeyword.split(',')
+    optlevel  = 'sp'
+    extrap    = False
+    enlevel   = None
+    freqlevel = None
+    for key in qckeys[:index+1]:
+        if key.startswith('opt'):
+            optlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+        if key.startswith('freq'):
+            freqlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+        if key.startswith('en'):
+            enlevel   = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+        if key.startswith('extra'):
+            enlevel  = [key.split('/')[1]]
+            optlevel = '/'.join(['opt', optlevel[1], optlevel[2], optlevel[0]])
+            extrap   = True
+    if not enlevel:
+        enlevel = optlevel
+    molform = ob.get_formula(ob.get_mol(mol))
+    clist, basis, basprint = comp_coefficients(molform, basis)
     ###PRINT STUFF OUT
-    lines = '\n  ' + mol + '\t\t' +  '\t'.join(basis) 
-    for i in range(len(mat)):
-       lines += '\n' + atomlist[i] + '  '
-       lines += str(stoich[i]) + '    \t'
-       for el in mat[i]:
-           lines += str(el) + '\t'
+    lines =  ('\n___________________________________________________\n\n' +
+              'HEAT OF FORMATION FOR: ' + mol + ' (' + molform + ')' +
+              '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
+              '\n\n___________________________________________________\n\n' +
+              '\nYou have chosen to ' + 
+              basprint) 
     lines +=  '\n\nCoefficients are: '
-    for co in clist:  lines += str(co) + ' '
+    lines += ', '.join(['{}'.format(co) for co in clist])
+    print lines
+    if extrap:
+        runE = False
+        optlevel = io.fix_path(optlevel)
+    E =  E_dic(mol, optlevel, enlevel, freqlevel, runE=runE, anharm=anharm)
+    E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)
+    hf0k = AU_to_kcal(E)
+    return
+
+def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlevel',enlevel='optlevel',anharm=False,runE=False, bas_not_smiles=False):
+
+
+    #Convert basis selection to smiles if it is mol. formula format
+    basis = basis.split()
+    if bas_not_smiles:
+        basis = convert_to_smiles(basis)
+
+    ####AUTO SET NONUSERDEFINED PARAMETERS FROM LOGFILE###
+    if logfile != '' and io.check_file(logfile):
+        loglines = io.read_file(logfile)
+    else: loglines = ''
+
+    optlevel  = get_progmethbasis(optlevel, loglines = loglines)
+    enlevel   = get_progmethbasis(enlevel,  optlevel = optlevel, loglines=loglines)
+    freqlevel = get_progmethbasis(freqlevel,optlevel = optlevel, loglines=loglines)
+
+    if is_auto(mol):
+        mol = getname_fromdirname() 
+        molform = ob.get_formula(ob.get_mol(mol))
+
+    if is_auto(E):
+        E = pa.get_energy(loglines,enmethod)
+        zpve = get_zpve(loglines)
+        if zpve == None:
+            print 'Zero point vibrational energy NOT accounted for'
+            zpve = 0
+        E = E + zpve
+     
+    #Search database for coords, energy, and zpve of mol and compute if its not there, unless told to parse it from logfile
+    molform = ob.get_formula(ob.get_mol(mol))
+    clist, basis, basprint = comp_coefficients(molform, basis)
+
+    ###PRINT STUFF OUT
+    lines =  ('\n___________________________________________________\n\n' +
+              'HEAT OF FORMATION FOR: ' + mol + ' (' + molform + ')' +
+              '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
+              '\n\n___________________________________________________\n\n' +
+              '\nYou have chosen to ' + 
+              basprint) 
+    lines +=  '\n\nCoefficients are: '
+    lines += ', '.join(['{}'.format(co) for co in clist])
     print lines + '\n'
-    print check(clist, basis, stoich,atomlist)
-    ##################
+    #print check(clist, basis, stoich,atomlist)
 
     #COMPUTE AND PRINT delH###
+    if not is_auto(E):
+        E = E_dic(mol, optlevel, enlevel, freqlevel, runE, anharm)
+
     E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)
-    lines =  '\n        delHf(0K)'
-    lines += '\nA.U. \t'
-    for e in E[:1]:  lines += str(e) + '\t'
-    lines += '\nkJ   \t'
-    for e in E[:1]:  lines += str(e/ .00038088) + '\t'
-    lines += '\nkcal   \t'
-    for e in E[:1]:  lines += str(e *  627.503) + '\t'
-    ##########################
-    
-    hf0k = E[0] * 627.503 
+    hf0k = AU_to_kcal(E)
+
     hfdire = io.db_sp_path(enprog, enmethod, enbasis, mol, None, optprog, optmethod, optbasis)
     if not mol_not_smiles:
         if not io.check_file(hfdire + '/' + mol + '.hf0k'):
@@ -901,7 +895,9 @@ if __name__ == '__main__':
     E      = args.electronic_energy
     runE   = args.run_energy
     basis  = args.select_stoich_basis
+    bas_not_smiles = True
     if basis == 'auto':
+        bas_not_smiles = False
         basis = args.select_smiles_basis
     optlevel  = args.optlevel
     freqlevel = args.freqlevel
@@ -911,4 +907,4 @@ if __name__ == '__main__':
     db     = args.database
     mol_not_smiles = args.mol_not_smiles
   
-    main(mol,logfile=logfile, basis=basis, E=E, optlevel=optlevel, freqlevel=freqlevel, enlevel=enlevel, anharm=anharm, runE=runE, mol_not_smiles=mol_not_smiles) 
+    main(mol,logfile=logfile, basis=basis, E=E, optlevel=optlevel, freqlevel=freqlevel, enlevel=enlevel, anharm=anharm, runE=runE,bas_not_smiles=bas_not_smiles) 

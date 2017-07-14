@@ -289,18 +289,16 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                         fname = '{0}_{1}.ene'.format(method,smilesname)
                         io.write_file(str(energy), fname)
         if store:
-            if package == 'gaussian':
-                package = 'g09'
             if optlevel == 'sp':
                 io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
                 io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
                 io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
             else:
                 opt1, opt2, opt3 = optlevel.split('/')
-                if opt1.startswith('gau'):
-                    opt1 = 'g09'
-                io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
-                io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
+                if energy:
+                    io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
+                if zpve:
+                    io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
                 if len(xmat) > 0:
                     io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
                 io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
