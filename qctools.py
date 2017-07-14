@@ -635,17 +635,17 @@ def run(s, parameters, mult=None):
             io.write_file(inptext, inpfile)
             if io.check_file(inpfile, timeout=1):
                 if package in  ['nwchem', 'torsscan']:
-                    command = [parameters['qcexe'], inpfile]
+                    command = parameters['qcexe'] + ' ' + inpfile
                     msg += io.execute(command,stdoutfile=outfile,merge=True)
                 elif package in  ['molpro']:
-                    command = [parameters['qcexe'], inpfile]
+                    command = parameters['qcexe'] + ' ' + inpfile
                     msg += io.execute(command,stdoutfile=outfile,merge=True)
                     logfile = prefix + '.log'
                     if io.check_file(logfile):
                         io.append_file(io.read_file(logfile),filename=outfile)
                         io.rm(logfile)
                 else:
-                    command = [parameters['qcexe'], inpfile, outfile] 
+                    command = parameters['qcexe'] + ' ' + inpfile + ' ' + outfile
                     msg += io.execute(command)
                 if io.check_file(outfile, timeout=1):
                     msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
@@ -927,13 +927,13 @@ def find_xyzfile(xyzpath,smilesdir):
     elif io.check_file(io.join_path(*(smilesdir,xyzpath))):
         xyzfile = io.join_path(*(smilesdir,xyzpath))
         msg += "xyz file found in {0}".format(xyzfile)
-    elif io.check_dir(xyzpath):
+    elif xyzpath and io.check_dir(xyzpath):
         try:
             xyzfile = next(io.find_files(xyzpath, '*.xyz'))
             msg += "xyz file found in {0}".format(xyzfile)
         except StopIteration:
             msg += "xyz file not found in {0}".format(xyzpath)
-    elif io.check_dir(io.join_path(*(smilesdir,xyzpath))):
+    elif xyzpath and io.check_dir(io.join_path(*(smilesdir,xyzpath))):
         xyzpath = io.join_path(*(smilesdir,xyzpath))
         try:
             xyzfile = next(io.find_files(xyzpath, '*.xyz'))
