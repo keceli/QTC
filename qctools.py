@@ -290,15 +290,21 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                         io.write_file(str(energy), fname)
         if store:
             if optlevel == 'sp':
-                io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
-                io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
-                io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
+                if energy:
+                    io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
+                if zpve:
+                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
+                if len(hrmfreqs) > 0:
+                     io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
             else:
                 opt1, opt2, opt3 = optlevel.split('/')
                 if energy:
                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
                 if zpve:
+                    print 'is it overwriting?'
                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
+                if len(hrmfreqs) > 0:
+                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
                 if len(xmat) > 0:
                     io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
                 io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
