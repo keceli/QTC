@@ -283,7 +283,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         if calculation == 'geometry optimization':
             for key,value in energies.iteritems():
                 if key is not method:
-                    d[package][calculation][method][basis]['geometry'].update({
+                    d[optlevel][package][calculation][method][basis]['geometry'].update({
                         'single point':{key:{basis:{'number of basis functions':nbasis,'energy':value}}}})
                     if write:
                         fname = '{0}_{1}.ene'.format(method,smilesname)
@@ -670,18 +670,34 @@ def run_extrapolation_keyword(s, parameters):
     msg = ''
     smilesname = ob.get_smiles_filename(s)
     calcs = keyword.split(',')
-    formulaline = calcs[-1].split('/')[-1]
+    tokens = calcs[-1].split('/')
+    formulaline = tokens[-1]
+    method = 'composite'
+    if len(tokens) > 2:
+        method = tokens[1]
     print('Extrapolation formula: {0}\n'.format(formulaline))
     ncalc = len(calcs) - 1
     E = [0.] * ncalc
-    energy = 0
+    energy = None
     enefile = smilesname + '.ene'  
+    inpfile = smilesname + '_' + method  + '.inp'  
     for i in range(ncalc):
         parse_qckeyword(parameters, i)
-        enepath = io.join_path(*[parameters['qcdirectory'],enefile])
+        task = parameters['qctask']
+        qcdirectory = parameters['qcdirectory']
+        if task.startswith('opt'):
+            optdirectory = qcdirectory
+        enepath = io.join_path(*[qcdirectory, enefile])
         E[i] = float(io.read_file(enepath))     
     exec(formulaline)
-    print('Extrapolated energy: {}\n'.format(energy))
+    if energy:
+        extdir = io.fix_path(io.join_path(*[optdirectory,'extrapolation',method]))
+        io.mkdir(extdir)
+        extfile = io.get_path(io.join_path(*[extdir,enefile]))
+        io.write_file(str(energy),extfile )
+        io.write_file(formulaline,inpfile )
+        print('Extrapolated energy: {}\n'.format(energy))
+        print('Energy file: {}\n'.format(extfile))
     return msg
 
 def run_extrapolation_template(s, parameters):

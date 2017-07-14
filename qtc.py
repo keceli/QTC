@@ -154,6 +154,7 @@ def run(s):
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
+        print('Quantum chemistry package: {0}'.format(package))
         if qcnproc > 1:
             if package.startswith('nwc'):
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
@@ -164,10 +165,10 @@ def run(s):
     if not package:
         if parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
+            print('Quantum chemistry package (based on template): {0}'.format(package))
     elif not package.startswith('extrap'):
-        if not parameters['qctemplate']:
-            templatename = package + '_template' + '.txt'
-            parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
+        templatename = package + '_template' + '.txt'
+        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
     if parameters['writefiles']:
         parameters['parseqc'] = True
     msg = "***************************************\n"
