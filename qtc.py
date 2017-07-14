@@ -92,6 +92,9 @@ def get_args():
     parser.add_argument('-B', '--hfbasis', type=str,
                         default='auto',
                         help='Heat of formation basis molecules')
+    parser.add_argument('-D', '--database', type=str,
+                        default= io.pwd(),
+                        help='Heat of formation basis molecules')
     parser.add_argument('-Q', '--runqc', action='store_true',
                         help='Run quantum chemistry calculation')
     parser.add_argument('-P', '--parseqc', action='store_true',
@@ -231,13 +234,16 @@ def run(s):
         msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qcoutput))
         if parameters['qcpackage'] == 'torsscan':
             msg += io.read_file(io.get_path(qcoutput))
-        else:
-            d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
-            xyz = next(db.gen_dict_extract('xyz',d))
-            freqs = next(db.gen_dict_extract('harmonic frequencies',d))
-            energy = float(next(db.gen_dict_extract('energy',d)))
-            xmat   = next(db.gen_dict_extract('xmat',d))
-            package = parameters['qcpackage']
+        else: 
+            if parameters['qckeyword'].split(',')[parameters['calcindex']].startswith('extrap'):
+                d = {}
+            else:
+                d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
+                xyz = next(db.gen_dict_extract('xyz',d))
+                freqs = next(db.gen_dict_extract('harmonic frequencies',d))
+                energy = float(next(db.gen_dict_extract('energy',d)))
+                xmat   = next(db.gen_dict_extract('xmat',d))
+            package   = parameters['qcpackage']
             optlevel  = parameters['optlevel']
             enlevel   = optlevel
             freqlevel = None
@@ -246,8 +252,9 @@ def run(s):
             if 'freqlevel' in parameters:
                 freqlevel   = parameters['freqlevel']
             hfbasis = parameters['hfbasis']
-            hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,
-                                freqlevel=freqlevel, basis=hfbasis,anharm=parameters['anharmonic'])
+            #hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,
+             #                   freqlevel=freqlevel, basis=hfbasis,anharm=parameters['anharmonic'])
+            hf0, hfset = hf.main_keyword(s,parameters['qckeyword'], parameters['calcindex'],basis=hfbasis,anharm=parameters['anharmonic'],dbdir=parameters['database'])
             hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
             io.write_file(hftxt,s + '.hf0k')

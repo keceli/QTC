@@ -514,7 +514,7 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
         return E
 
-def E_dic(bas, opt, en, freq, runE=True, anharm=False):
+def E_dic(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
     """
     Checks a dictionary and directories for energy at a specified level of theory and basisset 
     Computes energy if it isn't in dictionary already
@@ -561,7 +561,7 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
                  zpvetype = 'anzpve'
              zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
     else:
-        enefile  = io.join_path(ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
+        enefile  = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
         runE=False
         if freq != None:
              freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
@@ -570,7 +570,6 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
              if anharm:
                  zpvetype = 'anzpve'
              zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
-    print enefile
     if io.check_file(enefile):
         E = io.read_file(enefile).strip()
         print 'Energy {} pulled from: {}'.format(E, enefile)
@@ -603,7 +602,7 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False):
     #print 'No electronic energy found -- ommitting its contribution'
     return  float(E) + float(zpve)
 
-def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm):
+def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm,dbdir='./'):
     """
     Uses the coefficients [a,b,c...] obtained from C = M^-1 S to find 
     delH(CxHyOz) = adelH(R1) + bdelH(R2) + cdelH(R3) + Eo(CxHyOz) - aEo(R1) - bEo(R2) -cEo(R3)
@@ -620,7 +619,7 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm):
     """
     for i,bas in enumerate(basis):
         E  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
-        e    =  E_dic(bas, opt, en, freq, anharm=anharm)
+        e    =  E_dic(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
         E   -=  coefflist[i] * e
 
     return E
@@ -753,7 +752,7 @@ def comp_coefficients(molform, basis='auto'):
     clist =  comp_coeff(mat,stoich)
     return clist, basis, basprint
 
-def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = True):
+def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = True,dbdir='./'):
     
     basis = basis.split()
     qckeys = qckeyword.split(',')
@@ -770,7 +769,7 @@ def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = Tr
             enlevel   = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('extra'):
             enlevel  = [key.split('/')[1]]
-            optlevel = '/'.join(['opt', optlevel[1], optlevel[2], optlevel[0]])
+            optlevel = ['/'.join(['opt', optlevel[1], optlevel[2], optlevel[0]])]
             extrap   = True
     if not enlevel:
         enlevel = optlevel
@@ -788,11 +787,11 @@ def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = Tr
     print lines
     if extrap:
         runE = False
-        optlevel = io.fix_path(optlevel)
-    E =  E_dic(mol, optlevel, enlevel, freqlevel, runE=runE, anharm=anharm)
-    E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)
+        optlevel = io.fix_path(optlevel[0])
+    E =  E_dic(mol, optlevel, enlevel, freqlevel, runE=runE, anharm=anharm,dbdir=dbdir)
+    E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm,dbdir=dbdir)
     hf0k = AU_to_kcal(E)
-    return
+    return hf0k, basis
 
 def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlevel',enlevel='optlevel',anharm=False,runE=False, bas_not_smiles=False):
 
