@@ -150,6 +150,7 @@ def run(s):
     A driver function to run quantum chemistry and thermochemistry calculations.
     It updates parameters dictionary.
     """
+    print("***************************************\n")
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
@@ -157,24 +158,26 @@ def run(s):
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
+        print('Quantum chemistry package: {0}'.format(package))
         if qcnproc > 1:
             if package.startswith('nwc'):
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
             elif package.startswith('mol'):
                 parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
+            else:
+                parameters['qcexe'] = parameters[package]
         else:
             parameters['qcexe'] = parameters[package]
     if not package:
         if parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
+            print('Quantum chemistry package (based on template): {0}'.format(package))
     elif not package.startswith('extrap'):
-        if not parameters['qctemplate']:
-            templatename = package + '_template' + '.txt'
-            parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
+        templatename = package + '_template' + '.txt'
+        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
     if parameters['writefiles']:
         parameters['parseqc'] = True
-    msg = "***************************************\n"
-    msg += "{0}\n".format(s)
+    msg = "Smiles: {0}\n".format(s)
     mult = ob.get_mult(s)
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
@@ -207,7 +210,7 @@ def run(s):
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan']          
     if runqc:
         if qcpackage in available_packages:
-            print('Running qc...')
+            print('Running qcpackage: {0}'.format(qcpackage))
             msg += qc.run(mol, parameters, mult)
         elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"
