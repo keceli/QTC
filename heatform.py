@@ -768,7 +768,7 @@ def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = Tr
         if key.startswith('en'):
             enlevel   = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('extra'):
-            enlevel  = [key.split('/')[1]]
+            enlevel  = ['extrapolation' + '/' + key.split('/')[1]]
             optlevel = ['/'.join(['opt', optlevel[1], optlevel[2], optlevel[0]])]
             extrap   = True
     if not enlevel:
