@@ -788,6 +788,9 @@ def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = Tr
     if extrap:
         runE = False
         optlevel = io.fix_path(optlevel[0])
+        import qtc
+        for bas in basis:
+            qtc.main({'input':bas,'qckeyword':qckeyword,'database':dbdir,'runthermo':False})
     E =  E_dic(mol, optlevel, enlevel, freqlevel, runE=runE, anharm=anharm,dbdir=dbdir)
     E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm,dbdir=dbdir)
     hf0k = AU_to_kcal(E)

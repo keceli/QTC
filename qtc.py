@@ -182,6 +182,7 @@ def run(s):
     mol = ob.get_mol(s)
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
+    smilesdir = io.join_path(parameters['database'], smilesdir)
     parameters['smilesdir'] = smilesdir
     workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
     parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
@@ -222,7 +223,7 @@ def run(s):
         else:
             msg = '{0} package not implemented\n'.format(qcpackage)
             msg += 'Available packages are {0}'.format(available_packages)
-            exit(msg)   
+            #exit(msg)   
         print(msg)
         msg = ''
     if parseqc:
@@ -240,6 +241,7 @@ def run(s):
         else: 
             if parameters['qckeyword'].split(',')[parameters['calcindex']].startswith('extrap'):
                 d = {}
+                freqs = []
             else:
                 d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
                 xyz = next(db.gen_dict_extract('xyz',d))
@@ -272,7 +274,7 @@ def run(s):
     return
 
 
-def main():
+def main(arg_update={}):
     from socket import gethostname
     from timeit import default_timer as timer
     import os
@@ -280,6 +282,8 @@ def main():
     start  = timer()
     args = get_args()
     parameters = vars(args)
+    for key in arg_update:
+        parameters[key] = arg_update[key]
     if parameters['qckeyword']:
         ncalc = len(parameters['qckeyword'].split(','))
     else:
