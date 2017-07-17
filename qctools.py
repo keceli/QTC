@@ -123,7 +123,7 @@ def parse_qckeyword(parameters,calcindex=0):
     """
     keyword = parameters['qckeyword']
     keyword = keyword.replace('//','/optimize,')
-    xyzdirectory = ''
+    xyzdirectory = parameters['xyzpath']
     package = 'nwchem'
     calcs = keyword.split(',')
     currentcalc = calcs[calcindex]
@@ -142,13 +142,7 @@ def parse_qckeyword(parameters,calcindex=0):
                 method  = parameters['optlevel'].split('/')[1]
                 basis   = parameters['optlevel'].split('/')[2]
                 task    = 'opt'
-            else:
-                parse_qckeyword(parameters,calcindex=0)
-                package = parameters['qcpackage']
-                method = parameters['qcmethod'] 
-                basis = parameters['qcbasis'] 
-                task = parameters['qctask']
-            xyzdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
+                xyzdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
             if len(tokens) == 1:
                 task = tokens[0]
             elif len(tokens) == 2:
@@ -179,8 +173,9 @@ def parse_qckeyword(parameters,calcindex=0):
             else:
                 print('Cannot parse qckeyword: {0}'.format(keyword))
         if task.startswith('opt'):
-            xyzdirectory='' 
-        qcdirectory = io.fix_path(io.join_path(*[xyzdirectory,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
+        else:
+            qcdirectory = io.fix_path(io.join_path(*[xyzdirectory,task,method,basis,package]))
 
     parameters['xyzpath'] = xyzdirectory
     parameters['qcdirectory'] = qcdirectory
@@ -194,7 +189,7 @@ def parse_qckeyword(parameters,calcindex=0):
     if task.startswith('an'):
         parameters['anharmonic']=True
     if task.startswith('opt'):
-        parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis) #MKNOTE: Sarah do we need to update these? I guess not.
+        parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
     elif 'freq' in task or 'anh' in task:
         parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
     elif task.startswith('energ'):
