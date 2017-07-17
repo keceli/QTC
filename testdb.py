@@ -2,7 +2,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'O2', 
 'charge'  : 0,
 'mult'    : 3,
-'HeatForm': {0:0,'sigma':0.0},
+'delHf': {0:0,'sigma':0.0},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -150.26605, 'sigma':0}},
     'm062x'   : {'6-311+g(d,p)':{'energy': -150.308589, 'sigma':0}},
@@ -18,7 +18,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'H2', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:0, 298:0, 'sigma':0.0},
+'delHf': {0:0, 298:0, 'sigma':0.0},
 'g09'     : { 
      'b3lyp'   : {'6-31+g(d,p)':{'energy': -1.17853935, 'sigma':0}},
      'ccsd' :    {'cc-pvtz':{'energy': -1.1723367, 'sigma':0}},
@@ -32,7 +32,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'H2O', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:-286.300, 298:-285.828, 'sigma':0.027},
+'delHf': {0:-286.300, 298:-285.828, 'sigma':0.027},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -76.434049, 'sigma':0}},
     'ccsd'    : {'cc-pvtz':{'energy': -76.3245455, 'sigma':0}},
@@ -46,7 +46,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'CH4', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:-66.50, 298:-74.520, 'sigma':0.057},
+'delHf': {0:-66.50, 298:-74.520, 'sigma':0.057},
 'g09'     : { 
     'b3lyp'   : {'6-31+g(d,p)':{'energy': -40.52613767, 'sigma':0,
                                   'zmat': '\n 0   1\n c1\n h2                   c1   R1\n h3                   c1   R2       h2   A2\n h4                   c1   R3       h2   A3       h3   D3       0\n h5                   c1   R4       h2   A4       h3   D4       0\nVariables:\n R1\t1.0922\n R2\t1.0922\n A2\t109.4712\n R3\t1.0922\n A3\t109.4712\n D3\t240.0\n R4\t1.0922\n A4\t109.4712\n D4\t120.001\n'}},
@@ -61,7 +61,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'CO2', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:-393.109, 298:-393.475, 'sigma':0.015},
+'delHf': {0:-393.109, 298:-393.475, 'sigma':0.015},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -188.59039, 'sigma':0,
                                'zmat': '\n 0   1\n o1\n c2                   o1   r2\n o3                   c2   r3       o1   a3\nVariables:\n R2\t1.1694\n R3\t1.1694\n A3\t179.9963\n'}}
@@ -72,7 +72,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'CH3CH3', 
 'charge'  :  0,
 'mult'    : 1,
-'HeatForm': {0:-68.29, 'sigma':0.14},
+'delHf': {0:-68.29, 'sigma':0.14},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -79.84164, 'sigma':0,
                                    'zmat': '\n 0   1\n c1\n h2                   c1   R1\n h3                   c1   R2       h2   A2\n h4                   c1   R3       h2   A3       h3   D3       0\n h5                   c1   R4       h2   A4       h3   D4       0\nVariables:\n R1\t1.0889\n R2\t1.0889\n A2\t109.4712\n R3\t1.0889\n A3\t109.4712\n D3\t240.0\n R4\t1.0889\n A4\t109.4712\n D4\t120.0\n'}}
@@ -83,7 +83,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'CH3OH', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:-189.83, 'sigma':0.16},
+'delHf': {0:-189.83, 'sigma':0.16},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -115.73487, 'sigma':0}}
             }
@@ -93,21 +93,21 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'NH3', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:-38.562, 'sigma':0.057}
+'delHf': {0:-38.562, 'sigma':0.057}
 },
 
 {'_id'    : 'C=C', 
 'stoich'  : 'C2H6', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:60.96, 'sigma':0.13}
+'delHf': {0:60.96, 'sigma':0.13}
 },
 
 {'_id'    : 'C=O', 
 'stoich'  : 'CH2O', 
 'charge'  : 0,
 'mult'    : 1,
-'HeatForm': {0:-105.349, 298:-109.188, 'sigma':0.099},
+'delHf': {0:-105.349, 298:-109.188, 'sigma':0.099},
 'g09'     : { 
     'm062x'   : {'6-311+g(d,p)':{'energy': -114.51152, 'sigma':0,
                                    'zmat':'\n 0   1\n c1\n o2                   c1   R1\n h3                   c1   R2       o2   A2\n h4                   c1   R3       o2   A3       h3   D3       0\nVariables:\n R1\t1.1969\n R2\t1.1047\n A2\t121.7284\n R3\t1.1047\n A3\t121.7284\n D3\t179.9995\n'}}

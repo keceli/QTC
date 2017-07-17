@@ -137,20 +137,24 @@ def get_args():
     parser.add_argument('--pac99', type=str,
                         default='pac99',
                         help='Path for pac99 executable')
+    parser.add_argument('--suppress_printing', action='store_true')
     parser.add_argument('--qcscript', type=str,
 #                        default='/lcrc/project/PACC/test-awj/builddb/bin/qcscript.pl',
                         default='',
                         help='Path for qcscript perl script')
     return parser.parse_args()
 
-
+def printp(string):
+    if not parameters['suppress_printing']:
+        print (string)
+    return
 
 def run(s):
     """
     A driver function to run quantum chemistry and thermochemistry calculations.
     It updates parameters dictionary.
     """
-    print("***************************************\n")
+    printp("***************************************\n")
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
@@ -158,7 +162,7 @@ def run(s):
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
-        print('Quantum chemistry package: {0}'.format(package))
+        printp('Quantum chemistry package: {0}'.format(package))
         if qcnproc > 1:
             if package.startswith('nwc'):
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
@@ -171,7 +175,7 @@ def run(s):
     if not package:
         if parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
-            print('Quantum chemistry package (based on template): {0}'.format(package))
+            printp('Quantum chemistry package (based on template): {0}'.format(package))
     elif not package.startswith('extrap'):
         templatename = package + '_template' + '.txt'
         parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
@@ -196,7 +200,7 @@ def run(s):
         xyz = io.read_file(xyzfile)
         coords = ob.get_coordinates_array(xyz)
         mol = ob.set_xyz(mol, coords)
-    print(msg)
+    printp(msg)
     msg = ''
     cwd = io.pwd()
     io.mkdir(workdirectory)
@@ -206,7 +210,7 @@ def run(s):
     else:
         msg += ('I/O error, {0} directory not found.\n'.format(workdirectory))
         return -1
-    print(msg)
+    printp(msg)
     msg = ''
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan']          
     if runqc:
@@ -224,7 +228,7 @@ def run(s):
             msg = '{0} package not implemented\n'.format(qcpackage)
             msg += 'Available packages are {0}'.format(available_packages)
             #exit(msg)   
-        print(msg)
+        printp(msg)
         msg = ''
     if parseqc:
         if io.check_file(qcoutput, timeout=1,verbose=False):
@@ -256,10 +260,9 @@ def run(s):
                 enlevel   = parameters['enlevel']
             if 'freqlevel' in parameters:
                 freqlevel   = parameters['freqlevel']
-            hfbasis = parameters['hfbasis']
             #hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,
              #                   freqlevel=freqlevel, basis=hfbasis,anharm=parameters['anharmonic'])
-            hf0, hfset = hf.main_keyword(s,parameters['qckeyword'], parameters['calcindex'],basis=hfbasis,anharm=parameters['anharmonic'],dbdir=parameters['database'])
+            hf0, hfset = hf.main_keyword(parameters)
             hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
             io.write_file(hftxt,s + '.hf0k')
@@ -270,7 +273,7 @@ def run(s):
                     lines = io.read_file('thermp.out')
                     msg += 'delHf(298) = {} kcal'.format(pa.get_298(lines))
     io.cd(cwd)
-    print(msg)
+    printp(msg)
     return
 
 
@@ -303,17 +306,17 @@ def main(arg_update={}):
         mylist = mylist[beginindex:endindex]
     else:
         mylist = mylist[beginindex:]        
-    print(__logo__)
-    print("QTC: Date and time           = {0}".format(io.get_date()))
-    print("QTC: Last update             = {0}".format(__updated__))
-    print("QTC: Number of processes     = {0}".format(nproc))
-    print("QTC: Hostname                = {0}".format(gethostname()))
-    print('QTC: Given arguments         =')
+    printp(__logo__)
+    printp("QTC: Date and time           = {0}".format(io.get_date()))
+    printp("QTC: Last update             = {0}".format(__updated__))
+    printp("QTC: Number of processes     = {0}".format(nproc))
+    printp("QTC: Hostname                = {0}".format(gethostname()))
+    printp('QTC: Given arguments         =')
     for param in parameters:
-        print('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
-    print("QTC: Number of species       = {0}".format(len(mylist)))
+        printp('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
+    printp("QTC: Number of species       = {0}".format(len(mylist)))
     init = timer()
-    print("QTC: Initialization time (s) = {0:.2f}".format(init-start))
+    printp("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     for i in range(ncalc):
         parameters['calcindex'] = i
         if parameters['qckeyword']:
@@ -324,9 +327,9 @@ def main(arg_update={}):
         else:
             map(run, mylist)
     end = timer()
-    print("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
-    print("QTC: Total time (s)          = {0:.2f}".format(end-start))
-    print("QTC: Date and time           = {0}".format(io.get_date()))
+    printp("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
+    printp("QTC: Total time (s)          = {0:.2f}".format(end-start))
+    printp("QTC: Date and time           = {0}".format(io.get_date()))
 
 if __name__ == "__main__":
     main()

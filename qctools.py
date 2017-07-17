@@ -220,6 +220,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     hrmfreqs = []
     anhrmfreqs = []
     xmat= []
+    zpve= None
     parsed = False
     if package == 'nwchem':
         method = get_nwchem_method(s)
@@ -263,6 +264,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             io.write_file(xyz, fname)
             fname = smilesname + '.ene'
             io.write_file(str(energy), fname)
+            if zpve:
+                fname = smilesname + '.zpve'
+                io.write_file(str(zpve), fname)
             if len(hrmfreqs) > 0:
                 fname = smilesname + '.hrm'
                 io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )

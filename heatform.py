@@ -16,27 +16,33 @@ molecules with well-determined heats of formation
 
 To use this script from command line you can do the following:
 
-(1) python heatform.py -l <logfile.log>
+(1) python heatform.py -s <smiles> -o prog/method/basis -f prog/method/basis -e prog/method/basis -r
+    will run (-r) an optimization (-o) on the smiles molecule, will use that geometry for 
+    an energy (-e) computation, and obtain a -f level zpve and do the same for the basis molecules.
+    ONLY molpro and gaussian are available
+
+(2) python heatform.py -l <logfile.log>
     this will automatically determine what stoichiometry, program, level of theory, basis set,
-    and electronic energy heatform needs as parameters 
+    and electronic energy heatform needs as parameters.  Will assume opt, freq, and en levels
+    are all the same
 
-(3) python heatform.py -s <smiles> -r -t <method>/<basisset> 
-    will run an energy computation for the smiles molecule at method/basis level of theory 
-    before it starts the basis molecules (-p will let you choose g09 or molpro)
+(3) python heatform.py -s <smiles> -o prog/method/basis -f prog/method/basis -e prog/method/basis -E <energy>
+    manually set all these parameters so that no logfile OR computation on main species is required
+    if you specify a freqlevel, add zpve to your -E.  
 
-(4) python heatform.py -s <stoichiometry> -p <program> -t <method>/<basisset> -e <energy>
-    manually set all these parameters so that no logfile or first computation is required
-
-(3) User can also use -b <R1 R2 R3> to manually select the basis of molecules
+(4) User can also use -B <R1 R2 R3> to manually select the basis of molecules or -b if they don't
+    use smiles
 
 To use this as a module in another script:
 
-(1) main(stoich, logfile, electronic_energy, basisset, theory, database, prog, runE) will return 
+(1) main(stoich, logfile, electronic_energy, optlevel, freqlevel, enlevel, anharm, runE) will return 
     the heat of formation in kcal.  If logfile is set, the rest can be auto (see defaults), and if 
     logfile is gibberish, the rest must be set.
+(2) main_keyword(parameters) for use from QTC
 
 """
 #  TO DO:
+#  Cleanup
 #  Select basis based on type of bonds
 
 def get_atomlist(mol):
@@ -253,6 +259,7 @@ def is_auto(item):
 def getname_fromdirname():
     """
     Sets stoichiometry as the directory name
+    if no -s is specified
     """
     cwd = os.getcwd()
     return cwd.split('/')[-1]
@@ -269,6 +276,7 @@ def nest_2_dic(bas,key1,key2):
 
     if key1 in dic:
         if key2 in dic[key1]:
+            print '{}-{}: {:5f}  pulled from dictionary testdb'.format(bas, key1, dic[key1][key2])
             return dic[key1][key2]
     print 'Value for ' + str(key1) + ',' + str(key2) + ' not found -- ommitting its contribution'
 
@@ -514,7 +522,7 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
         return E
 
-def E_dic(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
+def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
     """
     Checks a dictionary and directories for energy at a specified level of theory and basisset 
     Computes energy if it isn't in dictionary already
@@ -546,33 +554,24 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
     #            return E
 
     ### Check directory ###
-    if len(en) > 1:
-         optprog, optmethod, optbasis  = opt[0], opt[1], opt[2]
-         enprog,   enmethod,  enbasis  =  en[0],  en[1],  en[2]
-         cdire      = io.db_opt_path(optprog, optmethod, optbasis, None, bas)
-         edire      = io.db_sp_path(enprog, enmethod, enbasis, None, bas, optprog, optmethod, optbasis)
-         coordsfile = io.join_path(cdire, bas + '.zmat')
-         enefile    = io.join_path(edire, bas + '.ene')
-
-         if freq != None:
-             freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
-             fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
-             if anharm:
-                 zpvetype = 'anzpve'
-             zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
+    if len(opt) > 1:
+        optprog, optmethod, optbasis  = opt[0], opt[1], opt[2]
     else:
-        enefile  = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
-        runE=False
-        if freq != None:
-             freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
-             opttask, optmethod, optbasis, optprog = opt.split('/')
-             fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
-             if anharm:
-                 zpvetype = 'anzpve'
-             zpvefile   = io.join_path(fdire, bas + '.' +  zpvetype)
+        optprog, optmethod, optbasis  = None, None, None
+    enprog,   enmethod,  enbasis  =  en[0],  en[1],  en[2]
+    cdire      = io.db_opt_path(optprog, optmethod, optbasis, None, bas)
+    edire      = io.db_sp_path(enprog, enmethod, enbasis, None, bas, optprog, optmethod, optbasis)
+    coordsfile = io.join_path(cdire, bas + '.zmat')
+    enefile    = io.join_path(edire, bas + '.ene')
+
+    if freq != None:
+        freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
+        fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
+        if anharm:
+            zpvetype = 'anzpve'
     if io.check_file(enefile):
         E = io.read_file(enefile).strip()
-        print 'Energy {} pulled from: {}'.format(E, enefile)
+        print '{}-    E:{:5} pulled from: {}'.format(bas, E, enefile)
         E = float(E)
     elif runE:
         if not io.check_file(coordsfile):
@@ -580,20 +579,20 @@ def E_dic(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
         E = run_energy(bas, optprog, optmethod, optbasis, enprog, enmethod, enbasis, 'ene')
         io.mkdir(edire)
         io.write_file(str(E), enefile)
-        print 'Energy {} saved to: {}'.format(E,  enefile)
+        print '{}-    E: {:5} saved to: {}'.format(bas, E,  enefile)
 
     if freq != None:
         if io.check_file(zpvefile):
             zpve= io.read_file(zpvefile).strip()
             zpve= float(zpve)
-            print 'ZPVE  {} pulled from: {}'.format(zpve, zpvefile)
+            print '{}- ZPVE: {:5} pulled from: {}'.format(bas, zpve, zpvefile)
         elif runE:
             if not io.check_file(coordsfile):
                 run_opt(bas, optprog, optmethod, optbasis, True)
             zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, zpvetype)
             io.mkdir(fdire)
             io.write_file(str(zpve), zpvefile)
-            print 'ZPVE  ' + str(zpve) +  ' saved to: ' + zpvefile
+            print '{}- ZPVE: {:5} saved to: {}'.format(basis, zpve, zpvefile)
     else:
         print 'Zero point vibrational energy NOT accounted for'
         zpve = 0
@@ -618,32 +617,32 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm,dbdir='./'):
    
     """
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
-        e    =  E_dic(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
+        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * 0.00038088
+        e    =  find_E(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
         E   -=  coefflist[i] * e
 
     return E
 
-#def E_hfbasis_in_directory(mol,basis,coefflist,E,opt, en, freq, anharm):
-#    """
-#    Uses the coefficients [a,b,c...] obtained from C = M^-1 S to find 
-#    delH(CxHyOz) = adelH(R1) + bdelH(R2) + cdelH(R3) + Eo(CxHyOz) - aEo(R1) - bEo(R2) -cEo(R3)
-#    where Rn are our basis molecules, delH(Rn) are their heats of formation, and Eo(Rn) are their
-#    electronic energies computed at the same level of theory as Eo(CxHyOz)
-#    INPUTS:
-#    mol       - molecule named stoichiometrically
-#    basis     - selected basis molecule list
-#    coefflist - coefficients [a,b,c,d...] described above
-#    E         - electronic energy of molecule
-#    OUTPUTS:
-#    E        - 0K heat of formation of molecule
-#   
-#    """
-#    for i,bas in enumerate(basis):
-#        E  +=  coefflist[i] * nest_2_dic(bas,'HeatForm',  0) * 0.00038088
-#        e    =  E_dic(bas, opt, en, freq, dirispacc = False)
-#        E   -=  coefflist[i] * e
-#    return E
+def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
+    """
+    Uses the coefficients [a,b,c...] obtained from C = M^-1 S to find 
+    delH(CxHyOz) = adelH(R1) + bdelH(R2) + cdelH(R3) + Eo(CxHyOz) - aEo(R1) - bEo(R2) -cEo(R3)
+    where Rn are our basis molecules, delH(Rn) are their heats of formation, and Eo(Rn) are their
+    electronic energies computed at the same level of theory as Eo(CxHyOz)
+    INPUTS:
+    mol       - molecule named stoichiometrically
+    basis     - selected basis molecule list
+    coefflist - coefficients [a,b,c,d...] described above
+    E         - electronic energy of molecule
+    OUTPUTS:
+    E        - 0K heat of formation of molecule
+   
+    """
+    for i,bas in enumerate(basis):
+        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * 0.00038088
+        e    =  E_QTC(bas, opt, en, freq, parameters)
+        E   -=  coefflist[i] * e
+    return E
     
 def check(clist, basis,stoich,atomlist):
     """
@@ -752,30 +751,88 @@ def comp_coefficients(molform, basis='auto'):
     clist =  comp_coeff(mat,stoich)
     return clist, basis, basprint
 
-def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = True,dbdir='./'):
+def E_QTC(bas, opt, en, freq, parameters):
+    ### Check dictionary ###
+    from testdb import db
+    import qtc
+
+    parameters['input']=bas
+    dbdir = parameters['database']
+    anharm = parameters['anharmonic']
+
+    E, zpve = 0, 0
+    zpvetype = 'zpve'
+
+    if len(opt) > 1:
+         optprog, optmethod, optbasis  = opt[0], opt[1], opt[2]
+         opt    = 'opt/' + '/'.join([optmethod, optbasis, optprog])
+    else:
+         optprog, optmethod, optbasis  = None
+
+    if len(en) > 1:
+         enprog,  enmethod,  enbasis  =  en[0],  en[1],  en[2]
+         en       = 'energy/' + '/'.join([enmethod, enbasis, enprog])
+         en       = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en, bas + '.ene')
+    else:
+        en  = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
+        enefile = 'doesntexist'
+
+    if freq != None:
+         freqprog, freqmethod, freqbasis  = freq[0], freq[1], freq[2]
+         task = 'freq'
+         if anharm:
+             zpvetype = 'anzpve'
+             task     = 'anharm'
+         freq   = task + '/' + '/'.join([freqmethod, freqbasis, freqprog])
+         freq   = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype) 
+
+    if not io.check_file(en):
+        qtc.main(parameters)
+    E= io.read_file(en).strip()
+    E= float(E)
+    print '{}-    E: {:5g} pulled from: {}'.format(bas, E, en)
+
+    if freq != None:
+        if not io.check_file(freq):
+            qtc.main(parameters)
+        zpve= io.read_file(freq).strip()
+        zpve= float(zpve)
+        print '{}- ZPVE: {:5g} pulled from: {}'.format(bas, zpve, freq)
+    else:
+        print 'Zero point vibrational energy NOT accounted for'
+        zpve = 0
+    return  float(E) + float(zpve)
+
+def main_keyword(parameters):
     
-    basis = basis.split()
-    qckeys = qckeyword.split(',')
+    mol    = parameters['input']
+    basis  = parameters['hfbasis'].split()
+    qckeys = parameters['qckeyword'].split(',')
+    anharm = parameters['anharmonic']
+    dbdir  = parameters['database']
+    index  = parameters['calcindex']
+    xyz    = parameters['xyzpath']
     optlevel  = 'sp'
     extrap    = False
     enlevel   = None
     freqlevel = None
+
     for key in qckeys[:index+1]:
+        key = io.fix_path(key)
         if key.startswith('opt'):
-            optlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+            optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('freq'):
-            freqlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+            freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('en'):
-            enlevel   = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+            enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('extra'):
             enlevel  = ['extrapolation' + '/' + key.split('/')[1]]
-            optlevel = ['/'.join(['opt', optlevel[1], optlevel[2], optlevel[0]])]
             extrap   = True
     if not enlevel:
-        enlevel = optlevel
+        enlevel = ['']
     molform = ob.get_formula(ob.get_mol(mol))
     clist, basis, basprint = comp_coefficients(molform, basis)
-    ###PRINT STUFF OUT
+
     lines =  ('\n___________________________________________________\n\n' +
               'HEAT OF FORMATION FOR: ' + mol + ' (' + molform + ')' +
               '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
@@ -785,15 +842,19 @@ def main_keyword(mol, qckeyword, index, basis = 'auto', anharm= False, runE = Tr
     lines +=  '\n\nCoefficients are: '
     lines += ', '.join(['{}'.format(co) for co in clist])
     print lines
-    if extrap:
-        runE = False
-        optlevel = io.fix_path(optlevel[0])
-        import qtc
-        for bas in basis:
-            qtc.main({'input':bas,'qckeyword':qckeyword,'database':dbdir,'runthermo':False})
-    E =  E_dic(mol, optlevel, enlevel, freqlevel, runE=runE, anharm=anharm,dbdir=dbdir)
-    E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm,dbdir=dbdir)
+
+    parameters['runthermo']=False
+    parameters['xyzpath']=''
+    parameters['suppress_printing']=True
+    parameters['qckeyword'] = ','.join(qckeys[:index+1])
+    E =  E_QTC(mol, optlevel, enlevel, freqlevel, parameters)
+    E =  E_hfbasis_QTC(molform, basis, clist, E, optlevel, enlevel, freqlevel, parameters)
     hf0k = AU_to_kcal(E)
+    parameters['runthermo']=True
+    parameters['suppress_printing']=False
+    parameters['xyzpath']=xyz
+    parameters['input']=mol
+    parameters['qckeyword'] = ','.join(qckeys)
     return hf0k, basis
 
 def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlevel',enlevel='optlevel',anharm=False,runE=False, bas_not_smiles=False):
@@ -843,7 +904,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
 
     #COMPUTE AND PRINT delH###
     if not is_auto(E):
-        E = E_dic(mol, optlevel, enlevel, freqlevel, runE, anharm)
+        E = find_E(mol, optlevel, enlevel, freqlevel, runE, anharm)
 
     E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)
     hf0k = AU_to_kcal(E)
