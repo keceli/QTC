@@ -288,6 +288,7 @@ def main(arg_update={}):
     for key in arg_update:
         parameters[key] = arg_update[key]
     if parameters['qckeyword']:
+        parameters['qckeyword'] = parameters['qckeyword'].lower()
         ncalc = len(parameters['qckeyword'].split(','))
     else:
         ncalc = 1
