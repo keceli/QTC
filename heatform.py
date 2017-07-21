@@ -31,7 +31,7 @@ To use this script from command line you can do the following:
     if you specify a freqlevel, add zpve to your -E.  
 
 (4) User can also use -B <R1 R2 R3> to manually select the basis of molecules or -b if they don't
-    use smiles
+    use smiles and -a will give anharmonic
 
 To use this as a module in another script:
 
@@ -117,6 +117,7 @@ def get_stoich(mol,atomlist):
     INPUT:
     mol       - molecule stoichiometry
     atomlist  - list of atoms 
+
     OUTPUT:
     stoich    - list of numbers corresponding to the number of each atom 
                 in the atomlist that the molecule contains
@@ -164,6 +165,7 @@ def comp_coeff(mat,stoich):
     INPUT:
     mat    - nonsingular matrix 
     stoich - list of numbers that give a molecules stoichiometry in terms of a list of atoms
+
     OUTPUT:
     coeff  - coefficients [a,b,c,d...] as described above
     """
@@ -501,7 +503,7 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         freq = True
         if ob.get_natom(ob.get_mol(mol)) < 3:
             entype = 'zpve'
-        if 'an' in entype: 
+        if 'an' in entype and mol != 'C': 
             anharm = True
     else:
         freq = False
@@ -511,7 +513,10 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         filename = build_gauss(dic, propmeth, propbas, zmat=zmat, directory=directory, freq=freq, anharm=anharm)
         run_gauss(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.log')), optprog, optmeth, optbas)
-        E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
+        if io.check_file(directory + '/' + mol + '.' + entype):
+            E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
+        elif entype == 'anzpve':
+            E = float(io.db_get_sp_prop(mol, 'zpve', db_location=directory))
         return E
 
     elif propprog == 'molpro':
@@ -569,6 +574,7 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
         fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
         if anharm:
             zpvetype = 'anzpve'
+        zpvefile = io.join_path(fdire, bas + '.' + zpvetype)
     if io.check_file(enefile):
         E = io.read_file(enefile).strip()
         print '{}-    E:{:5} pulled from: {}'.format(bas, E, enefile)
@@ -592,7 +598,7 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
             zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, zpvetype)
             io.mkdir(fdire)
             io.write_file(str(zpve), zpvefile)
-            print '{}- ZPVE: {:5} saved to: {}'.format(basis, zpve, zpvefile)
+            print '{}- ZPVE: {:5} saved to: {}'.format(bas, zpve, zpvefile)
     else:
         print 'Zero point vibrational energy NOT accounted for'
         zpve = 0
@@ -739,6 +745,7 @@ def comp_coefficients(molform, basis='auto'):
         stoich   = get_stoich(molform,atomlist)
         mat      = form_mat(basis,atomlist)
         basprint +='\n\nBasis is: ' + ', '.join(basis)
+        print basprint
         #basprint +='\n'.join(['\t'.join([{}.format(el) for el in line] for line in mat])
     basprint += '\n  ' + molform + '\t\t' 
     basprint += '\t'.join([ob.get_formula(bas) for bas in basis])
@@ -820,11 +827,11 @@ def main_keyword(parameters):
     for key in qckeys[:index+1]:
         key = io.fix_path(key)
         if key.startswith('opt'):
-            optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+            optlevel = [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
         if key.startswith('freq'):
-            freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+            freqlevel= [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
         if key.startswith('en'):
-            enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+            enlevel  = [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
         if key.startswith('extra'):
             enlevel  = ['extrapolation' + '/' + key.split('/')[1]]
             extrap   = True
@@ -870,24 +877,19 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
         loglines = io.read_file(logfile)
     else: loglines = ''
 
-    optlevel  = get_progmethbasis(optlevel, loglines = loglines)
     enlevel   = get_progmethbasis(enlevel,  optlevel = optlevel, loglines=loglines)
     freqlevel = get_progmethbasis(freqlevel,optlevel = optlevel, loglines=loglines)
+    optlevel  = get_progmethbasis(optlevel, loglines = loglines)
 
+    molform = ''
     if is_auto(mol):
         mol = getname_fromdirname() 
         molform = ob.get_formula(ob.get_mol(mol))
 
-    if is_auto(E):
-        E = pa.get_energy(loglines,enmethod)
-        zpve = get_zpve(loglines)
-        if zpve == None:
-            print 'Zero point vibrational energy NOT accounted for'
-            zpve = 0
-        E = E + zpve
      
     #Search database for coords, energy, and zpve of mol and compute if its not there, unless told to parse it from logfile
-    molform = ob.get_formula(ob.get_mol(mol))
+    for spec in mol.split('_'):
+        molform += ob.get_formula(ob.get_mol(spec))  #So transition states can be specified by two species
     clist, basis, basprint = comp_coefficients(molform, basis)
 
     ###PRINT STUFF OUT
@@ -903,24 +905,36 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
     #print check(clist, basis, stoich,atomlist)
 
     #COMPUTE AND PRINT delH###
-    if not is_auto(E):
+    if runE:
         E = find_E(mol, optlevel, enlevel, freqlevel, runE, anharm)
+    elif is_auto(E):
+        E = pa.energy(loglines)[1]
+        print '{}-    E: {:5} pulled from: {}'.format(mol, E, logfile)
+        zpve = pa.zpve(loglines)
+        if zpve == None:
+            print 'Zero point vibrational energy NOT accounted for'
+            zpve = 0
+        else:
+            print '{}- ZPVE: {:5} pulled from: {}'.format(mol, zpve, logfile)
+        E = E + zpve
 
     E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)
     hf0k = AU_to_kcal(E)
 
+    enprog, enmethod, enbasis = enlevel[0], enlevel[1], enlevel[2]
+    optprog, optmethod, optbasis = optlevel[0], optlevel[1], optlevel[2]
     hfdire = io.db_sp_path(enprog, enmethod, enbasis, mol, None, optprog, optmethod, optbasis)
-    if not mol_not_smiles:
+    if '_' not in mol:
         if not io.check_file(hfdire + '/' + mol + '.hf0k'):
             io.db_store_sp_prop('Energy (kcal)\tBasis\n----------------------------------',mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
         s = '\n' + str(hf0k) + '\t' + '  '.join(basis) 
         io.db_append_sp_prop(s,mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
         
-        lines += '\n\nStored heats of formation:\n'
+        lines  = '\n\nStored heats of formation:\n'
         lines += '----------------------------------\n' 
         lines += io.db_get_sp_prop(mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
-    lines += '\n\n_________________________________________________\n\n'
-    print lines
+        lines += '\n\n_________________________________________________\n\n'
+        print lines
 
     return hf0k, basis
 
