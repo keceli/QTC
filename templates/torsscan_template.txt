@@ -35,14 +35,14 @@ EStoKTP options
 ================
 No. MC  sampling points: 5
 Scan interval (degrees): 360
-No. of steps on the PES: 4
+No. of steps on the PES: 12
 
 ------------------------------------------------ 
    Module      :    Program    :      Theory
 ------------------------------------------------
 Opt            :               : 
 Opt_1          : QTC(TSPACKAGE): QTC(TSMETHOD)/QTC(TSBASIS)
-1dTau          : QTC(TASK)    : QTC(METHOD)/QTC(BASIS)
+1dTau          : QTC(METHOD)   : QTC(BASIS)/QTC(TASK)  
 MdTau          :               :
 Symm           :               :
 HL             :               :
