@@ -1,7 +1,7 @@
 db= [{'_id'     : '[O][O]', 
 'stoich'  : 'O2', 
 'charge'  : 0,
-'mult'    : 3,
+'mult'    : 1,
 'delHf': {0:0,'sigma':0.0},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -150.26605, 'sigma':0}},
@@ -94,6 +94,13 @@ db= [{'_id'     : '[O][O]',
 'charge'  : 0,
 'mult'    : 1,
 'delHf': {0:-38.562, 'sigma':0.057}
+},
+
+{'_id'    : 'N#N', 
+'stoich'  : 'N2', 
+'charge'  : 0,
+'mult'    : 1,
+'delHf': {0:0, 'sigma':0.0}
 },
 
 {'_id'    : 'C=C', 
