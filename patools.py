@@ -85,13 +85,18 @@ def gaussian_method(lines):
     elif 'CCSD' in lines:
         return 'CCSD'
     method = method[-1].lstrip('r').lstrip('u').lstrip('R').lstrip('U')
+    if 'HF' in method:
+        if 'MP2' in lines:
+            return 'MP2'
+        if 'MP4' in lines:
+            return 'MP4'
     return method
 
 def gaussian_energy(lines,method=''):
 
     if method == '':
         method = gaussian_method(lines)
-    if 'CCSD' in method:
+    if 'CCSD' in method or 'MP' in method:
         method = method.replace('(','\(').replace(')','\)')
         energ  = method + '=([u,U,r,R]*[\w,\.,\s,-]*)'
         energ  = re.findall(energ,lines.replace('\n','').replace(' ',''))

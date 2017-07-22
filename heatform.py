@@ -75,8 +75,41 @@ def select_basis(atomlist,attempt=0):
     count = len(atomlist)-1
     basis = []
     i= 0
-    if 'N' in atomlist and i <= count:
+    if 'N' in atomlist and i <= count and attempt < 2:
+        basis.append('N#N')
+        i += 1
+    if 'N' in atomlist and 'H' in atomlist and i <= count and attempt >1:
         basis.append('N')
+        i += 1
+    if 'S' in atomlist and i<= count:
+        basis.append('O=S=O') 
+        i += 1
+    if 'H' in atomlist  and i<= count and attempt < 1:
+        basis.append('[H][H]')
+        i += 1
+    elif 'H' in atomlist and 'C' not in atomlist and i<= count and attempt < 2:
+        basis.append('[H][H]')
+        i += 1
+    if 'O' in atomlist and i<= count and attempt < 2:
+        basis.append('[O][O]')
+        i += 1
+    if 'C' in atomlist and i<= count and attempt < 3:
+        basis.append('C')
+        i += 1
+    if 'O' in atomlist and 'H' in atomlist and  i<= count and attempt  < 3:
+        basis.append('O')
+        i += 1
+    if 'C' in atomlist and 'O' in atomlist and  i<= count and attempt < 4:
+        basis.append('C(=O)=O')
+        i += 1
+    if 'C' in atomlist and 'O' in atomlist and  i<= count and attempt < 4:
+        basis.append('C=O')
+        i += 1
+    if 'C' in atomlist and 'O' in atomlist and  i<= count:
+        basis.append('CO')
+        i += 1
+    if 'C' in atomlist and i<= count:
+        basis.append('CC')
         i += 1
     if 'S' in atomlist and i<= count:
         basis.append('O=S=O') 
@@ -313,9 +346,6 @@ def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, f
 
     gauss += '\nEnergy for HeatForm\n\n'
 
-    meths = ['ccsdt','ccsd(t)','ccsd','m062x','b3lyp']
-    bases = ['cc-pvqz','cc-pvtz','cc-pvdz','6-311+g(d,p)','6-31+g(d,p)']
-    
     if type(mol) == dict:
         dic    = mol
         mol    = ob.get_mol(dic['_id'])
@@ -364,8 +394,6 @@ def build_molpro(mol, theory, basisset, zmat='none', directory=None, opt=False, 
         mult   = ob.get_mult(mol)
 
     molp  = 'memory,         200 ,m\nnosym\n'
-    meths = ['ccsdt','ccsd(t)','ccsd','m062x','b3lyp']
-    bases = ['cc-pvqz','cc-pvtz','cc-pvdz','6-311+g(d,p)','6-31+g(d,p)']
     
     if zmat.startswith('geometry'):
         molp += zmat
@@ -397,7 +425,7 @@ def build_molpro(mol, theory, basisset, zmat='none', directory=None, opt=False, 
         elif 'hf' in theory.lower():
 	    molp += '!open shell input\nbasis=' + basisset + '\nuhf'
         elif 'mp' in theory.lower():
-	    molp += '!open shell input\nbasis=' + basisset + '\nrhf\n' + theory.lower() 
+	    molp += '!open shell input\nbasis=' + basisset + '\nuhf\n' + 'u' + theory.lower() 
         else:
             molp += '!open shell input\nbasis=' + basisset + '\ndft=['+theory.lower() + ']\nuhf\ndft'
     if opt:
