@@ -35,7 +35,39 @@ def get_prog(lines):
 ################################################
 ############     Gaussian PARSER    ############
 ################################################
+def gaussian_islinear(s):
+    """
+    Returns true if the molecule is linear for the given log.
+    """
+    if "Linear Molecule" in s or gaussian_natom(s) == 2:
+        return True
+    else:
+        return False
+    
+def gaussian_natom(s):
+    """
+    NAtoms=     30 NQM=       30 NQMF=       0 NMMI=      0 NMMIF=      0
+    """
+    import iotools as io
+    if type(s) == str:
+        lines = s.splitlines()
+    keyword = 'NAtoms='
+    n = io.get_line_number(keyword, lines=lines)
+    return int(lines[n].split()[1])
 
+def gaussian_nfreq(s):
+    """
+    Return the number of vibrational degrees of freedom for
+    a given log.
+    """
+    natom = gaussian_natom(s)
+    if gaussian_islinear(s):
+        nvdof = 3*natom - 5
+    else:
+        nvdof = 3*natom - 6
+    return nvdof
+
+  
 def gaussian_basisset(lines):
 
     bas = 'Standard basis:\s*(\S*)'
@@ -102,15 +134,18 @@ def gaussian_zmat(lines):
     return zmat + optzmat
 
 def gaussian_freqs(lines):
-
-    freqs = 'Frequencies --  (.+)'
-    freqlines = re.findall(freqs, lines)
+    """
+    Return harmonic frequencies.
+    """
+    kw = 'Frequencies --  (.+)'
+    freqlines = re.findall(kw, lines)
     freqs = []
-    for line in freqlines:
-        freqs.extend(line.split())
-    if len(freqs) > 0:
-        return freqs
-    return []
+    if len(freqlines) > 0:
+        nfreq = gaussian_nfreq(lines)
+        freqs = ['']*nfreq
+        for i in range(nfreq):
+            freqs[i] = freqlines[i]
+    return freqs
 
 def gaussian_zpve(lines):
 
@@ -129,9 +164,9 @@ def gaussian_anzpve(lines):
  
 def gaussian_calc(lines):
     if 'Optimization complete' in lines:
-       return 'geometry optimization'
+        return 'geometry optimization'
     else:
-       return ''
+        return ''
 
 def gaussian_xyz_foresk(lines):
     atom = lines.split('Distance matrix')[-1].split('Symm')[0]
@@ -158,7 +193,7 @@ def gaussian_xyz_foresk(lines):
     return xyz 
     
 def gaussian_geo(lines):
-    atomnum = {'1':'H', '6':'C','8':'O'}
+    atomnum = {'1':'H','6':'C','7':'N','8':'O'}
     xyz = ''
     if 'Eckart' in lines:
         lines = lines.split('Gaussian Orientation')[-1].split('Eckart')[0]
