@@ -292,9 +292,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                 if energy:
                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
                 if zpve:
-                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
+                    io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
                 if len(hrmfreqs) > 0:
-                     io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
+                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
             else:
                 opt1, opt2, opt3 = optlevel.split('/')
                 if energy:
@@ -627,8 +627,14 @@ def run(s, parameters, mult=None):
             msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
             run = True
         else:
-            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
-            run = False
+            out = io.read_file(outfile)
+            if check_output(out):
+                msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
+                run = False
+            else: 
+                msg = 'Failed output found "{0}", renaming and running a new calculation\n'.format(io.get_path(outfile))
+                io.mv(outfile, 'failed_'+outfile)
+                run = True
     else:
         run = True
     if run:
@@ -1303,7 +1309,7 @@ def get_gaussian_islinear(s):
     """
     Returns true if the molecule is linear for the given log.
     """
-    if "Linear Molecule" in s:
+    if "Linear Molecule" in s or get_gaussian_natom(s) == 2:
         return True
     else:
         return False
