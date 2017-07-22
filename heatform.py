@@ -810,9 +810,10 @@ def E_QTC(bas, opt, en, freq, parameters):
         zpve = 0
     return  float(E) + float(zpve)
 
-def main_keyword(parameters):
+def main_keyword(mol,parameters):
     
-    mol    = parameters['input']
+ #   mol    = ob.get_mol(s)
+    smi = ob.get_smiles(mol)
     basis  = parameters['hfbasis'].split()
     qckeys = parameters['qckeyword'].split(',')
     anharm = parameters['anharmonic']
@@ -827,21 +828,21 @@ def main_keyword(parameters):
     for key in qckeys[:index+1]:
         key = io.fix_path(key)
         if key.startswith('opt'):
-            optlevel = [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
+            optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('freq'):
-            freqlevel= [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
+            freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('en'):
-            enlevel  = [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
+            enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('extra'):
             enlevel  = ['extrapolation' + '/' + key.split('/')[1]]
             extrap   = True
     if not enlevel:
         enlevel = ['']
-    molform = ob.get_formula(ob.get_mol(mol))
+    molform = ob.get_formula(mol)
     clist, basis, basprint = comp_coefficients(molform, basis)
 
     lines =  ('\n___________________________________________________\n\n' +
-              'HEAT OF FORMATION FOR: ' + mol + ' (' + molform + ')' +
+              'HEAT OF FORMATION FOR: ' + smi + ' (' + molform + ')' +
               '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
               '\n\n___________________________________________________\n\n' +
               '\nYou have chosen to ' + 
@@ -854,13 +855,13 @@ def main_keyword(parameters):
     parameters['xyzpath']=''
     parameters['suppress_printing']=True
     parameters['qckeyword'] = ','.join(qckeys[:index+1])
-    E =  E_QTC(mol, optlevel, enlevel, freqlevel, parameters)
+    E =  E_QTC(smi, optlevel, enlevel, freqlevel, parameters)
     E =  E_hfbasis_QTC(molform, basis, clist, E, optlevel, enlevel, freqlevel, parameters)
     hf0k = AU_to_kcal(E)
     parameters['runthermo']=True
     parameters['suppress_printing']=False
     parameters['xyzpath']=xyz
-    parameters['input']=mol
+    parameters['input']=smi
     parameters['qckeyword'] = ','.join(qckeys)
     return hf0k, basis
 
