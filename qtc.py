@@ -262,7 +262,7 @@ def run(s):
                 freqlevel   = parameters['freqlevel']
             #hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,
              #                   freqlevel=freqlevel, basis=hfbasis,anharm=parameters['anharmonic'])
-            hf0, hfset = hf.main_keyword(parameters)
+            hf0, hfset = hf.main_keyword(mol,parameters)
             hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
             io.write_file(hftxt,s + '.hf0k')
@@ -288,6 +288,7 @@ def main(arg_update={}):
     for key in arg_update:
         parameters[key] = arg_update[key]
     if parameters['qckeyword']:
+        parameters['qckeyword'] = parameters['qckeyword'].lower()
         ncalc = len(parameters['qckeyword'].split(','))
     else:
         ncalc = 1

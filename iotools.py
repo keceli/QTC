@@ -329,25 +329,28 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False):
         command = command.split()
     else:
         commandstr = ' '.join(command)
+    msg = 'Running Popen with command: {0}\n'.format(commandstr)
     process = Popen(command, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
-    msg = ''
     if merge:
         if type(out) == str and type(err) == str:
             out += err
     if out is None or out == '':
-        msg = 'No STDOUT\n'
+        pass
     else:
         if stdoutfile:
             write_file(out,stdoutfile)
+            msg += 'STDOUT is appended to {0}\n'.format(stdoutfile)
         else:
-            msg += 'STDOUT\n'  
+            msg += 'STDOUT:\n{0}\n'.format(out)  
     if err is None or err == '':
-        msg += 'Run {0}: Success.\n'.format(commandstr)
+        pass
     else:
-        msg += '\nRun {0}: Error: \n "{1}"\n'.format(commandstr, get_path(err))
         if stderrfile:
-            write_file(msg + err, stderrfile)      
+            write_file(err, stderrfile)      
+            msg += 'STDERR file:\n"{0}"\n'.format(get_path(err))
+        else:
+            msg += 'STDERR:\n{0}\n'.format(err)
     return msg
 
 def db_head_path(db_location=None):

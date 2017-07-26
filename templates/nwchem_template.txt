@@ -4,6 +4,7 @@ memory stack 800 mb heap 200 mb global 700 mb noverify #modify based on availabl
 #scratch_dir ./tmp/QTC(UNIQUENAME)
 ECHO
 geometry units angstrom 
+    symmetry c1
     QTC(GEO)
 end
 
