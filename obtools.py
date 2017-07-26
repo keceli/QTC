@@ -398,7 +398,9 @@ def get_smiles_filename(x):
     if type(x) is pybel.Molecule:
         s = x.write(format='can').strip()
     elif type(x) is str:
-        s = x.strip()
+        x = get_mol(x)
+        s = x.write(format='can').strip()
+        #s = x.strip()
     else:
         return 'filename'           
     s = s.replace('\\','-dbs-')
