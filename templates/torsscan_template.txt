@@ -42,7 +42,7 @@ No. of steps on the PES: 12
 ------------------------------------------------
 Opt            :               : 
 Opt_1          : QTC(TSPACKAGE): QTC(TSMETHOD)/QTC(TSBASIS)
-1dTau          : QTC(METHOD)   : QTC(BASIS)/QTC(TASK)  
+1dTau          : QTC(TASK)     : QTC(METHOD)/QTC(BASIS)  
 MdTau          :               :
 Symm           :               :
 HL             :               :
