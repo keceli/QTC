@@ -84,25 +84,25 @@ def select_basis(atomlist,attempt=0):
     if 'S' in atomlist and i<= count:
         basis.append('O=S=O') 
         i += 1
-    if 'H' in atomlist  and i<= count and attempt < 1:
+    if 'H' in atomlist and i<= count and attempt < 2:
         basis.append('[H][H]')
         i += 1
-    elif 'H' in atomlist and 'C' not in atomlist and i<= count and attempt < 2:
+    elif 'H' in atomlist and 'C' not in atomlist and i<= count and attempt < 3:
         basis.append('[H][H]')
         i += 1
-    if 'O' in atomlist and i<= count and attempt < 2:
+    if 'O' in atomlist and i<= count and attempt < 3:
         basis.append('[O][O]')
         i += 1
-    if 'C' in atomlist and i<= count and attempt < 3:
+    if 'C' in atomlist and i<= count and attempt < 4:
         basis.append('C')
         i += 1
-    if 'O' in atomlist and 'H' in atomlist and  i<= count and attempt  < 3:
+    if 'O' in atomlist and 'H' in atomlist and  i<= count and attempt  < 4:
         basis.append('O')
         i += 1
-    if 'C' in atomlist and 'O' in atomlist and  i<= count and attempt < 4:
+    if 'C' in atomlist and 'O' in atomlist and  i<= count and attempt < 5:
         basis.append('C(=O)=O')
         i += 1
-    if 'C' in atomlist and 'O' in atomlist and  i<= count and attempt < 4:
+    if 'C' in atomlist and 'O' in atomlist and  i<= count and attempt < 5:
         basis.append('C=O')
         i += 1
     if 'C' in atomlist and 'O' in atomlist and  i<= count:
@@ -117,7 +117,7 @@ def select_basis(atomlist,attempt=0):
     if 'H' in atomlist  and i<= count and attempt < 1:
         basis.append('[H][H]')
         i += 1
-    elif 'H' in atomlist and 'C' not in atomlist and i<= count and attempt < 2:
+    elif 'H' in atomlist and 'C' not in atomlist and i<= count and attempt < 3:
         basis.append('[H][H]')
         i += 1
     if 'O' in atomlist and i<= count and attempt < 2:
@@ -760,11 +760,16 @@ def comp_coefficients(molform, basis='auto'):
     for i in range(5):
         if np.linalg.det(mat) != 0:
              break
+
         basprint += '\nMatrix is singular -- select new basis'
+
         atomlist = get_atomlist(molform)
+        if 'H' not in atomlist:
+            atomlist.append('H')
+        print atomlist
         basis    = select_basis(atomlist,basisselection)
         basisselection += 1
-
+       
         for bas in basis:
             bas = ob.get_formula(ob.get_mol(bas))
             atomlist.extend(get_atomlist(bas))
@@ -855,11 +860,14 @@ def main_keyword(parameters):
     for key in qckeys[:index+1]:
         key = io.fix_path(key)
         if key.startswith('opt'):
-            optlevel = [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
+            #optlevel = [key.split('/')[1], key.split('/')[2], key.split('/')[3]] #MURAT! ucomment this line if it is task/prog/method/basis
+            optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]  #This line for task/method/basis/prog
         if key.startswith('freq'):
-            freqlevel= [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
+            #freqlevel= [key.split('/')[1], key.split('/')[2], key.split('/')[3]] #and this line
+            freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('en'):
-            enlevel  = [key.split('/')[1], key.split('/')[2], key.split('/')[3]]
+            #enlevel  = [key.split('/')[1], key.split('/')[2], key.split('/')[3]] #and this one too
+            enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('extra'):
             enlevel  = ['extrapolation' + '/' + key.split('/')[1]]
             extrap   = True
