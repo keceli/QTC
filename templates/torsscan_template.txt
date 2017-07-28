@@ -36,6 +36,7 @@ EStoKTP options
 No. MC  sampling points: 5
 Scan interval (degrees): 360
 No. of steps on the PES: 12
+Multidim scan (2 or 3D): auto
 
 ------------------------------------------------ 
    Module      :    Program    :      Theory
@@ -53,9 +54,10 @@ Irc            :               :
 THERMO options
 =============
 Perform all thermochemistry? (default true): QTC(THERMO)
+Precomputed heat of formation (hf0kreac1, hf0kreac2, hf0kTS1, ... in kcal): false
+Basis for heat of formation: QTC(HFBASIS) 
 Anharmonic (0 for level0 theory, 1 for level1 theory, false for off, or prog/meth/bas): QTC(ANHARMLOC)
 Overwrite anharmonic: false
-Basis for heat of formation: QTC(HFBASIS) 
 Parse all: True
 
 
