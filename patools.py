@@ -145,11 +145,17 @@ def gaussian_freqs(lines):
     kw = 'Frequencies --  (.+)'
     freqlines = re.findall(kw, lines)
     freqs = []
+    k = 0
     if len(freqlines) > 0:
         nfreq = gaussian_nfreq(lines)
         freqs = ['']*nfreq
-        for i in range(nfreq):
-            freqs[i] = freqlines[i]
+        for i in range(len(freqlines)):
+            tokens = freqlines[i].split()
+            for j in range(len(tokens)):
+                freqs[k] = tokens[j]
+                k += 1
+            if k == nfreq:
+                break
     return freqs
 
 def gaussian_zpve(lines):
