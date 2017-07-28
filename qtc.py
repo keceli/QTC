@@ -8,7 +8,7 @@ import tctools as tc
 import dbtools as db
 import heatform as hf
 from pprint import pprint
-
+import sys
 __updated__ = "2017-07-13"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
@@ -227,15 +227,24 @@ def run(s):
         else:
             msg = '{0} package not implemented\n'.format(qcpackage)
             msg += 'Available packages are {0}'.format(available_packages)
-            #exit(msg)   
         printp(msg)
         msg = ''
     if parseqc:
         if io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput,aslines=False)
-            d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
-            pprint(d)
-                                   
+            if qc.check_output(out):
+                d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
+                pprint(d)
+            else:
+                msg += 'Failed calculation in "{0}".\n'.format(qcoutput)
+                msg += 'Can not run thermo\n'
+                runthermo = False                
+        else:
+            msg += 'Output file "{0}" not found.\n'.format(qcoutput)
+            msg += 'Can not run thermo\n'
+            runthermo = False
+    printp(msg)
+    msg = ''                                   
     if runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
