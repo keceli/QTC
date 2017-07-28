@@ -248,7 +248,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         xyz            = pa.gaussian_xyz(s)
         geo            = pa.gaussian_geo(s)
         hrmfreqs       = pa.gaussian_freqs(s)
-        if len(hrmfreqs) > 0:
+        anhrmfreqs  = get_gaussian_fundamentals(s)[:,1]
+        if sum(anhrmfreqs) > 0:
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
             if type(xmat) == str:
                 xmat = []
@@ -265,7 +266,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if len(hrmfreqs) > 0:
                 fname = smilesname + '.hrm'
                 io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )
-            if len(anhrmfreqs) > 0:
+            if sum(anhrmfreqs) > 0:
                 fname = smilesname + '.anhrm'
                 io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
         d = {optlevel:
@@ -1256,13 +1257,12 @@ Overtones (DE w.r.t. Ground State)
     lines = s.splitlines()
     key = 'Fundamental Bands (DE w.r.t. Ground State)'
     iline = io.get_line_number(key,lines=lines)
-    if iline < 0:
-        return 'Not found: {0}'.format(key)
-    for i in range(nfreq):
-        iline += 1
-        line = lines[iline]
-        cols = line.split()
-        freqs[i,:] = [float(cols[1]),float(cols[2])]
+    if iline > 0:
+        for i in range(nfreq):
+            iline += 1
+            line = lines[iline]
+            cols = line.split()
+            freqs[i,:] = [float(cols[1]),float(cols[2])]
     return freqs[freqs[:,0].argsort()]
 
 
