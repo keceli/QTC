@@ -148,8 +148,9 @@ def gaussian_freqs(lines):
     if len(freqlines) > 0:
         nfreq = gaussian_nfreq(lines)
         freqs = ['']*nfreq
-        for i in range(nfreq):
-            freqs[i] = freqlines[i]
+        for i in range(nfreq/3):
+            for j, freq in enumerate(freqlines[i].split()):
+                freqs[i+j] = freq
     return freqs
 
 def gaussian_zpve(lines):
