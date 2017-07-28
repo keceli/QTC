@@ -171,6 +171,10 @@ def gaussian_anzpve(lines):
     zpve = re.findall(zpve, lines)
     if len(zpve) > 0:
         return float(zpve[-1].replace('D','E'))*.00038088
+    zpve = 'Total Anharm\s*:\s*cm\-1\s*=\s*(\d,\.,\-]*)'
+    zpve = re.findall(zpve, lines)
+    if len(zpve) > 0:
+        return float(zpve[-1].replace('D','E'))*.00038088
     return
  
 def gaussian_calc(lines):
