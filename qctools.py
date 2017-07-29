@@ -128,7 +128,7 @@ def parse_qckeyword(parameters,calcindex=0):
     calcs = keyword.split(',')
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
-    if tokens[0].startswith('ext') or tokens[0].startswith('cbs'):
+    if tokens[0].startswith('ext') or tokens[0].startswith('cbs') or tokens[0].startswith('comp'):
         qcdirectory = ''
         xyzdirectory = ''
         package = 'extrapolation'
@@ -193,7 +193,6 @@ def parse_qckeyword(parameters,calcindex=0):
     elif 'freq' in task or 'anh' in task:
         parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
     elif task.startswith('energ'):
-    #else:
         parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)
     return parameters 
 
@@ -216,6 +215,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     anhrmfreqs = []
     xmat= []
     zpve= None
+    anzpve= None
     parsed = False
     if package == 'nwchem':
         method = get_nwchem_method(s)
@@ -242,6 +242,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     elif package == 'gaussian':
         method, energy = pa.gaussian_energy(s)
         zpve           = pa.gaussian_zpve(s)
+        anzpve       = pa.gaussian_anzpve(s)
         calculation    = pa.gaussian_calc(s)
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
@@ -263,6 +264,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if zpve:
                 fname = smilesname + '.zpve'
                 io.write_file(str(zpve), fname)
+            if anzpve:
+                fname = smilesname + '.anzpve'
+                io.write_file(str(anzpve), fname)
             if len(hrmfreqs) > 0:
                 fname = smilesname + '.hrm'
                 io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )
@@ -327,52 +331,6 @@ def get_listofstrings(array):
         s[i] = '{0}\n'.format(array[i])
     return s
 
-   
-def parse_qclog(qclog,qccode='gaussian',anharmonic=False):
-    xyz = None
-    freqs = None
-    zpe = None
-    deltaH = None
-    xmat = None
-    afreqs = None
-    msg =''
-    if io.check_file(qclog, 1):
-        s = io.read_file(qclog, aslines=False)
-    else:
-        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog))
-        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
-    lines = s.splitlines()
-    if check_output(s):
-        try:
-            if qccode == 'gaussian':
-                mol = ob.get_gaussian_mol(qclog)
-                zpe = mol.energy
-                if cclib:
-                    ccdata = cclib.io.ccread(qclog)
-                    xyz = ccdata.writexyz()
-                    freqs = ccdata.vibfreqs
-                    freqs = get_listofstrings(freqs)
-                    nfreq = len(freqs)
-                    deltaH = ccdata.enthalpy
-                    if anharmonic:
-                        xmat = ccdata.vibanharms
-                        afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
-                        afreqs = get_listofstrings(afreqs)
-
-            elif qccode == 'mopac':
-                xyz = get_mopac_xyz(lines)
-                freqs = get_mopac_freq(lines)
-                freqs = get_listofstrings(freqs)
-                zpe = get_mopac_zpe(lines)
-                deltaH = get_mopac_deltaH(lines)
-        except:
-            msg = 'Parsing failed for "{0}"\n'.format(io.get_path(qclog))
-            return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
-    else:
-        msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
-
-    return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
-
 
 def parse_qclog_cclib(qclog,anharmonic=False):
     xyz = None
@@ -405,55 +363,6 @@ def parse_qclog_cclib(qclog,anharmonic=False):
                 xmat = ccdata.vibanharms
                 afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
                 afreqs = get_listofstrings(afreqs)
-    else:
-        msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
-
-    return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
-
-
-def parse_qclog_as_dict(qclog,qccode='gaussian',anharmonic=False):
-
-    xyz = None
-    freqs = None
-    zpe = None
-    deltaH = None
-    xmat = None
-    afreqs = None
-    basis = None
-    method = None
-    msg =''
-    if io.check_file(qclog, 1):
-        s = io.read_file(qclog, aslines=False)
-    else:
-        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog))
-        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
-    lines = s.splitlines()
-    if check_output(s):
-        try:
-            if qccode == 'gaussian':
-                mol = ob.get_gaussian_mol(qclog)
-                zpe = mol.energy
-                if cclib:
-                    ccdata = parse_cclib(qclog)
-                    xyz = ccdata.writexyz()
-                    freqs = ccdata.vibfreqs
-                    freqs = get_listofstrings(freqs)
-                    nfreq = len(freqs)
-                    deltaH = ccdata.enthalpy
-                    if anharmonic:
-                        xmat = ccdata.vibanharms
-                        afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
-                        afreqs = get_listofstrings(afreqs)
-
-            elif qccode == 'mopac':
-                xyz = get_mopac_xyz(lines)
-                freqs = get_mopac_freq(lines)
-                freqs = get_listofstrings(freqs)
-                zpe = get_mopac_zpe(lines)
-                deltaH = get_mopac_deltaH(lines)
-        except:
-            msg = 'Parsing failed for "{0}"\n'.format(io.get_path(qclog))
-            return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
     else:
         msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
 
@@ -534,75 +443,6 @@ def get_symbol(atomno):
             'H', 'He'
             'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne']
     return syms[atomno]
-
-
-
-def execute(inp, exe,outputfile=None):
-    """
-    Executes a calculation for a given input file inp and executable exe.
-    """
-    from subprocess import Popen, PIPE
-    process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
-    out, err = process.communicate()
-    if outputfile:
-        io.write_file(out,outputfile)
-    if err is None or err == '':
-        msg = 'Run {0} {1}: Success.\n'.format(exe, inp)
-    else:
-        errstr = """ERROR in "{0}"\n
-        STDOUT:\n{1}\n
-        STDERR:\n{2}""".format(inp, out, err)
-        errfile = inp + '.err'
-        io.write_file(errstr, errfile)
-        msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, io.get_path(errfile))
-    return msg
-
-
-
-def execute_gaussian(inp, exe='g09'):
-    """
-    Runs gaussian calculation.
-    """
-    from subprocess import Popen, PIPE
-    process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
-    out, err = process.communicate()
-
-    if err is None or err == '':
-        msg = 'Run {0} {1}: Success.'.format(exe, inp)
-    else:
-        errstr = """ERROR in "{0}"\n
-        STDOUT:\n{1}\n
-        STDERR:\n{2}""".format(inp, out, err)
-        errfile = inp + '.err'
-        io.write_file(errstr, errfile)
-        msg = 'Run {0} {1}: Failed, see "{2}"'.format(exe, inp, io.get_path(errfile))
-    return msg
-
-
-def execute_mopac(inp, exe='mopac'):
-    """
-    Runs mopac calculation.
-    Mopac is a fortran code that does not return an error code
-    but writes error to stderr.
-    If there is no error stderr = None or ''
-    For some keyword errors, still no stderr or stdout is provided,
-    so additional checks are required.
-    """
-    from subprocess import Popen, PIPE
-    import iotools as io
-#    subprocess.call([mopacexe, inp])
-    process = Popen([exe, inp], stdout=PIPE, stderr=PIPE)
-    out, err = process.communicate()
-    if err is None or err == '':
-        msg = 'Run {0} {1}: Success.'.format(exe, inp)
-    else:
-        errstr = """ERROR in {0}\n
-        STDOUT:\n{1}\n
-        STDERR:\n{2}""".format(inp, out, err)
-        errfile = inp + '.err'
-        io.write_file(errstr, errfile)
-        msg = 'Run {0} {1}: Failed, see {2}\n'.format(exe, inp, errfile)
-    return msg
 
 
 def run(s, parameters, mult=None):
@@ -687,7 +527,7 @@ def run_extrapolation_keyword(s, parameters):
         method = tokens[1]
     print('Extrapolation formula: {0}\n'.format(formulaline))
     ncalc = len(calcs) - 1
-    E = [0.] * ncalc
+    energies = [0.] * ncalc
     energy = None
     enefile = smilesname + '.ene'  
     inpfile = smilesname + '_' + method  + '.inp'  
@@ -698,7 +538,7 @@ def run_extrapolation_keyword(s, parameters):
         if task.startswith('opt'):
             optdirectory = qcdirectory
         enepath = io.join_path(*[qcdirectory, enefile])
-        E[i] = float(io.read_file(enepath))     
+        energies[i] = float(io.read_file(enepath))     
     exec(formulaline)
     if energy:
         extdir = io.fix_path(io.join_path(*[optdirectory,'extrapolation',method]))
@@ -762,150 +602,6 @@ def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
     msg, err = process.communicate()
     if err:
         msg = 'Failed {0}'.format(err)
-    return msg
-
-
-def run_gaussian(s, exe='g09', template='gaussian_template.txt', mult=None, overwrite=False):
-    """
-    Runs gaussian calculation
-    """
-    mol = ob.get_mol(s, make3D=True)
-    if mult is None:
-        mult = ob.get_multiplicity(mol)
-    tmp = io.read_file(template)
-    inptext = get_gaussian_input(mol, tmp, mult)
-    prefix = ob.get_smiles_filename(s)
-    inpfile = prefix + '.g09'
-    outfile = prefix + '_gaussian.log'
-    command = [exe, inpfile, outfile]
-    if io.check_file(outfile, timeout=1):
-        if overwrite:
-            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
-            run = True
-        else:
-            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
-            run = False
-    else:
-        run = True
-    if run:
-        if not io.check_file(inpfile, timeout=1) or overwrite:
-            io.write_file(inptext, inpfile)
-        if io.check_file(inpfile, timeout=1):
-            msg = io.execute(command)
-            if io.check_file(outfile, timeout=1):
-                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
-        else:
-            msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
-    return msg
-
-
-def run_nwchem(s, exe='nwchem', template='nwchem_template.txt', mult=None, overwrite=False):
-    """
-    Runs nwchem, returns a string specifying the status of the calculation.
-    nwchem inp.nw > nw.log
-    NWChem writes output and error to stdout.
-    Generates .db (a binary file to restart a job) and .movecs (scf wavefunction) files in the run directory.
-    Generates many junk files in a scratch directory.
-    If scratch is not specified, these junk files are placed in the run directory.
-    """
-    mol = ob.get_mol(s, make3D=True)
-    if mult is None:
-        mult = ob.get_multiplicity(mol)
-    tmp = io.read_file(template)
-    inptext = get_input(mol, tmp)
-    prefix = ob.get_smiles_filename(s)
-    inpfile = prefix + '.nw'
-    outfile = prefix + '_nwchem.log'
-    command = [exe, inpfile]
-    if io.check_file(outfile, timeout=1):
-        if overwrite:
-            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
-            run = True
-        else:
-            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
-            run = False
-    else:
-        run = True
-    if run:
-        if not io.check_file(inpfile, timeout=1) or overwrite:
-            io.write_file(inptext, inpfile)
-        if io.check_file(inpfile, timeout=1):
-            msg = io.execute(command,stdoutfile=outfile,merge=True)
-            if io.check_file(outfile, timeout=1):
-                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
-        else:
-            msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
-    return msg
-
-
-def run_mopac(s, exe='mopac', template='mopac_template.txt', mult=None, overwrite=False):
-    """
-    Runs mopac, returns a string specifying the status of the calculation.
-    mopac inp inp.out
-    Mopac always writes the log file into a file with .out extension
-    """
-    mol = ob.get_mol(s, make3D=True)
-    if mult is None:
-        mult = ob.get_multiplicity(mol)
-    tmp = io.read_file(template)
-    inptext = get_input(mol, tmp, mult)
-    prefix = ob.get_smiles_filename(s)
-    inpfile = prefix + '.mop'
-    outfile = prefix + '.out'
-    command = [exe, inpfile]
-    if io.check_file(outfile, timeout=1):
-        if overwrite:
-            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
-            run = True
-        else:
-            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
-            run = False
-    else:
-        run = True
-    if run:
-        if not io.check_file(inpfile, timeout=1) or overwrite:
-            io.write_file(inptext, inpfile)
-        if io.check_file(inpfile, timeout=1):
-            msg = io.execute(command)
-            if io.check_file(outfile, timeout=1):
-                msg += 'Output file: "{0}"\n'.format(io.get_path(outfile))
-        else:
-            msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
-    return msg
-
-
-def run_molpro(s, exe='molpro', template='molpro_template.txt', mult=None, overwrite=False):
-    """
-    Runs molpro, returns a string specifying the status of the calculation.
-    TODO
-    """
-    mol = ob.get_mol(s, make3D=True)
-    if mult is None:
-        mult = ob.get_multiplicity(mol)
-    tmp = io.read_file(template)
-    inptext = get_input(mol, tmp, mult)
-    prefix = ob.get_smiles_filename(s)
-    inpfile = prefix + '.nw'
-    outfile = prefix + '_nwchem.log'
-    command = [exe, inpfile]
-    if io.check_file(outfile, timeout=1):
-        if overwrite:
-            msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
-            run = True
-        else:
-            msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
-            run = False
-    else:
-        run = True
-    if run:
-        if not io.check_file(inpfile, timeout=1) or overwrite:
-            io.write_file(inptext, inpfile)
-        if io.check_file(inpfile, timeout=1):
-            msg = io.execute(command,stdoutfile=outfile,merge=True)
-            if io.check_file(outfile, timeout=1):
-                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
-        else:
-            msg = 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
     return msg
 
 
@@ -1262,7 +958,7 @@ Overtones (DE w.r.t. Ground State)
             iline += 1
             line = lines[iline]
             cols = line.split()
-            freqs[i,:] = [float(cols[1]),float(cols[2])]
+            freqs[i,:] = [float(cols[-5]),float(cols[-4])]
     return freqs[freqs[:,0].argsort()]
 
 
