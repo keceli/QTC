@@ -862,11 +862,11 @@ def main_keyword(mol,parameters):
         key = io.fix_path(key)
         if key.startswith('opt'):
             optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-        if key.startswith('freq'):
+        elif key.startswith('freq') or key.startswith('anh'):
             freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-        if key.startswith('en'):
+        elif key.startswith('en'):
             enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-        if key.startswith('extra'):
+        elif key.startswith('extra'):
             enlevel  = ['extrapolation' + '/' + key.split('/')[1]]
             extrap   = True
     if not enlevel:
