@@ -181,9 +181,12 @@ def run(s):
         parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
     if parameters['writefiles']:
         parameters['parseqc'] = True
-    msg = "Smiles: {0}\n".format(s)
     mult = ob.get_mult(s)
+    formula = ob.get_formula(s)
     mol = ob.get_mol(s)
+    msg = "Smiles = {0}\n".format(s)
+    msg += "Formula = {0}\n".format(formula)
+    msg += "Multiplicity = {0}\n".format(mult)
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
     smilesdir = io.join_path(parameters['database'], smilesdir)
@@ -230,7 +233,10 @@ def run(s):
         printp(msg)
         msg = ''
     if parseqc:
-        if io.check_file(qcoutput, timeout=1,verbose=False):
+        print parameters['qcpackage'] 
+        if parameters['qckeyword'].split(',')[parameters['calcindex']].startswith('extrap'):
+            pass
+        elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput,aslines=False)
             if qc.check_output(out):
                 d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
@@ -259,18 +265,7 @@ def run(s):
                 d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
                 xyz = next(db.gen_dict_extract('xyz',d))
                 freqs = next(db.gen_dict_extract('harmonic frequencies',d))
-                energy = float(next(db.gen_dict_extract('energy',d)))
                 xmat   = next(db.gen_dict_extract('xmat',d))
-            package   = parameters['qcpackage']
-            optlevel  = parameters['optlevel']
-            enlevel   = optlevel
-            freqlevel = None
-            if 'enlevel' in parameters:
-                enlevel   = parameters['enlevel']
-            if 'freqlevel' in parameters:
-                freqlevel   = parameters['freqlevel']
-            #hf0, hfset = hf.main(s,E=energy,optlevel=optlevel,enlevel=enlevel,
-             #                   freqlevel=freqlevel, basis=hfbasis,anharm=parameters['anharmonic'])
             hf0, hfset = hf.main_keyword(mol,parameters)
             hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
