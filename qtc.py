@@ -32,8 +32,8 @@ def get_args():
     Returns args object that contains command line options.
     """
     import argparse
-    parser = argparse.ArgumentParser(#formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     #formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                      description=
     """
     April 18, 2017
@@ -44,36 +44,16 @@ def get_args():
     """)
     parser.add_argument('-i', '--input', type=str,
                         default='qclist.txt',
-                        help='List of inchi or smiles for species to be calculated')
-    parser.add_argument('-f', '--first', type=int,
-                        default=0,
-                        help='Beginning index of the species list')
-    parser.add_argument('-l', '--last', type=int,
-                        help='Ending index of the species list')
-    parser.add_argument('-n', '--nproc', type=int,
-                        default=1,
-                        help='Number of processors, default is one processor')
-    parser.add_argument('-c', '--qccalculation', type=str,
-                        default='',
-                        help='Type of quantum chemistry calculation: "optimization", "frequency", "energy", "anharmonic"')
-    parser.add_argument('-k', '--qckeyword', type=str,
-                        default='',
-                        help='Keyword string that can define package, method, basis, task i.e.: "opt/ccsd/cc-pvdz/gaussian, nwchem/ccsdt/cc-pvdz/energy,')
-    parser.add_argument('-m', '--qcmethod', type=str,
-                        default='',
-                        help='Quantum chemistry method to be used')
-    parser.add_argument('-b', '--qcbasis', type=str,
-                        default='',
-                        help='Basis-set in quantum chemistry calculations')
-    parser.add_argument('-a', '--qctask', type=str,
-                        default='',
-                        help='Task for quantum chemistry calculations (opt,freq,energy)')
-    parser.add_argument('-z', '--qcpackage', type=str,
-                        default='',
-                        help='Quantum chemistry package ("gausian","mopac","nwchem","qcscript") to be used')
+                        help='INPUT can be a text file containing a list of inchi or smiles strings or it can be a single string containing inchi or smiles strings separated by commas')
     parser.add_argument('-p', '--qcnproc', type=int,
                         default=1,
-                        help='Number of processors for quantum chemistry calculations')
+                        help='Number of processors for each quantum chemistry calculation')
+    parser.add_argument('-n', '--nproc', type=int,
+                        default=1,
+                        help='Number of processors for qtc calculations, to run different species in parallel')
+    parser.add_argument('-k', '--qckeyword', type=str,
+                        default='',
+                        help='Keyword string that defines quantum chemistry calculations i.e.: "opt/ccsd/cc-pvdz/gaussian,energy/ccsd/cc-pvtz/nwchem,extrapolation/cbs/energy=0.3*E0+0.7*E1" Note that each calculation is separated by a comma (,) and calculations are defined by TASK/METHOD/BASIS/PACKAGE. TASK can be opt, freq, anharm,extrapolation.METHOD and BASIS are simply copied into quantum chemistry input file as defined in the templates folder. PACKAGE can be gaussian, molpro or nwchem')
     parser.add_argument('-t', '--qctemplate', type=str,
                         default='',
                         help='Template for quantum chemistry input file')
@@ -89,6 +69,11 @@ def get_args():
     parser.add_argument('-o', '--qcoutput', type=str,
                         default='',
                         help='Path for the qc output file')
+    parser.add_argument('-f', '--first', type=int,
+                        default=0,
+                        help='Beginning index of the species list')
+    parser.add_argument('-l', '--last', type=int,
+                        help='Ending index of the species list')
     parser.add_argument('-B', '--hfbasis', type=str,
                         default='auto',
                         help='Heat of formation basis molecules')
