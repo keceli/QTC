@@ -170,7 +170,7 @@ def gaussian_anzpve(lines):
     """
     Returns anharmonic zpve in au.
     """
-    from unittols import rcm2au,kjpermol2au
+    from unittools import rcm2au,kjpermol2au
     zpve = 'ZPE\(anh\)=\s*([\d,\w,\+,\.,\-]*)'
     zpve = re.findall(zpve, lines)
     if len(zpve) > 0:
