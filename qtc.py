@@ -160,7 +160,6 @@ def run(s):
     if not package:
         if parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
-            printp('Quantum chemistry package (based on template): {0}'.format(package))
     elif not package.startswith('extrap'):
         templatename = package + '_template' + '.txt'
         parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
@@ -184,7 +183,7 @@ def run(s):
     xyzpath = parameters['xyzpath']
     xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
     if xyzfile:
-        msg += "Using xyz file in '{0}'\n".format(xyzfile)
+        msg += "XYZ file = '{0}'\n".format(xyzfile)
         xyz = io.read_file(xyzfile)
         coords = ob.get_coordinates_array(xyz)
         mol = ob.set_xyz(mol, coords)
@@ -194,7 +193,7 @@ def run(s):
     io.mkdir(workdirectory)
     if io.check_dir(workdirectory, 1):
         io.cd(workdirectory)
-        msg += "cd '{0}'\n".format(workdirectory)
+        msg += "Run directory = '{0}'\n".format(workdirectory)
     else:
         msg += ('I/O error, {0} directory not found.\n'.format(workdirectory))
         return -1
@@ -203,7 +202,7 @@ def run(s):
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan']          
     if runqc:
         if qcpackage in available_packages:
-            print('Running qcpackage: {0}'.format(qcpackage))
+            print('QC package = {0}'.format(qcpackage))
             msg += qc.run(mol, parameters, mult)
         elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"

@@ -625,29 +625,22 @@ def find_xyzfile(xyzpath,smilesdir):
     """
     Returns the path for xyzfile.
     """
-    msg = ''
     xyzfile = ''
     if io.check_file(xyzpath):
         xyzfile = xyzpath
-        msg += "xyz file found in {0}".format(xyzfile)
     elif io.check_file(io.join_path(*(smilesdir,xyzpath))):
         xyzfile = io.join_path(*(smilesdir,xyzpath))
-        msg += "xyz file found in {0}".format(xyzfile)
     elif xyzpath and io.check_dir(xyzpath):
         try:
             xyzfile = next(io.find_files(xyzpath, '*.xyz'))
-            msg += "xyz file found in {0}".format(xyzfile)
         except StopIteration:
-            msg += "xyz file not found in {0}".format(xyzpath)
+            pass
     elif xyzpath and io.check_dir(io.join_path(*(smilesdir,xyzpath))):
         xyzpath = io.join_path(*(smilesdir,xyzpath))
         try:
             xyzfile = next(io.find_files(xyzpath, '*.xyz'))
         except StopIteration:
-            msg += "xyz file not found in {0}".format(xyzpath)        
-    else:
-        msg += "xyz path not found {0}".format(xyzpath)
-    print(msg) 
+            pass
     return xyzfile 
 
   
