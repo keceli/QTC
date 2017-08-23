@@ -136,8 +136,8 @@ def printp(string):
 
 def run(s):
     """
-    A driver function to run quantum chemistry and thermochemistry calculations.
-    It updates parameters dictionary.
+    A driver function to run quantum chemistry and thermochemistry calculations for a given molecule object identified by a SMILES or InChI string.
+    It uses and modifies 'parameters', which is defined as a global variable.
     """
     printp("***************************************\n")
     global parameters
@@ -168,7 +168,7 @@ def run(s):
     mult = ob.get_mult(s)
     formula = ob.get_formula(s)
     mol = ob.get_mol(s)
-    msg = "Smiles = {0}\n".format(s)
+    msg = "SMILES = {0}\n".format(s)
     msg += "Formula = {0}\n".format(formula)
     msg += "Multiplicity = {0}\n".format(mult)
     smilesname = ob.get_smiles_filename(s)

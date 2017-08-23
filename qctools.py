@@ -114,12 +114,29 @@ def get_input(x, template, parameters):
     return inp
 
 
-def parse_qckeyword(parameters,calcindex=0):
+def parse_qckeyword(parameters, calcindex=0):
     """
-    Returns package, method, basis, task, qcdirectory for a given qckeyword and calcindex.
-    >>> package, method, basis, task, qcdirectory = parse_qckeyword('nwchem/ccsd/cc-pvz/optimize,molpro/uccsdt/cc-pvtz/energy',1)
-    >>> print('package, method, basis, task, qcdirectory = {0} {1} {2} {3} {4}'.format(package, method, basis, task, qcdirectory))
-    
+    Updates parameters based on qckeyword and given calcindex.
+    Not pure!
+    Specifically it updates the values of the following keys in parameters:
+    optlevel
+    qcpackage
+    tspackage
+    tsmethod
+    tsbasis
+    xyzpath
+    qcdirectory
+    qcpackage
+    qcmethod
+    qcbasis
+    qctask
+    runqc
+    parseqc
+    writefiles
+    anharmonic
+    optlevel
+    freqlevel
+    enlevel
     """
     keyword = parameters['qckeyword']
     keyword = keyword.replace('//','/optimize,')
@@ -192,7 +209,7 @@ def parse_qckeyword(parameters,calcindex=0):
         parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
     elif 'freq' in task or 'anh' in task:
         parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
-    elif task.startswith('energ'):
+    elif task.startswith('ene'):
         parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)
     return parameters 
 
