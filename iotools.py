@@ -68,7 +68,10 @@ def mv(oldname,newname):
     Renames or moves a file
     """
     import os
-    os.rename(oldname,newname)
+    try:
+        os.rename(oldname,newname)
+    except:
+        print('Command "mv {0} {1}" failed' .format(oldname, newname))
     return 
 
 def pwd():
