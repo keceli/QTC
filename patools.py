@@ -164,7 +164,7 @@ def gaussian_zpve(lines):
     zpve = re.findall(zpve, lines)
     if len(zpve) > 0:
         return float(zpve[-1])
-    return None 
+    return 0.0 
 
 def gaussian_anzpve(lines):
     """
@@ -261,9 +261,7 @@ def molpro_energy(lines,method=''):
         if len(energ) == 0:
             energ  = '!\w*\-\s*[\U,\R]' + method + '\s*energy\s*([\d,\-,\.]+)'
             energ  = re.findall(energ,lines)
-            if len(energ) == 0:
-                print 'energy not found'
-            else:
+            if len(energ) > 0:
                 return (method, float(energ[-1].replace('\n','').replace(' ','')))
         else:
             return (method, float(energ[-1].replace('\n','').replace(' ','')))
@@ -271,17 +269,13 @@ def molpro_energy(lines,method=''):
     elif 'HF' in method:
         energ = method + ' STATE\s*\d\.\d\s*Energy\s*([\w,\-,\.]+)'
         energ = re.findall(energ,lines)
-        if len(energ) == 0:
-            print 'energy not found'
-        else:
+        if len(energ) > 0:
             return (method, float(energ[-1].replace('\n','').replace(' ','')))
     
     elif 'MP' in method:
         energ = ' ' + method + ' total energy:\s*([\w,\-,\.]+)'
         energ = re.findall(energ,lines)
-        if len(energ) == 0:
-            print 'energy not found'
-        else:
+        if  len(energ) > 0:
             return (method, float(energ[-1].replace('\n','').replace(' ','')))
 
     energ  = 'SETTING ENERGY\s*=\s*([\w,\.,-]+)'
@@ -289,13 +283,12 @@ def molpro_energy(lines,method=''):
     if len(energ) == 0:
         energ  = 'SETTING CBSEN\s*=\s*([\w,\.,-]+)'
         energ  = re.findall(energ,lines)
-        if len(energ) == 0:
-            print 'energy not found'
-        else:
+        if len(energ) > 0:
             return (method,float(energ[-1].replace('\n','').replace(' ','')))
     else:
         return (method,float(energ[-1].replace('\n','').replace(' ','')))
-
+    if len(energ) == 0:
+        print 'energy not found'
     return 0 
    
 def  molpro_freqs(lines):
@@ -315,7 +308,7 @@ def molpro_zpve(lines):
     zpve = re.findall(zpve, lines)
     if len(zpve) > 0:
         return float(zpve[-1])
-    return
+    return 0.0
 
 def molpro_method(lines):
     method  = '1PROGRAM\s*\*\s*(\S*)'
