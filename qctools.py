@@ -31,6 +31,18 @@ def get_input(x, template, parameters):
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
+    if basis == 'adz':
+        basis = 'aug-cc-pvdz'
+    elif basis == 'atz':
+        basis = 'aug-cc-pvtz'
+    elif basis == 'aqz':
+        basis = 'aug-cc-pvqz' 
+    elif basis == 'dz':
+        basis = 'cc-pvdz'
+    elif basis == 'tz':
+        basis = 'cc-pvtz'
+    elif basis == 'qz':
+        basis = 'cc-pvqz'               
     task    = parameters[   'qctask']
     nproc   = parameters[  'qcnproc']
     if task.startswith('gau'):
@@ -139,7 +151,6 @@ def parse_qckeyword(parameters, calcindex=0):
     enlevel
     """
     keyword = parameters['qckeyword']
-    keyword = keyword.replace('//','/optimize,')
     xyzdirectory = parameters['xyzpath']
     package = 'nwchem'
     calcs = keyword.split(',')
@@ -231,7 +242,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     hrmfreqs = []
     anhrmfreqs = []
     xmat= []
-    zpve= None
+    zpve= 0.0
     anzpve= None
     parsed = False
     if package == 'nwchem':
@@ -1027,7 +1038,9 @@ def get_gaussian_nfreq(s):
     a given log.
     """
     natom = get_gaussian_natom(s)
-    if get_gaussian_islinear(s):
+    if natom == 1:
+        nvdof = 0
+    elif get_gaussian_islinear(s):
         nvdof = 3*natom - 5
     else:
         nvdof = 3*natom - 6
