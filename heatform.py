@@ -835,9 +835,13 @@ def E_QTC(bas, opt, en, freq, parameters):
     if freq != None:
         if not io.check_file(freq):
             qtc.main(parameters)
-        zpve= io.read_file(freq).strip()
-        zpve= float(zpve)
-        print '{}- ZPVE: {:5g} pulled from: {}'.format(bas, zpve, freq)
+        if io.check_file(freq):        
+            zpve= io.read_file(freq).strip()
+            zpve= float(zpve)
+            print '{}- ZPVE: {:5g} pulled from: {}'.format(bas, zpve, freq)
+        else:
+            zpve = 0.0
+            print 'ZPVE not found assumed 0.0'
     else:
         print 'Zero point vibrational energy NOT accounted for'
         zpve = 0
