@@ -7,7 +7,7 @@ QTC(GEO)
 SET,SPIN= QTC(NOPEN)
 
 basis=QTC(BASIS)
-hf
+rhf
 QTC(METHOD)
 QTC(TASK)
 put,xyz
