@@ -1,6 +1,6 @@
 %mem=20GB
 %nproc=QTC(NPROC)
-#P QTC(METHOD)/QTC(BASIS) QTC(TASK) int=ultrafine scf=verytight nosym
+#P QTC(METHOD)/QTC(BASIS) QTC(TASK) int=ultrafine nosym
 
 QTC(SMILESNAME)
 
