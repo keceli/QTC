@@ -403,18 +403,25 @@ def get_smiles_filename(x):
         #s = x.strip()
     else:
         return 'filename'           
-    s = s.replace('\\','-dbs-')
-    s = s.replace('/','-s-')
-    s = s.replace(':','__')
-    s = s.replace('*','-star-')
+    s = s.replace('\\','-db-') #double back slash
+    s = s.replace('/','-sl-')
+    s = s.replace(':','-co-')
+    s = s.replace('*','-st-')
     s = s.replace('?','-qm-')
     s = s.replace('<','-la-')
     s = s.replace('>','-ra-')
-    s = s.replace('|','-l-')
-    s = s.replace('(','_')
-    s = s.replace(')','_')
+    s = s.replace('|','-bs-')
+    s = s.replace('(','-lp-')
+    s = s.replace(')','-rp-')
     return s
 
+
+def smiles2formula(filename):
+    import iotools as io
+    mols = io.read_list(filename)
+    for mol in mols:
+        formula = get_formula(mol)
+        print mol,  formula
 
 def get_coordinates_array(xyz):
     """

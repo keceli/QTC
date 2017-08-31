@@ -796,7 +796,7 @@ def E_QTC(bas, opt, en, freq, parameters):
     from testdb import db
     import qtc
 
-    parameters['input']=bas
+    parameters['input'] = bas
     dbdir = parameters['database']
     anharm = parameters['anharmonic']
 
@@ -804,40 +804,40 @@ def E_QTC(bas, opt, en, freq, parameters):
     zpvetype = 'zpve'
 
     if len(opt) > 1:
-         optprog, optmethod, optbasis  = opt[0], opt[1], opt[2]
-         opt    = 'opt/' + '/'.join([optmethod, optbasis, optprog])
+        optprog, optmethod, optbasis = opt[0], opt[1], opt[2]
+        opt = 'opt/' + '/'.join([optmethod, optbasis, optprog])
     else:
-         optprog, optmethod, optbasis  = None
+        optprog, optmethod, optbasis = None
 
     if len(en) > 1:
-         enprog,  enmethod,  enbasis  =  en[0],  en[1],  en[2]
-         en       = 'energy/' + '/'.join([enmethod, enbasis, enprog])
-         en       = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en, bas + '.ene')
+        enprog, enmethod, enbasis = en[0], en[1], en[2]
+        en = 'energy/' + '/'.join([enmethod, enbasis, enprog])
+        en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en, bas + '.ene')
     else:
-        en  = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
+        en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
         enefile = 'doesntexist'
 
     if freq != None:
-         freqprog, freqmethod, freqbasis  = freq[0], freq[1], freq[2]
-         task = 'freq'
-         if anharm:
-             zpvetype = 'anzpve'
-             task     = 'anharm'
-         freq   = task + '/' + '/'.join([freqmethod, freqbasis, freqprog])
-         freq   = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype) 
+        freqprog, freqmethod, freqbasis = freq[0], freq[1], freq[2]
+        task = 'freq'
+        if anharm:
+            zpvetype = 'anzpve'
+            task = 'anharm'
+        freq = task + '/' + '/'.join([freqmethod, freqbasis, freqprog])
+        freq = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype) 
 
     if not io.check_file(en):
         qtc.main(parameters)
-    E= io.read_file(en).strip()
-    E= float(E)
+    E = io.read_file(en).strip()
+    E = float(E)
     print '{}-    E: {:5g} pulled from: {}'.format(bas, E, en)
 
     if freq != None:
         if not io.check_file(freq):
             qtc.main(parameters)
         if io.check_file(freq):        
-            zpve= io.read_file(freq).strip()
-            zpve= float(zpve)
+            zpve = io.read_file(freq).strip()
+            zpve = float(zpve)
             print '{}- ZPVE: {:5g} pulled from: {}'.format(bas, zpve, freq)
         else:
             zpve = 0.0
