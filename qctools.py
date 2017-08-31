@@ -21,6 +21,7 @@ def get_input(x, template, parameters):
     mol = ob.get_mol(x)
     mult = ob.get_multiplicity(mol)
     nopen = mult - 1
+    natom = ob.get_natom(mol)
     charge = ob.get_charge(mol)
     formula = ob.get_formula(mol)
     geo = ob.get_geo(mol)
@@ -45,6 +46,8 @@ def get_input(x, template, parameters):
         basis = 'cc-pvqz'               
     task    = parameters[   'qctask']
     nproc   = parameters[  'qcnproc']
+    if natom == 1:
+        task = 'energy'
     if task.startswith('gau'):
         task = 'g09'
     if package == 'nwchem':
@@ -56,7 +59,7 @@ def get_input(x, template, parameters):
             task = 'freq'
     elif package == 'gaussian':
         if task.lower().startswith('opt'):
-            task = 'opt'
+            task = 'opt=(maxcyc=50)'
         elif task.lower().startswith('single'):
             task = ''
         elif task.lower().startswith('energy'):
@@ -69,6 +72,9 @@ def get_input(x, template, parameters):
         if method.lower().startswith('ccsd'):
             if nopen > 0:
                 method = 'u'+method
+        if method.lower().startswith('mp2'):
+            if nopen > 0:
+                method = 'r'+method
         if task.lower().startswith('opt'):
             task = 'optg'
         elif task.lower().startswith('single'):
@@ -113,6 +119,8 @@ def get_input(x, template, parameters):
         inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
+        inp = inp.replace(   "QTC(HOF)", str(0))#TODO: Fix, what to do if no HOF
+
         parameters['runthermo'] = False
         if parameters['anharmonic'] == True:
             inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
@@ -121,8 +129,9 @@ def get_input(x, template, parameters):
         inp = inp.replace('QTC(ANHARMLOC)', 'false')
         parameters['runthermo'] = False
     if "QTC(" in inp:
-        print("Error in template file:\n" + inp)
-        return
+        print(66*'#')
+        print("Error in template file: \n" + inp)
+        print(66*'#')
     return inp
 
 
@@ -151,6 +160,14 @@ def parse_qckeyword(parameters, calcindex=0):
     enlevel
     """
     keyword = parameters['qckeyword']
+    keyword = keyword.replace(' ','')
+    keyword = keyword.replace('/adz','/aug-cc-pvdz')
+    keyword = keyword.replace('/atz','/aug-cc-pvtz')
+    keyword = keyword.replace('/aqz','/aug-cc-pvqz')
+    keyword = keyword.replace('/dz','/cc-pvdz')
+    keyword = keyword.replace('/tz','/cc-pvtz')
+    keyword = keyword.replace('/qz','/cc-pvqz')
+    parameters['qckeyword'] = keyword
     xyzdirectory = parameters['xyzpath']
     package = 'nwchem'
     calcs = keyword.split(',')
@@ -555,7 +572,7 @@ def run_extrapolation_keyword(s, parameters):
         method = tokens[1]
     print('Extrapolation formula: {0}\n'.format(formulaline))
     ncalc = len(calcs) - 1
-    energies = [0.] * ncalc
+    e = [0.] * ncalc
     energy = None
     enefile = smilesname + '.ene'  
     inpfile = smilesname + '_' + method  + '.inp'  
@@ -566,7 +583,7 @@ def run_extrapolation_keyword(s, parameters):
         if task.startswith('opt'):
             optdirectory = qcdirectory
         enepath = io.join_path(*[qcdirectory, enefile])
-        energies[i] = float(io.read_file(enepath))     
+        e[i] = float(io.read_file(enepath))     
     exec(formulaline)
     if energy:
         extdir = io.fix_path(io.join_path(*[optdirectory,'extrapolation',method]))
