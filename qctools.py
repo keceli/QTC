@@ -134,6 +134,20 @@ def get_input(x, template, parameters):
         print(66*'#')
     return inp
 
+def update_qckeyword(keyword):
+    """
+    Update parameters['qckeyword']  to minimize the differences
+    based on user input.
+    """
+    keyword = keyword.lower()
+    keyword = keyword.replace(' ','')
+    keyword = keyword.replace('/adz','/aug-cc-pvdz')
+    keyword = keyword.replace('/atz','/aug-cc-pvtz')
+    keyword = keyword.replace('/aqz','/aug-cc-pvqz')
+    keyword = keyword.replace('/dz','/cc-pvdz')
+    keyword = keyword.replace('/tz','/cc-pvtz')
+    keyword = keyword.replace('/qz','/cc-pvqz')
+    return keyword
 
 def parse_qckeyword(parameters, calcindex=0):
     """
@@ -160,14 +174,6 @@ def parse_qckeyword(parameters, calcindex=0):
     enlevel
     """
     keyword = parameters['qckeyword']
-    keyword = keyword.replace(' ','')
-    keyword = keyword.replace('/adz','/aug-cc-pvdz')
-    keyword = keyword.replace('/atz','/aug-cc-pvtz')
-    keyword = keyword.replace('/aqz','/aug-cc-pvqz')
-    keyword = keyword.replace('/dz','/cc-pvdz')
-    keyword = keyword.replace('/tz','/cc-pvtz')
-    keyword = keyword.replace('/qz','/cc-pvqz')
-    parameters['qckeyword'] = keyword
     xyzdirectory = parameters['xyzpath']
     package = 'nwchem'
     calcs = keyword.split(',')

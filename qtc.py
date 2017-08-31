@@ -27,6 +27,13 @@ __logo__ = """
 For computation of accurate thermochemistry
 By ECP-PACC team                                  
 """
+"""
+TODO: 
+1)When optimization fails, restart from the last geometry
+ 2) Remove space from qckeyword:  done
+ 3) Gaussian molpro bug for deltaH: 
+ 4) Double prll fails
+"""
 def get_args():
     """
     Returns args object that contains command line options.
@@ -138,6 +145,7 @@ def run(s):
     """
     A driver function to run quantum chemistry and thermochemistry calculations for a given molecule object identified by a SMILES or InChI string.
     It uses and modifies 'parameters', which is defined as a global variable.
+    Not pure.
     """
     printp("***************************************\n")
     global parameters
@@ -276,7 +284,7 @@ def main(arg_update={}):
     for key in arg_update:
         parameters[key] = arg_update[key]
     if parameters['qckeyword']:
-        parameters['qckeyword'] = parameters['qckeyword'].lower()
+        parameters['qckeyword'] = qc.update_qckeyword(parameters['qckeyword'])
         ncalc = len(parameters['qckeyword'].split(','))
     else:
         ncalc = 1
