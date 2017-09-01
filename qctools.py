@@ -32,78 +32,11 @@ def get_input(x, template, parameters):
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
-    heat = parameters['heat']
-    if basis == 'adz':
-        basis = 'aug-cc-pvdz'
-    elif basis == 'atz':
-        basis = 'aug-cc-pvtz'
-    elif basis == 'aqz':
-        basis = 'aug-cc-pvqz' 
-    elif basis == 'dz':
-        basis = 'cc-pvdz'
-    elif basis == 'tz':
-        basis = 'cc-pvtz'
-    elif basis == 'qz':
-        basis = 'cc-pvqz'               
-    task    = parameters[   'qctask']
-    nproc   = parameters[  'qcnproc']
+    heat = parameters['heat']          
+    task    = parameters['qctask']
+    nproc   = parameters['qcnproc']
     if natom == 1:
         task = 'energy'
-    if task.startswith('gau'):
-        task = 'g09'
-    if package == 'nwchem':
-        if task == 'opt':
-            task = 'optimize'
-        if ('cc') in method or method.startswith('tce') or 'mp' in method:
-            task = 'tce ' + task
-            method = method.replace('tce','')
-        else:
-            task = '{0} {1}'.format(method, task) 
-    elif package == 'gaussian':
-        if task == 'opt':
-            task = 'opt=(maxcyc=50)'
-        elif task == 'energy':
-            task = ''
-        elif task == 'anharm':
-            task = 'freq=(anharm,vibrot)'
-    elif package == 'molpro':
-        if method.lower().startswith('ccsd'):
-            if nopen > 0:
-                method = 'u'+method
-        if method.lower().startswith('mp2'):
-            if nopen > 0:
-                method = 'r'+method
-        if task.lower().startswith('opt'):
-            task = 'optg'
-        elif task.lower().startswith('single'):
-            task = ''
-        elif task.lower().startswith('energy'):
-            task = ''
-        elif task.lower().startswith('freq'):
-            task = 'frequencies'
-
-    if nopen == 0:
-        scftype = 'RHF'
-        rhftype = 'RHF'
-    else:
-        scftype = 'UHF'
-        rhftype = 'ROHF'
-    inp = template.replace("QTC(CHARGE)", str(charge))
-    inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
-    inp = inp.replace("QTC(NOPEN)", str(nopen))
-    inp = inp.replace("QTC(UNIQUENAME)", uniquename)
-    inp = inp.replace("QTC(SMILESNAME)", smilesname)
-    inp = inp.replace("QTC(ZMAT)", zmat)
-    inp = inp.replace("QTC(GEO)", geo)
-    inp = inp.replace("QTC(XYZ)", xyz)
-    inp = inp.replace("QTC(FORMULA)", formula)
-    inp = inp.replace("QTC(METHOD)", method)
-    inp = inp.replace("QTC(BASIS)", basis)
-    inp = inp.replace("QTC(TASK)", task)
-    inp = inp.replace("QTC(PACKAGE)", package)
-    inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
-    inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
-    inp = inp.replace("QTC(NPROC)", str(nproc))
     if task == 'torsscan':
         optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
         if optpackage != 'molpro' or optpackage.startswith('g'):
@@ -113,7 +46,7 @@ def get_input(x, template, parameters):
         #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
         #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
-        inp = inp.replace("QTC(TSPACKAGE)", optpackage)
+        inp = template.replace("QTC(TSPACKAGE)", optpackage)
         inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
         inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
@@ -128,8 +61,61 @@ def get_input(x, template, parameters):
             inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
         else:
             inp = inp.replace('QTC(ANHARMLOC)', 'false')
-        inp = inp.replace('QTC(ANHARMLOC)', 'false')
-        parameters['runthermo'] = False
+    else:
+        if package == 'nwchem':
+            if task == 'opt':
+                task = 'optimize'
+            if ('cc') in method or method.startswith('tce') or 'mp' in method:
+                task = 'tce ' + task
+                method = method.replace('tce','')
+            else:
+                task = '{0} {1}'.format(method, task) 
+        elif package == 'gaussian':
+            if task == 'opt':
+                task = 'opt=(maxcyc=50)'
+            elif task == 'energy':
+                task = ''
+            elif task == 'anharm':
+                task = 'freq=(anharm,vibrot)'
+        elif package == 'molpro':
+            if method.lower().startswith('ccsd'):
+                if nopen > 0:
+                    method = 'u'+method
+            if method.lower().startswith('mp2'):
+                if nopen > 0:
+                    method = 'r'+method
+            if task.lower().startswith('opt'):
+                task = 'optg'
+            elif task.lower().startswith('single'):
+                task = ''
+            elif task.lower().startswith('energy'):
+                task = ''
+            elif task.lower().startswith('freq'):
+                task = 'frequencies'
+    
+        if nopen == 0:
+            scftype = 'RHF'
+            rhftype = 'RHF'
+        else:
+            scftype = 'UHF'
+            rhftype = 'ROHF'
+        inp = template.replace("QTC(CHARGE)", str(charge))
+        inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
+        inp = inp.replace("QTC(NOPEN)", str(nopen))
+        inp = inp.replace("QTC(UNIQUENAME)", uniquename)
+        inp = inp.replace("QTC(SMILESNAME)", smilesname)
+        inp = inp.replace("QTC(ZMAT)", zmat)
+        inp = inp.replace("QTC(GEO)", geo)
+        inp = inp.replace("QTC(XYZ)", xyz)
+        inp = inp.replace("QTC(FORMULA)", formula)
+        inp = inp.replace("QTC(METHOD)", method)
+        inp = inp.replace("QTC(BASIS)", basis)
+        inp = inp.replace("QTC(TASK)", task)
+        inp = inp.replace("QTC(PACKAGE)", package)
+        inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
+        inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
+        inp = inp.replace("QTC(NPROC)", str(nproc))   
+    inp = inp.replace('QTC(ANHARMLOC)', 'false')
     if "QTC(" in inp:
         print(66*'#')
         print("Error in template file: \n" + inp)
@@ -500,7 +486,7 @@ def get_symbol(atomno):
     return syms[atomno]
 
 
-def run(s, parameters, mult=None):
+def run(mol, parameters, mult=None):
     """
     Runs qc, returns a string specifying the status of the calculation.
     """
@@ -508,7 +494,6 @@ def run(s, parameters, mult=None):
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
     task = parameters['qctask']
-    mol = ob.get_mol(s, make3D=True)
     msg = ''
     if mult is None:
         mult = ob.get_multiplicity(mol)
@@ -518,7 +503,7 @@ def run(s, parameters, mult=None):
     inptext = get_input(mol, tmp, parameters)
     if task.startswith('tors'):
         package = task
-    prefix = ob.get_smiles_filename(s) + '_' + package
+    prefix = ob.get_smiles_filename(mol) + '_' + package
     inpfile = prefix + '.inp'
     outfile = prefix + '.out'
     if io.check_file(outfile, timeout=1):
@@ -538,7 +523,7 @@ def run(s, parameters, mult=None):
         run = True
     if run:
         if task == 'composite' :
-            msg += run_extrapolation(s, parameters)
+            msg += run_extrapolation(mol, parameters)
         else:
             io.write_file(inptext, inpfile)
             if io.check_file(inpfile, timeout=1):
@@ -562,17 +547,17 @@ def run(s, parameters, mult=None):
     return msg
 
 
-def run_extrapolation(s,parameters):
+def run_extrapolation(mol,parameters):
     if parameters['qckeyword']:
-        msg = run_extrapolation_keyword(s,parameters)
+        msg = run_extrapolation_keyword(mol,parameters)
     elif parameters['qctemplate']:
-        msg = run_extrapolation_template(s, parameters)
+        msg = run_extrapolation_template(mol, parameters)
     else:
         msg = 'Can not run extrapolation, you need to specify qckeyword with -k or qctemplate with -t. \n'
     return msg
 
 
-def run_extrapolation_keyword(s, parameters):
+def run_extrapolation_keyword(mol, parameters):
     """
     Parses qckeyword for composite method. 
     'opt/mp2/cc-pvdz/gaussian,freq/mp2/cc-pvtz/molpro,sp/mp2/cc-pvqz,composite/cbs-dtq/energy=0.1 * E[0] + 0.4 * E[1] + 0.5 * E[2]'
@@ -581,7 +566,7 @@ def run_extrapolation_keyword(s, parameters):
     formula = parameters['formula'][0]
     method = parameters['qcmethod']
     msg = ''
-    smilesname = ob.get_smiles_filename(s)
+    smilesname = ob.get_smiles_filename(mol)
     calcs = keyword.split(',')
     print('Composite energy formula: {0}\n'.format(formula))
     ncalc = len(calcs) 
