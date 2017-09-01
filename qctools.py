@@ -100,6 +100,7 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(METHOD)", method)
     inp = inp.replace("QTC(BASIS)", basis)
     inp = inp.replace("QTC(TASK)", task)
+    inp = inp.replace("QTC(PACKAGE)", package)
     inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
     inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
     inp = inp.replace("QTC(NPROC)", str(nproc))

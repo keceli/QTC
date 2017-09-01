@@ -43,7 +43,7 @@ Multidim scan (2 or 3D): auto
 ------------------------------------------------
 Opt            :               : 
 Opt_1          : QTC(TSPACKAGE): QTC(TSMETHOD)/QTC(TSBASIS)
-1dTau          : QTC(TASK)     : QTC(METHOD)/QTC(BASIS)  
+1dTau          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)  
 MdTau          :               :
 Symm           :               :
 HL             :               :
