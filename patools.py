@@ -98,14 +98,14 @@ def gaussian_energy(lines,method=''):
         method = gaussian_method(lines)
     if 'CCSD' in method or 'MP' in method:
         method = method.replace('(','\(').replace(')','\)')
-        energ  = method + '=([u,U,r,R]*[\w,\.,\s,-]*)'
+        energ  = method + '=([u,U,r,R]*[\w,\.,\s,-,D,\+]*)'
         energ  = re.findall(energ,lines.replace('\n','').replace(' ',''))
-        return (method,float(energ[-1].replace('\n','').replace(' ','')))
+        return (method,float(energ[-1].replace('D','E').replace('\n','').replace(' ','')))
     else:
        # energ = '(\S+)\s*A\.U\.'
-        energ = 'E\([u,U,r,R]*' + method + '\)\s*=\s*([\d,\-,\.]*)'
+        energ = 'E\([u,U,r,R]*' + method + '\)\s*=\s*([\d,\-,\.,D,\+]*)'
         energ = re.findall(energ,lines)
-        return (method, float(energ[-1]))
+        return (method, float(energ[-1].replace('D','E')))
     return 
 
 def gaussian_opt_zmat_params(lines):
