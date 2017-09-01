@@ -32,6 +32,7 @@ def get_input(x, template, parameters):
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
+    heat = parameters['heat']
     if basis == 'adz':
         basis = 'aug-cc-pvdz'
     elif basis == 'atz':
@@ -116,8 +117,10 @@ def get_input(x, template, parameters):
         inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
-        #inp = inp.replace(   "QTC(HOF)", str(0))#TODO: Fix, what to do if no HOF
-        inp = inp.replace(   "QTC(HOF)", 'false')#TODO: Fix, what to do if no HOF
+        if heat:
+            inp = inp.replace(   "QTC(HOF)", heat)
+        else:
+            inp = inp.replace(   "QTC(HOF)", 'false')
 
         parameters['runthermo'] = False
         if parameters['anharmonic'] == True:
@@ -503,6 +506,7 @@ def run(s, parameters, mult=None):
     package = parameters['qcpackage'].lower()
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
+    task = parameters['qctask']
     mol = ob.get_mol(s, make3D=True)
     msg = ''
     if mult is None:
@@ -530,7 +534,7 @@ def run(s, parameters, mult=None):
     else:
         run = True
     if run:
-        if package.startswith('ext') or package.startswith('cbs'):
+        if task == 'composite' :
             msg += run_extrapolation(s, parameters)
         else:
             io.write_file(inptext, inpfile)
@@ -571,9 +575,9 @@ def run_extrapolation_keyword(s, parameters):
     'opt/mp2/cc-pvdz/gaussian,freq/mp2/cc-pvtz/molpro,sp/mp2/cc-pvqz,composite/cbs-dtq/energy=0.1 * E[0] + 0.4 * E[1] + 0.5 * E[2]'
     """
     keyword = parameters['qckeyword']
-    formula = parameters['formula']
+    formula = parameters['formula'][0]
     method = parameters['qcmethod']
-    msg = 'Formula = {}'.format(formula)
+    msg = ''
     smilesname = ob.get_smiles_filename(s)
     calcs = keyword.split(',')
     print('Composite energy formula: {0}\n'.format(formula))
@@ -584,10 +588,12 @@ def run_extrapolation_keyword(s, parameters):
     inpfile = smilesname + '_' + method  + '.inp'  
     for i in range(ncalc):
         parse_qckeyword(parameters, i)
-        enedir = parameters['qcdirectory']
+        smilesdir = parameters['smilesdir']
+        enedir  = io.join_path(*[smilesdir,parameters['qcdirectory']])
         enepath = io.join_path(*[enedir, enefile])
-        e[i] = float(io.read_file(enepath))
-        msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
+        if io.check_file(enepath):
+            e[i] = float(io.read_file(enepath))
+            msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
     print(msg)
     exec(formula)
     if energy:

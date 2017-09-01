@@ -169,7 +169,7 @@ def run(s):
     if not package:
         if parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
-    elif not package.startswith('extrap'):
+    elif not package.startswith('compos'):
         templatename = package + '_template' + '.txt'
         parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
     if parameters['writefiles']:
@@ -229,8 +229,8 @@ def run(s):
         printp(msg)
         msg = ''
     if parseqc:
-        print parameters['qcpackage'] 
-        if parameters['qckeyword'].split(',')[parameters['calcindex']].startswith('extrap'):
+        printp('Parsing ...')
+        if parameters['qctask'] == 'composite' or parameters['qctask'] == 'torsscan':
             pass
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput,aslines=False)
@@ -250,11 +250,10 @@ def run(s):
     if runthermo:
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
-        msg += "Parsing qc logfile '{0}'\n".format(io.get_path(qcoutput))
-        if parameters['qcpackage'] == 'torsscan':
+        if parameters['qctask'] == 'torsscan':
             msg += io.read_file(io.get_path(qcoutput))
         else: 
-            if parameters['qckeyword'].split(',')[parameters['calcindex']].startswith('extrap'):
+            if parameters['qckeyword'].split(',')[parameters['calcindex']].startswith('comp'):
                 d = {}
                 freqs = []
             else:
@@ -265,6 +264,7 @@ def run(s):
             hf0, hfset = hf.main_keyword(mol,parameters)
             hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
+            parameters['heat'] = hf0
             io.write_file(hftxt,s + '.hf0k')
             if len(freqs) > 0:
                 msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters,xmat=xmat)
@@ -326,6 +326,7 @@ def main(arg_update={}):
             parameters['qcdirectory'] = ''
             parameters['optlevel'] = ''
             parameters['freqlevel'] = ''
+            parameters['heat'] = None
             for i in range(ncalc):
                 parameters['calcindex'] = i
                 if parameters['qckeyword']:

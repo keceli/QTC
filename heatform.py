@@ -870,8 +870,8 @@ def main_keyword(mol,parameters):
             freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         elif key.startswith('en'):
             enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-        elif key.startswith('extra'):
-            enlevel  = ['extrapolation' + '/' + key.split('/')[1]]
+        elif key.startswith('comp'):
+            enlevel  = ['composite' + '/' + key.split('/')[1]]
             extrap   = True
     if not enlevel:
         enlevel = ['']
