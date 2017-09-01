@@ -100,10 +100,11 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(METHOD)", method)
     inp = inp.replace("QTC(BASIS)", basis)
     inp = inp.replace("QTC(TASK)", task)
+    inp = inp.replace("QTC(PACKAGE)", package)
     inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
     inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
     inp = inp.replace("QTC(NPROC)", str(nproc))
-    if package == 'torsscan':
+    if task == 'torsscan':
         optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
         if optpackage != 'molpro' or optpackage.startswith('g'):
             optpackage = 'g09'
@@ -118,7 +119,7 @@ def get_input(x, template, parameters):
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
-            inp = inp.replace(   "QTC(HOF)", heat)
+            inp = inp.replace(   "QTC(HOF)", str(heat))
         else:
             inp = inp.replace(   "QTC(HOF)", 'false')
 
@@ -515,6 +516,8 @@ def run(s, parameters, mult=None):
         ob.set_mult(mol, mult)
     tmp = io.read_file(template)
     inptext = get_input(mol, tmp, parameters)
+    if task.startswith('tors'):
+        package = task
     prefix = ob.get_smiles_filename(s) + '_' + package
     inpfile = prefix + '.inp'
     outfile = prefix + '.out'

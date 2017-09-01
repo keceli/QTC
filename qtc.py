@@ -154,11 +154,14 @@ def run(s):
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
     package = parameters['qcpackage'].lower()
+    task    = parameters['qctask'].lower()
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
         if qcnproc > 1:
-            if package.startswith('nwc'):
+            if task.startswith('tors'):
+                parameters['qcexe'] = parameters['torsscan']
+            elif package.startswith('nwc'):
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
             elif package.startswith('mol'):
                 parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
@@ -169,6 +172,9 @@ def run(s):
     if not package:
         if parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
+    elif task.startswith('tors'):
+        templatename = task + '_template' + '.txt'
+        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
     elif not package.startswith('compos'):
         templatename = package + '_template' + '.txt'
         parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
