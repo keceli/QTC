@@ -230,8 +230,9 @@ def run(s):
         msg = ''
     if parseqc:
         printp('Parsing ...')
+        print parameters['qctask'] 
         if parameters['qctask'] == 'composite' or parameters['qctask'] == 'torsscan':
-            pass
+            printp('Nothing to parse for {}'.format(parameters['qctask'] ))
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput,aslines=False)
             if qc.check_output(out):

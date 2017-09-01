@@ -581,12 +581,13 @@ def run_extrapolation_keyword(s, parameters):
     smilesname = ob.get_smiles_filename(s)
     calcs = keyword.split(',')
     print('Composite energy formula: {0}\n'.format(formula))
-    ncalc = len(calcs) - 1
+    ncalc = len(calcs) 
+    calcindex = parameters['calcindex']
     e = [0.] * ncalc
     energy = None
     enefile = smilesname + '.ene'  
     inpfile = smilesname + '_' + method  + '.inp'  
-    for i in range(ncalc):
+    for i in range(0,calcindex):
         parse_qckeyword(parameters, i)
         smilesdir = parameters['smilesdir']
         enedir  = io.join_path(*[smilesdir,parameters['qcdirectory']])
@@ -595,12 +596,14 @@ def run_extrapolation_keyword(s, parameters):
             e[i] = float(io.read_file(enepath))
             msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
     print(msg)
+    msg = ''
     exec(formula)
     if energy:
         io.write_file(str(energy),enefile )
         io.write_file(msg,inpfile )
         print('Composite energy: {}\n'.format(energy))
         print('Energy file: "{}"\n'.format(io.get_path(enefile)))
+    parse_qckeyword(parameters, calcindex)
     return msg
 
 def run_extrapolation_template(s, parameters):
