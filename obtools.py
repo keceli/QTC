@@ -48,7 +48,7 @@ def get_format(s):
     return frm
 
 
-def get_mol(s, make3D=True):
+def get_mol(s, make3D=False):
     """
     Returns open-babel mol object from a given inchi or smiles string
     >>> mol = get_mol('[O][O]')

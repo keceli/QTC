@@ -154,9 +154,10 @@ def run(s):
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
     package = parameters['qcpackage'].lower()
-    task    = parameters['qctask'].lower()
+    task    = parameters['qctask']
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
+    optdir = parameters['optdir']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
         if qcnproc > 1:
             if task.startswith('tors'):
@@ -180,9 +181,9 @@ def run(s):
         parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
     if parameters['writefiles']:
         parameters['parseqc'] = True
-    mult = ob.get_mult(s)
-    formula = ob.get_formula(s)
-    mol = ob.get_mol(s)
+    mol = ob.get_mol(s,make3D=True)
+    mult = ob.get_mult(mol)
+    formula = ob.get_formula(mol)
     msg = "Formula = {0}\n".format(formula)
     msg += "SMILES = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
@@ -200,12 +201,16 @@ def run(s):
     qcscript = io.get_path(parameters['qcscript'])
     qcoutput = smilesname + '_' + qcpackage + '.out'
     xyzpath = parameters['xyzpath']
-    xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
+    xyzfile = ''
+    if xyzpath:
+        xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
+    elif optdir:
+        xyzfile = qc.find_xyzfile(optdir, smilesdir)
     if xyzfile:
         msg += "XYZ file = '{0}'\n".format(xyzfile)
         xyz = io.read_file(xyzfile)
         coords = ob.get_coordinates_array(xyz)
-        mol = ob.set_xyz(mol, coords)
+        mol = ob.set_xyz(mol, coords)  
     printp(msg)
     msg = ''
     cwd = io.pwd()
@@ -258,7 +263,7 @@ def run(s):
         groupstext = tc.get_new_groups()
         io.write_file(groupstext, 'new.groups')
         if parameters['qctask'] == 'torsscan':
-            msg += io.read_file(io.get_path(qcoutput))
+            printp('TorsScan TODO')
         else: 
             if parameters['qckeyword'].split(',')[parameters['calcindex']].startswith('comp'):
                 d = {}
