@@ -147,7 +147,9 @@ def run(s):
     It uses and modifies 'parameters', which is defined as a global variable.
     Not pure.
     """
-    printp("***************************************\n")
+    printp('\n')
+    printp(100*'*')
+    printp('\n')
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
@@ -155,7 +157,6 @@ def run(s):
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
-        printp('Quantum chemistry package: {0}'.format(package))
         if qcnproc > 1:
             if package.startswith('nwc'):
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
@@ -176,9 +177,13 @@ def run(s):
     mult = ob.get_mult(s)
     formula = ob.get_formula(s)
     mol = ob.get_mol(s)
-    msg = "SMILES = {0}\n".format(s)
-    msg += "Formula = {0}\n".format(formula)
+    msg = "Formula = {0}\n".format(formula)
+    msg += "SMILES = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
+    msg += 'Task = {0}\n'.format(parameters['qctask'])
+    msg += 'Method = {0}\n'.format(parameters['qcmethod'])
+    msg += 'Basis = {0}\n'.format(parameters['qcbasis'])
+    msg += 'Package = {0}\n'.format(parameters['qcpackage'])  
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
     smilesdir = io.join_path(parameters['database'], smilesdir)
@@ -207,10 +212,9 @@ def run(s):
         return -1
     printp(msg)
     msg = ''
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'extrapolation', 'torsscan']          
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']          
     if runqc:
         if qcpackage in available_packages:
-            print('QC package = {0}'.format(qcpackage))
             msg += qc.run(mol, parameters, mult)
         elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"
@@ -314,15 +318,25 @@ def main(arg_update={}):
     printp("QTC: Number of species       = {0}".format(len(mylist)))
     init = timer()
     printp("QTC: Initialization time (s) = {0:.2f}".format(init-start))
-    for i in range(ncalc):
-        parameters['calcindex'] = i
-        if parameters['qckeyword']:
-            qc.parse_qckeyword(parameters, calcindex=i)
-        if nproc > 1:
+    if nproc == 1:
+        for s in mylist:
+            parameters['optdir'] = ''
+            parameters['freqdir'] = ''
+            parameters['anharmdir'] = ''
+            parameters['qcdirectory'] = ''
+            parameters['optlevel'] = ''
+            parameters['freqlevel'] = ''
+            for i in range(ncalc):
+                parameters['calcindex'] = i
+                if parameters['qckeyword']:
+                    qc.parse_qckeyword(parameters, calcindex=i)
+                run(s)
+    else:
+        for i in range(ncalc):
+            parameters['calcindex'] = i
+            if parameters['qckeyword']:
+                qc.parse_qckeyword(parameters, calcindex=i)
             pool = multiprocessing.Pool(nproc)
-            pool.map(run, mylist)
-        else:
-            map(run, mylist)
     end = timer()
     printp("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     printp("QTC: Total time (s)          = {0:.2f}".format(end-start))
