@@ -119,7 +119,8 @@ def get_input(x, template, parameters):
         inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
-        inp = inp.replace(   "QTC(HOF)", str(0))#TODO: Fix, what to do if no HOF
+        #inp = inp.replace(   "QTC(HOF)", str(0))#TODO: Fix, what to do if no HOF
+        inp = inp.replace(   "QTC(HOF)", 'false')#TODO: Fix, what to do if no HOF
 
         parameters['runthermo'] = False
         if parameters['anharmonic'] == True:
