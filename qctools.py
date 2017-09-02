@@ -37,6 +37,7 @@ def get_input(x, template, parameters):
     nproc   = parameters['qcnproc']
     if natom == 1:
         task = 'energy'
+    inp = template
     if task == 'torsscan':
         optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
         if optpackage != 'molpro' or optpackage.startswith('g'):
@@ -46,7 +47,7 @@ def get_input(x, template, parameters):
         #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
         #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
-        inp = template.replace("QTC(TSPACKAGE)", optpackage)
+        inp = inp.replace("QTC(TSPACKAGE)", optpackage)
         inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
         inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
@@ -93,28 +94,28 @@ def get_input(x, template, parameters):
             elif task.lower().startswith('freq'):
                 task = 'frequencies'
     
-        if nopen == 0:
-            scftype = 'RHF'
-            rhftype = 'RHF'
-        else:
-            scftype = 'UHF'
-            rhftype = 'ROHF'
-        inp = template.replace("QTC(CHARGE)", str(charge))
-        inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
-        inp = inp.replace("QTC(NOPEN)", str(nopen))
-        inp = inp.replace("QTC(UNIQUENAME)", uniquename)
-        inp = inp.replace("QTC(SMILESNAME)", smilesname)
-        inp = inp.replace("QTC(ZMAT)", zmat)
-        inp = inp.replace("QTC(GEO)", geo)
-        inp = inp.replace("QTC(XYZ)", xyz)
-        inp = inp.replace("QTC(FORMULA)", formula)
-        inp = inp.replace("QTC(METHOD)", method)
-        inp = inp.replace("QTC(BASIS)", basis)
-        inp = inp.replace("QTC(TASK)", task)
-        inp = inp.replace("QTC(PACKAGE)", package)
-        inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
-        inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
-        inp = inp.replace("QTC(NPROC)", str(nproc))   
+    if nopen == 0:
+        scftype = 'RHF'
+        rhftype = 'RHF'
+    else:
+        scftype = 'UHF'
+        rhftype = 'ROHF'
+    inp = inp.replace("QTC(CHARGE)", str(charge))
+    inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
+    inp = inp.replace("QTC(NOPEN)", str(nopen))
+    inp = inp.replace("QTC(UNIQUENAME)", uniquename)
+    inp = inp.replace("QTC(SMILESNAME)", smilesname)
+    inp = inp.replace("QTC(ZMAT)", zmat)
+    inp = inp.replace("QTC(GEO)", geo)
+    inp = inp.replace("QTC(XYZ)", xyz)
+    inp = inp.replace("QTC(FORMULA)", formula)
+    inp = inp.replace("QTC(METHOD)", method)
+    inp = inp.replace("QTC(BASIS)", basis)
+    inp = inp.replace("QTC(TASK)", task)
+    inp = inp.replace("QTC(PACKAGE)", package)
+    inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
+    inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
+    inp = inp.replace("QTC(NPROC)", str(nproc))   
     inp = inp.replace('QTC(ANHARMLOC)', 'false')
     if "QTC(" in inp:
         print(66*'#')
@@ -490,7 +491,7 @@ def run(mol, parameters, mult=None):
     """
     Runs qc, returns a string specifying the status of the calculation.
     """
-    package = parameters['qcpackage'].lower()
+    package = parameters['qcpackage']
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
     task = parameters['qctask']
