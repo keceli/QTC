@@ -98,9 +98,11 @@ def gaussian_energy(lines,method=''):
         method = gaussian_method(lines)
     if 'CCSD' in method or 'MP' in method:
         method = method.replace('(','\(').replace(')','\)')
-        energ  = method + '=([u,U,r,R]*[\w,\.,\s,-,D,\+]*)'
+    #    energ  = method + '=([u,U,r,R]*[\w,\.,\s,-,D,\+]*)'
+        energ  = method + '=([u,U,r,R]*[\w,\.,\s,-]*)'
         energ  = re.findall(energ,lines.replace('\n','').replace(' ',''))
-        return (method,float(energ[-1].replace('D','E').replace('\n','').replace(' ','')))
+    #    return (method,float(energ[-1].replace('D','E').replace('\n','').replace(' ','')))
+        return (method,float(energ[-1].replace('\n','').replace(' ','')))
     else:
        # energ = '(\S+)\s*A\.U\.'
         energ = 'E\([u,U,r,R]*' + method + '\)\s*=\s*([\d,\-,\.,D,\+]*)'
