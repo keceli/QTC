@@ -216,7 +216,7 @@ def parse_qckeyword(parameters, calcindex=0):
         elif task.startswith('sp') or task.startswith('single') or task.startswith('ene'):
             task = 'energy'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
-            parameters['splevel'] = '{}/{}/{}'.format(package,method,basis)
+            parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('tors'):
             task = 'torsscan'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,freqdir,anharmdir,task,method,basis,package]))
@@ -675,16 +675,16 @@ def find_xyzfile(xyzpath,smilesdir):
         xyzfile = xyzpath
     elif io.check_file(io.join_path(*(smilesdir,xyzpath))):
         xyzfile = io.join_path(*(smilesdir,xyzpath))
-    elif xyzpath and io.check_dir(xyzpath):
+    elif io.check_dir(xyzpath):
         try:
-            xyzfile = next(io.find_files(xyzpath, '*.xyz'))
-        except StopIteration:
+            xyzfile = io.find_files(xyzpath, '*.xyz')[0]
+        except:
             pass
     elif xyzpath and io.check_dir(io.join_path(*(smilesdir,xyzpath))):
         xyzpath = io.join_path(*(smilesdir,xyzpath))
         try:
-            xyzfile = next(io.find_files(xyzpath, '*.xyz'))
-        except StopIteration:
+            xyzfile = io.find_files(xyzpath, '*.xyz')[0]
+        except:
             pass
     return xyzfile 
 

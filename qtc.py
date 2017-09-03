@@ -204,13 +204,19 @@ def run(s):
     xyzfile = ''
     if xyzpath:
         xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
+        msg += 'xyzpath = {0}\n'.format(xyzpath)
     elif optdir:
-        xyzfile = qc.find_xyzfile(optdir, smilesdir)
+        xyzfilename = smilesname + '.xyz'
+        msg += 'Optdir = {0}\n'.format(optdir)
+        if io.check_file(io.join_path(*[smilesdir,optdir,xyzfilename])):
+            xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
     if xyzfile:
         msg += "XYZ file = '{0}'\n".format(xyzfile)
         xyz = io.read_file(xyzfile)
         coords = ob.get_coordinates_array(xyz)
-        mol = ob.set_xyz(mol, coords)  
+        mol = ob.set_xyz(mol, coords)
+    else:
+        msg += "XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath)
     printp(msg)
     msg = ''
     cwd = io.pwd()
@@ -274,7 +280,7 @@ def run(s):
                 freqs = next(db.gen_dict_extract('harmonic frequencies',d))
                 xmat   = next(db.gen_dict_extract('xmat',d))
             hf0, hfset = hf.main_keyword(mol,parameters)
-            hftxt  = 'Energy (kcal)\tBasis\n----------------------------------'
+            hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
             parameters['heat'] = hf0
             io.write_file(hftxt,s + '.hf0k')
