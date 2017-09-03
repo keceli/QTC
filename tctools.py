@@ -518,7 +518,7 @@ def write_chemkin_polynomial(mol, xyz, freqs, deltaH,parameters, xmat=[], zpe=0.
     msg += run_pac99(name)
     msg += 'Converting to chemkin format.\n'
     chemkinfile = name + '.ckin'
-    msg += 'Writing chemking file {0}.\n'.format(chemkinfile)
+    msg += 'Writing chemkin file {0}.\n'.format(chemkinfile)
     try:
         msg += write_chemkin_file(deltaH, tag, name, chemkinfile)
     except:
