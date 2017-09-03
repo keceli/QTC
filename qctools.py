@@ -40,14 +40,14 @@ def get_input(x, template, parameters):
     inp = template
     if task == 'torsscan':
         #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
+        #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
         if len(parameters['optlevel'].split('/')) > 1:
+            optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
             if optpackage != 'molpro' or optpackage.startswith('g'):
                 optpackage = 'g09'
             if optpackage.startswith('gau'):
                 optpackage = 'g09'
-        #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
-        #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
-            optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
             inp = inp.replace("QTC(TSPACKAGE)", optpackage)
             inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
             inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
