@@ -82,7 +82,7 @@ def pwd():
     return os.getcwd()
 
 
-def find_files(directory, pattern):
+def find_files_recursive(directory, pattern):
     """
     Yields files in a directory (including subdirectories) with a given pattern
     https://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python
@@ -93,7 +93,14 @@ def find_files(directory, pattern):
             if fnmatch.fnmatch(basename, pattern):
                 filename = os.path.join(root, basename)
                 yield filename
-
+                
+def find_files(directory,pattern):
+    """
+    Returns a list of files that matches the pattern in a given directory
+    """
+    import glob
+    files = glob.glob(directory + '/' + pattern)
+    return files
                 
 def join_path(*paths):
     """
