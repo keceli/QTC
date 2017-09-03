@@ -41,7 +41,7 @@ Multidim scan (2 or 3D): auto
 ------------------------------------------------ 
    Module      :    Program    :      Theory
 ------------------------------------------------
-Opt            :               : 
+Opt            : QTC(TEST1)    : QTC(TEST2)/QTC(TEST3)
 Opt_1          : QTC(TSPACKAGE): QTC(TSMETHOD)/QTC(TSBASIS)
 1dTau          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)  
 MdTau          :               :

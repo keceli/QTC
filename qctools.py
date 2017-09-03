@@ -39,17 +39,28 @@ def get_input(x, template, parameters):
         task = 'energy'
     inp = template
     if task == 'torsscan':
-        optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
-        if optpackage != 'molpro' or optpackage.startswith('g'):
-            optpackage = 'g09'
-        if optpackage.startswith('gau'):
-            optpackage = 'g09'
+        #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        if len(parameters['optlevel'].split('/')) > 1:
+            if optpackage != 'molpro' or optpackage.startswith('g'):
+                optpackage = 'g09'
+            if optpackage.startswith('gau'):
+                optpackage = 'g09'
         #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
-        #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
-        inp = inp.replace("QTC(TSPACKAGE)", optpackage)
-        inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
-        inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
+            optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
+            inp = inp.replace("QTC(TSPACKAGE)", optpackage)
+            inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
+            inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
+            inp = inp.replace(    "QTC(TEST1)",         '')
+            inp = inp.replace(    "QTC(TEST2)",         '')
+            inp = inp.replace(    "QTC(TEST3)",         '')
+        else:
+            inp = inp.replace("QTC(TSPACKAGE)",    package)
+            inp = inp.replace( "QTC(TSMETHOD)",     method)
+            inp = inp.replace(  "QTC(TSBASIS)",      basis)
+            inp = inp.replace(    "QTC(TEST1)",    package)
+            inp = inp.replace(    "QTC(TEST2)",     method)
+            inp = inp.replace(    "QTC(TEST3)",      basis)
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
@@ -220,8 +231,9 @@ def parse_qckeyword(parameters, calcindex=0):
         elif task.startswith('tors'):
             task = 'torsscan'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,freqdir,anharmdir,task,method,basis,package]))
-            if parameters['qcpackage'].startswith('gau'):
-                parameters['qcpackage'] = 'g09'
+            if 'qcpackage' in parameters:
+                if parameters['qcpackage'].startswith('gau'):
+                    parameters['qcpackage'] = 'g09'
             parameters['tspackage'] = package
             parameters[ 'tsmethod'] = method
             parameters[  'tsbasis'] = basis
