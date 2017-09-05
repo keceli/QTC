@@ -63,7 +63,7 @@ def get_args():
                         help='Keyword string that defines quantum chemistry calculations i.e.: "opt/ccsd/cc-pvdz/gaussian,energy/ccsd/cc-pvtz/nwchem,extrapolation/cbs/energy=0.3*E0+0.7*E1" Note that each calculation is separated by a comma (,) and calculations are defined by TASK/METHOD/BASIS/PACKAGE. TASK can be opt, freq, anharm,extrapolation.METHOD and BASIS are simply copied into quantum chemistry input file as defined in the templates folder. PACKAGE can be gaussian, molpro or nwchem')
     parser.add_argument('-t', '--qctemplate', type=str,
                         default='',
-                        help='Template for quantum chemistry input file')
+                        help='Path for the templates directory. Templates have a specific format for filenames. See qtc/templates.')
     parser.add_argument('-d', '--qcdirectory', type=str,
                         default='',
                         help='Path for the directory for running qc jobs')
@@ -160,9 +160,7 @@ def run(s):
     optdir = parameters['optdir']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
         if qcnproc > 1:
-            if task.startswith('tors'):
-                parameters['qcexe'] = parameters['torsscan']
-            elif package.startswith('nwc'):
+            if package.startswith('nwc'):
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
             elif package.startswith('mol'):
                 parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
@@ -170,23 +168,34 @@ def run(s):
                 parameters['qcexe'] = parameters[package]
         else:
             parameters['qcexe'] = parameters[package]
+    if task.startswith('tors'):
+        parameters['qcexe'] = parameters['torsscan']
+    if io.check_dir(parameters['qctemplate']):
+        tempdir = parameters['qctemplate']
+    else:
+        tempdir = io.join_path(*[parameters['qtcdirectory'],'templates'])
     if not package:
         if parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
     elif task.startswith('tors'):
         templatename = task + '_template' + '.txt'
-        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
+        parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
     elif not package.startswith('compos'):
         templatename = package + '_template' + '.txt'
-        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates',templatename])
+        parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
     if parameters['writefiles']:
         parameters['parseqc'] = True
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
+    nrotor = ob.get_nrotor(mol)
     msg = "Formula = {0}\n".format(formula)
     msg += "SMILES = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
+    msg += "Number of rotors = {0}\n".format(nrotor)
+    if nrotor == 0 and task.startswith('tors'):
+        msg += '{0} is not possible for {1}.'.format(parameters['qctask'], s)
+        return
     msg += 'Task = {0}\n'.format(parameters['qctask'])
     msg += 'Method = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis = {0}\n'.format(parameters['qcbasis'])
@@ -248,8 +257,12 @@ def run(s):
     if parseqc:
         printp('Parsing ...')
         print parameters['qctask'] 
-        if parameters['qctask'] == 'composite' or parameters['qctask'] == 'torsscan':
+        if parameters['qctask'] == 'composite':
             printp('Nothing to parse for {}'.format(parameters['qctask'] ))
+        elif io.check_file('geom1.xyz'):
+            xyzfilename = smilesname + '.xyz'
+            io.cp('geom1.xyz',xyzfilename)
+            parameters['optdir'] = io.pwd()
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput,aslines=False)
             if qc.check_output(out):

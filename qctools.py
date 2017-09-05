@@ -674,6 +674,8 @@ def check_output(s):
         completed = True
     elif "Variable memory released" in s:
         completed = True
+    elif "Projected Frequencies" in s:
+        completed = True
     else:
         completed = False
     return completed
