@@ -71,8 +71,8 @@ def get_mol(s, make3D=False):
         else:   
             frm = get_format(s)
             mol = pybel.readstring(frm, s)
-            if make3D and not frm == 'xyz':
-                mol.make3D()
+    if make3D:
+        mol.make3D()
     return mol
     
     
@@ -184,7 +184,10 @@ def get_nrotor(x):
     """
     Return number of rotors.
     """
-    mol = get_mol(x)
+    if type(x) == str:
+        mol = get_mol(x,make3D=True)
+    else:
+        mol = get_mol(x)
     return mol.OBMol.NumRotors()
     
 def get_nelectron(x):
