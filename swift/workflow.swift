@@ -4,26 +4,25 @@
  * */
 
 import files;
+import io;
 import sys;
 import string;
 
+// Retrieve user argument --input=<input_list_file>
 list_name = argv("input");
+printf("input: " + list_name);
 
-trace(list_name);
-
+// Read the input file for molecule strings
 list_file = input(list_name);
+string lines[] = file_lines(list_file, comment="!");
 
-string line_string = read(list_file);
-string lines[] = split(line_string, "\n");
-// trace(lines);
-
-file null = input("/dev/null");
-
+// Define the app function for QTC
 app qtc(string molecule)
 {
   "/home/keceli/anaconda2/bin/python" "-u" "/home/keceli/backup/QTC/qtc.py"
 }
 
+// Run QTC on each molecule in the input file
 foreach line in lines
 {
   trace(line);
