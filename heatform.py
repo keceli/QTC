@@ -311,7 +311,7 @@ def nest_2_dic(bas,key1,key2):
 
     if key1 in dic:
         if key2 in dic[key1]:
-            print '{}-{}: {:5f}  pulled from dictionary testdb'.format(bas, key1, dic[key1][key2])
+            print '{} {}: {:5f}  pulled from dictionary testdb'.format(bas, key1, dic[key1][key2])
             return dic[key1][key2]
     print 'Value for ' + str(key1) + ',' + str(key2) + ' not found -- ommitting its contribution'
 
@@ -605,7 +605,7 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
         zpvefile = io.join_path(fdire, bas + '.' + zpvetype)
     if io.check_file(enefile):
         E = io.read_file(enefile).strip()
-        print '{}-    E:{:5} pulled from: {}'.format(bas, E, enefile)
+        print '{}    E:{:5} pulled from: {}'.format(bas, E, enefile)
         E = float(E)
     elif runE:
         if not io.check_file(coordsfile):
@@ -613,20 +613,20 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
         E = run_energy(bas, optprog, optmethod, optbasis, enprog, enmethod, enbasis, 'ene')
         io.mkdir(edire)
         io.write_file(str(E), enefile)
-        print '{}-    E: {:5} saved to: {}'.format(bas, E,  enefile)
+        print '{}    E: {:5} saved to: {}'.format(bas, E,  enefile)
 
     if freq != None:
         if io.check_file(zpvefile):
             zpve= io.read_file(zpvefile).strip()
             zpve= float(zpve)
-            print '{}- ZPVE: {:5} pulled from: {}'.format(bas, zpve, zpvefile)
+            print '{} ZPVE: {:5} pulled from: {}'.format(bas, zpve, zpvefile)
         elif runE:
             if not io.check_file(coordsfile):
                 run_opt(bas, optprog, optmethod, optbasis, True)
             zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, zpvetype)
             io.mkdir(fdire)
             io.write_file(str(zpve), zpvefile)
-            print '{}- ZPVE: {:5} saved to: {}'.format(bas, zpve, zpvefile)
+            print '{} ZPVE: {:5} saved to: {}'.format(bas, zpve, zpvefile)
     else:
         print 'Zero point vibrational energy NOT accounted for'
         zpve = 0
@@ -830,7 +830,7 @@ def E_QTC(bas, opt, en, freq, parameters):
         qtc.main(parameters)
     E = io.read_file(en).strip()
     E = float(E)
-    print '{}-    E: {:5g} pulled from: {}'.format(bas, E, en)
+    print '{}   E: {:5g}  pulled from: {}'.format(bas, E, en)
 
     if freq != None:
         if not io.check_file(freq):
@@ -838,7 +838,7 @@ def E_QTC(bas, opt, en, freq, parameters):
         if io.check_file(freq):        
             zpve = io.read_file(freq).strip()
             zpve = float(zpve)
-            print '{}- ZPVE: {:5g} pulled from: {}'.format(bas, zpve, freq)
+            print '{} ZPVE: {:5g}  pulled from: {}'.format(bas, zpve, freq)
         else:
             zpve = 0.0
             print 'ZPVE not found assumed 0.0'
@@ -870,8 +870,8 @@ def main_keyword(mol,parameters):
             freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         elif key.startswith('en'):
             enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-        elif key.startswith('extra'):
-            enlevel  = ['extrapolation' + '/' + key.split('/')[1]]
+        elif key.startswith('comp'):
+            enlevel  = ['composite' + '/' + key.split('/')[1]]
             extrap   = True
     if not enlevel:
         enlevel = ['']
@@ -947,13 +947,13 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
         E = find_E(mol, optlevel, enlevel, freqlevel, runE, anharm)
     elif is_auto(E):
         E = pa.energy(loglines)[1]
-        print '{}-    E: {:5} pulled from: {}'.format(mol, E, logfile)
+        print '{}    E: {:5} pulled from: {}'.format(mol, E, logfile)
         zpve = pa.zpve(loglines)
         if zpve == None:
             print 'Zero point vibrational energy NOT accounted for'
             zpve = 0
         else:
-            print '{}- ZPVE: {:5} pulled from: {}'.format(mol, zpve, logfile)
+            print '{} ZPVE: {:5} pulled from: {}'.format(mol, zpve, logfile)
         E = E + zpve
 
     E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)

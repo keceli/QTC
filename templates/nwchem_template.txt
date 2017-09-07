@@ -13,7 +13,7 @@ basis spherical
 end
 
 scf
-    thresh 1.0e-12
+    thresh 1.0e-10
 #    QTC(RHF_OR_UHF) # Default SCF type is RHF for singlets, ROHF for higher multiplicities. If UHF is required uncomment this line
     nopen QTC(NOPEN) # Number of open shells, 0 for singlets, 1 for doublets and so on
 end
@@ -27,7 +27,7 @@ tce
     thresh 1.0e-10
     freeze atomic
     diis 5
-   QTC(METHOD) # ccsd,ccsd(t),ccsd(2)_t, ccsd(2), ccsdt,ccsdt(2)_q,ccsdtq
+   QTC(METHOD) #mp2, ccsd,ccsd(t),ccsd(2)_t, ccsd(2), ccsdt,ccsdt(2)_q,ccsdtq
 end
-task tce QTC(TASK) # optimize, frequency or energy
+task QTC(TASK) # optimize, frequency or energy
 #task shell "rm -rf ./tmp/QTC(UNIQUENAME)"

@@ -11,7 +11,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-07-13"
+__updated__ = "2017-08-31"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 def get_input(x, template, parameters):
@@ -32,65 +32,86 @@ def get_input(x, template, parameters):
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
-    if basis == 'adz':
-        basis = 'aug-cc-pvdz'
-    elif basis == 'atz':
-        basis = 'aug-cc-pvtz'
-    elif basis == 'aqz':
-        basis = 'aug-cc-pvqz' 
-    elif basis == 'dz':
-        basis = 'cc-pvdz'
-    elif basis == 'tz':
-        basis = 'cc-pvtz'
-    elif basis == 'qz':
-        basis = 'cc-pvqz'               
-    task    = parameters[   'qctask']
-    nproc   = parameters[  'qcnproc']
+    heat = parameters['heat']          
+    task    = parameters['qctask']
+    nproc   = parameters['qcnproc']
     if natom == 1:
         task = 'energy'
-    if task.startswith('gau'):
-        task = 'g09'
-    if package == 'nwchem':
-        if task.lower().startswith('opt'):
-            task = 'optimize'
-        elif task.lower().startswith('single'):
-            task = 'energy'
-        elif task.lower().startswith('freq'):
-            task = 'freq'
-    elif package == 'gaussian':
-        if task.lower().startswith('opt'):
-            task = 'opt=(maxcyc=50)'
-        elif task.lower().startswith('single'):
-            task = ''
-        elif task.lower().startswith('energy'):
-            task = ''
-        elif task.lower().startswith('freq'):
-            task = 'freq'
-        elif task.lower().startswith('anharm'):
-            task = 'freq=(anharm,vibrot)'
-    elif package == 'molpro':
-        if method.lower().startswith('ccsd'):
-            if nopen > 0:
-                method = 'u'+method
-        if method.lower().startswith('mp2'):
-            if nopen > 0:
-                method = 'r'+method
-        if task.lower().startswith('opt'):
-            task = 'optg'
-        elif task.lower().startswith('single'):
-            task = ''
-        elif task.lower().startswith('energy'):
-            task = ''
-        elif task.lower().startswith('freq'):
-            task = 'frequencies'
+    inp = template
+    if task == 'torsscan':
+        #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
+        #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
+        #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
+        if len(parameters['optlevel'].split('/')) > 1:
+            optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
+            if optpackage != 'molpro' or optpackage.startswith('g'):
+                optpackage = 'g09'
+            if optpackage.startswith('gau'):
+                optpackage = 'g09'
+            inp = inp.replace("QTC(TSPACKAGE)", optpackage)
+            inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
+            inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
+            inp = inp.replace(    "QTC(TEST1)",         '')
+            inp = inp.replace(    "QTC(TEST2)",         '')
+            inp = inp.replace(    "QTC(TEST3)",         '')
+        else:
+            inp = inp.replace("QTC(TSPACKAGE)",    package)
+            inp = inp.replace( "QTC(TSMETHOD)",     method)
+            inp = inp.replace(  "QTC(TSBASIS)",      basis)
+            inp = inp.replace(    "QTC(TEST1)",    package)
+            inp = inp.replace(    "QTC(TEST2)",     method)
+            inp = inp.replace(    "QTC(TEST3)",      basis)
+        inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
+        inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
+        if heat:
+            inp = inp.replace(   "QTC(HOF)", str(heat))
+        else:
+            inp = inp.replace(   "QTC(HOF)", 'false')
 
+        parameters['runthermo'] = False
+        if parameters['anharmonic'] == True:
+            inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
+        else:
+            inp = inp.replace('QTC(ANHARMLOC)', 'false')
+    else:
+        if package == 'nwchem':
+            if task == 'opt':
+                task = 'optimize'
+            if ('cc') in method or method.startswith('tce') or 'mp' in method:
+                task = 'tce ' + task
+                method = method.replace('tce','')
+            else:
+                task = '{0} {1}'.format(method, task) 
+        elif package == 'gaussian':
+            if task == 'opt':
+                task = 'opt=(maxcyc=50)'
+            elif task == 'energy':
+                task = ''
+            elif task == 'anharm':
+                task = 'freq=(anharm,vibrot)'
+        elif package == 'molpro':
+            if method.lower().startswith('ccsd'):
+                if nopen > 0:
+                    method = 'u'+method
+            if method.lower().startswith('mp2'):
+                if nopen > 0:
+                    method = 'r'+method
+            if task.lower().startswith('opt'):
+                task = 'optg'
+            elif task.lower().startswith('single'):
+                task = ''
+            elif task.lower().startswith('energy'):
+                task = ''
+            elif task.lower().startswith('freq'):
+                task = 'frequencies'
+    
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'
     else:
         scftype = 'UHF'
         rhftype = 'ROHF'
-    inp = template.replace("QTC(CHARGE)", str(charge))
+    inp = inp.replace("QTC(CHARGE)", str(charge))
     inp = inp.replace("QTC(MULTIPLICITY)", str(mult))
     inp = inp.replace("QTC(NOPEN)", str(nopen))
     inp = inp.replace("QTC(UNIQUENAME)", uniquename)
@@ -102,33 +123,11 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(METHOD)", method)
     inp = inp.replace("QTC(BASIS)", basis)
     inp = inp.replace("QTC(TASK)", task)
+    inp = inp.replace("QTC(PACKAGE)", package)
     inp = inp.replace("QTC(RHF_OR_UHF)", scftype)
     inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
-    inp = inp.replace("QTC(NPROC)", str(nproc))
-    if package == 'torsscan':
-        optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
-        if optpackage != 'molpro' or optpackage.startswith('g'):
-            optpackage = 'g09'
-        if optpackage.startswith('gau'):
-            optpackage = 'g09'
-        #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
-        #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
-        #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
-        inp = inp.replace("QTC(TSPACKAGE)", optpackage)
-        inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
-        inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
-        inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
-        inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
-        #inp = inp.replace(   "QTC(HOF)", str(0))#TODO: Fix, what to do if no HOF
-        inp = inp.replace(   "QTC(HOF)", 'false')#TODO: Fix, what to do if no HOF
-
-        parameters['runthermo'] = False
-        if parameters['anharmonic'] == True:
-            inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
-        else:
-            inp = inp.replace('QTC(ANHARMLOC)', 'false')
-        inp = inp.replace('QTC(ANHARMLOC)', 'false')
-        parameters['runthermo'] = False
+    inp = inp.replace("QTC(NPROC)", str(nproc))   
+    inp = inp.replace('QTC(ANHARMLOC)', 'false')
     if "QTC(" in inp:
         print(66*'#')
         print("Error in template file: \n" + inp)
@@ -175,61 +174,72 @@ def parse_qckeyword(parameters, calcindex=0):
     enlevel
     """
     keyword = parameters['qckeyword']
-    xyzdirectory = parameters['xyzpath']
+    xyzdir = parameters['xyzpath']
+    optdir   = parameters['optdir']
+    freqdir  = parameters['freqdir']
+    anharmdir = parameters['anharmdir']
     package = 'nwchem'
     calcs = keyword.split(',')
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
-    if tokens[0].startswith('ext') or tokens[0].startswith('cbs') or tokens[0].startswith('comp'):
-        qcdirectory = ''
-        xyzdirectory = ''
-        package = 'extrapolation'
-        method = ''
+    task = tokens[0]
+    if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
+        task = 'composite'
+        if len(tokens) > 2:
+            method = tokens[1]
+            parameters['formula'] = tokens[2:]
+        elif len(tokens) == 2:
+            method = 'generic'
+            parameters['formula'] = tokens[1]
+        else:
+            print('ERROR! Invalid qckeyword: {0}'.format(tokens))
+            return
+        qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method]))
+        package = ''
         basis = ''
-        task = ''
     else:
-        if calcindex > 0:
-            if parameters['optlevel'] != 'sp':
-                package = parameters['optlevel'].split('/')[0]
-                method  = parameters['optlevel'].split('/')[1]
-                basis   = parameters['optlevel'].split('/')[2]
-                task    = 'opt'
-                xyzdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
-            if len(tokens) == 1:
-                task = tokens[0]
-            elif len(tokens) == 2:
-                task = 'energy'
-                method, basis = tokens            
-            elif len(tokens) == 3:
-                task = 'energy'
-                method, basis, package = tokens            
-            elif len(tokens) == 4:
-                task, method, basis, package = tokens
-            else:
-                print('Cannot parse qckeyword: {0}'.format(keyword))
-            if package == 'torsscan':
+        if len(tokens) == 4:
+            method = tokens[1]
+            basis = tokens[2]
+            package = tokens[3]
+        elif len(tokens) == 3:
+            method = tokens[1]
+            basis = ''
+            package = tokens[2]
+        else:
+            print('ERROR! Invalid qckeyword: {0}'.format(tokens))
+            return        
+        if task.startswith('opt') or task.startswith('geo') or task.startswith('min'):
+            task = 'opt'
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
+            parameters['optdir'] = qcdirectory
+            parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+        elif task.startswith('freq') or task.startswith('harm') or task.startswith('hrm'):
+            task = 'freq'
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            parameters['freqdir'] = qcdirectory
+            parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
+        elif task.startswith('anh') or task.startswith('afre'):
+            task = 'anharm'
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            parameters['anharmdir'] = qcdirectory
+            parameters['anharmonic'] = True
+        elif task.startswith('sp') or task.startswith('single') or task.startswith('ene'):
+            task = 'energy'
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
+        elif task.startswith('tors'):
+            task = 'torsscan'
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,freqdir,anharmdir,task,method,basis,package]))
+            if 'qcpackage' in parameters:
                 if parameters['qcpackage'].startswith('gau'):
                     parameters['qcpackage'] = 'g09'
-                parameters['tspackage'] = parameters['qcpackage']
-                parameters[ 'tsmethod'] = parameters[ 'qcmethod']
-                parameters[  'tsbasis'] = parameters[  'qcbasis']
+            parameters['tspackage'] = package
+            parameters[ 'tsmethod'] = method
+            parameters[  'tsbasis'] = basis
         else:
-            if len(tokens) == 2:
-                task = 'optimize'
-                method, basis = tokens  
-            elif len(tokens) == 3:
-                task = 'optimize'
-                method, basis, task = tokens
-            elif len(tokens) == 4:
-                task, method, basis, package = tokens
-            else:
-                print('Cannot parse qckeyword: {0}'.format(keyword))
-        if task.startswith('opt'):
-            qcdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
-        else:
-            qcdirectory = io.fix_path(io.join_path(*[xyzdirectory,task,method,basis,package]))
-
-    parameters['xyzpath'] = xyzdirectory
+            print('ERROR! Invalid qckeyword task: {0}'.format(task))
+            return      
     parameters['qcdirectory'] = qcdirectory
     parameters['qcpackage'] = package
     parameters['qcmethod'] = method
@@ -238,14 +248,6 @@ def parse_qckeyword(parameters, calcindex=0):
     parameters['runqc'] = True
     parameters['parseqc'] = True
     parameters['writefiles'] = True
-    if task.startswith('an'):
-        parameters['anharmonic']=True
-    if task.startswith('opt'):
-        parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-    elif 'freq' in task or 'anh' in task:
-        parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
-    elif task.startswith('ene'):
-        parameters['enlevel'] =  '{}/{}/{}'.format(package,method,basis)
     return parameters 
 
 
@@ -497,14 +499,14 @@ def get_symbol(atomno):
     return syms[atomno]
 
 
-def run(s, parameters, mult=None):
+def run(mol, parameters, mult=None):
     """
     Runs qc, returns a string specifying the status of the calculation.
     """
-    package = parameters['qcpackage'].lower()
+    package = parameters['qcpackage']
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
-    mol = ob.get_mol(s, make3D=True)
+    task = parameters['qctask']
     msg = ''
     if mult is None:
         mult = ob.get_multiplicity(mol)
@@ -512,7 +514,9 @@ def run(s, parameters, mult=None):
         ob.set_mult(mol, mult)
     tmp = io.read_file(template)
     inptext = get_input(mol, tmp, parameters)
-    prefix = ob.get_smiles_filename(s) + '_' + package
+    if task.startswith('tors'):
+        package = task
+    prefix = ob.get_smiles_filename(mol) + '_' + package
     inpfile = prefix + '.inp'
     outfile = prefix + '.out'
     if io.check_file(outfile, timeout=1):
@@ -531,8 +535,8 @@ def run(s, parameters, mult=None):
     else:
         run = True
     if run:
-        if package.startswith('ext') or package.startswith('cbs'):
-            msg += run_extrapolation(s, parameters)
+        if task == 'composite' :
+            msg += run_extrapolation(mol, parameters)
         else:
             io.write_file(inptext, inpfile)
             if io.check_file(inpfile, timeout=1):
@@ -556,50 +560,51 @@ def run(s, parameters, mult=None):
     return msg
 
 
-def run_extrapolation(s,parameters):
+def run_extrapolation(mol,parameters):
     if parameters['qckeyword']:
-        msg = run_extrapolation_keyword(s,parameters)
+        msg = run_extrapolation_keyword(mol,parameters)
     elif parameters['qctemplate']:
-        msg = run_extrapolation_template(s, parameters)
+        msg = run_extrapolation_template(mol, parameters)
     else:
         msg = 'Can not run extrapolation, you need to specify qckeyword with -k or qctemplate with -t. \n'
     return msg
 
 
-def run_extrapolation_keyword(s, parameters):
+def run_extrapolation_keyword(mol, parameters):
+    """
+    Parses qckeyword for composite method. 
+    'opt/mp2/cc-pvdz/gaussian,freq/mp2/cc-pvtz/molpro,sp/mp2/cc-pvqz,composite/cbs-dtq/energy=0.1 * E[0] + 0.4 * E[1] + 0.5 * E[2]'
+    """
     keyword = parameters['qckeyword']
-    keyword = keyword.replace('//','/optimize,')
+    formula = parameters['formula'][0]
+    method = parameters['qcmethod']
     msg = ''
-    smilesname = ob.get_smiles_filename(s)
+    smilesname = ob.get_smiles_filename(mol)
     calcs = keyword.split(',')
-    tokens = calcs[-1].split('/')
-    formulaline = tokens[-1]
-    method = 'composite'
-    if len(tokens) > 2:
-        method = tokens[1]
-    print('Extrapolation formula: {0}\n'.format(formulaline))
-    ncalc = len(calcs) - 1
+    print('Composite energy formula: {0}\n'.format(formula))
+    ncalc = len(calcs) 
+    calcindex = parameters['calcindex']
     e = [0.] * ncalc
     energy = None
     enefile = smilesname + '.ene'  
     inpfile = smilesname + '_' + method  + '.inp'  
-    for i in range(ncalc):
+    for i in range(0,calcindex):
         parse_qckeyword(parameters, i)
-        task = parameters['qctask']
-        qcdirectory = parameters['qcdirectory']
-        if task.startswith('opt'):
-            optdirectory = qcdirectory
-        enepath = io.join_path(*[qcdirectory, enefile])
-        e[i] = float(io.read_file(enepath))     
-    exec(formulaline)
+        smilesdir = parameters['smilesdir']
+        enedir  = io.join_path(*[smilesdir,parameters['qcdirectory']])
+        enepath = io.join_path(*[enedir, enefile])
+        if io.check_file(enepath):
+            e[i] = float(io.read_file(enepath))
+            msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
+    print(msg)
+    msg = ''
+    exec(formula)
     if energy:
-        extdir = io.fix_path(io.join_path(*[optdirectory,'extrapolation',method]))
-        io.mkdir(extdir)
-        extfile = io.get_path(io.join_path(*[extdir,enefile]))
-        io.write_file(str(energy),extfile )
-        io.write_file(formulaline,inpfile )
-        print('Extrapolated energy: {}\n'.format(energy))
-        print('Energy file: {}\n'.format(extfile))
+        io.write_file(str(energy),enefile )
+        io.write_file(msg,inpfile )
+        print('Composite energy: {}\n'.format(energy))
+        print('Energy file: "{}"\n'.format(io.get_path(enefile)))
+    parse_qckeyword(parameters, calcindex)
     return msg
 
 def run_extrapolation_template(s, parameters):
@@ -669,6 +674,8 @@ def check_output(s):
         completed = True
     elif "Variable memory released" in s:
         completed = True
+    elif "Projected Frequencies" in s:
+        completed = True
     else:
         completed = False
     return completed
@@ -682,16 +689,16 @@ def find_xyzfile(xyzpath,smilesdir):
         xyzfile = xyzpath
     elif io.check_file(io.join_path(*(smilesdir,xyzpath))):
         xyzfile = io.join_path(*(smilesdir,xyzpath))
-    elif xyzpath and io.check_dir(xyzpath):
+    elif io.check_dir(xyzpath):
         try:
-            xyzfile = next(io.find_files(xyzpath, '*.xyz'))
-        except StopIteration:
+            xyzfile = io.find_files(xyzpath, '*.xyz')[0]
+        except:
             pass
     elif xyzpath and io.check_dir(io.join_path(*(smilesdir,xyzpath))):
         xyzpath = io.join_path(*(smilesdir,xyzpath))
         try:
-            xyzfile = next(io.find_files(xyzpath, '*.xyz'))
-        except StopIteration:
+            xyzfile = io.find_files(xyzpath, '*.xyz')[0]
+        except:
             pass
     return xyzfile 
 
