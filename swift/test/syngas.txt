@@ -1,3 +1,6 @@
+
+! Copied from /home/keceli/pacc/databases/syngas/syngas.txt
+
 [H]
 [H][H]
 [O]
