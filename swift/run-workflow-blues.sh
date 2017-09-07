@@ -17,4 +17,4 @@ PYTHONPATH+=/home/keceli/openbabel-2.4.1/install/lib/python2.7/site-packages
 # Run it!
 swift-t -l -e PYTHONPATH \
         -m pbs \
-        workflow.swift --input=$PWD/test/syngas.txt |& tee workflow.out
+        workflow.swift --input=$PWD/test/syngas.txt
