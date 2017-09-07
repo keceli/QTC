@@ -19,7 +19,7 @@ string lines[] = file_lines(list_file, comment="!");
 // Define the app function for QTC
 app qtc(string molecule)
 {
-  "/home/keceli/anaconda2/bin/python" "-u" "/home/keceli/backup/QTC/qtc.py"
+  "/home/wozniak/proj/qtc/swift/qtc.sh" molecule ;
 }
 
 // Run QTC on each molecule in the input file
