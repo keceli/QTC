@@ -342,7 +342,7 @@ def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp
     return msg
 
 
-def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[]):
+def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[], hindered=None):
     """
     Write input file for mess partition function program
     Temperature(step[K],size)        100.   30
@@ -381,6 +381,8 @@ def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[]):
     inp += '\nCore RigidRotor\n'
     inp += 'SymmetryFactor {0}\n'.format(sym)
     inp += 'End\n'
+    if hindered:
+        inp += hindered
     inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),freqmethod)
     inp += ' '.join(freqs) + '\n'
     if len(xmat) > 0:
