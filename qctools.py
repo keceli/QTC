@@ -240,8 +240,8 @@ def parse_qckeyword(parameters, calcindex=0):
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('tors'):
             #task = 'torsscan'
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
-            parameters['optdir'] = qcdirectory
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            #parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
             parameters['freqdir'] = qcdirectory
             parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
@@ -329,6 +329,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         optlevel, method, energy = get_torsscan_info(s)
         if io.check_file('geom1.xyz'):
             xyz = io.read_file('geom1.xyz', aslines=False)
+            energy = float(xyz.splitlines()[1])
             parsed = True
             if io.check_file('hrproj_freq.dat'):
                 freqlines = io.read_file('hrproj_freq.dat',aslines=True)
@@ -556,7 +557,7 @@ def run(mol, parameters, mult=None):
     tmp = io.read_file(template)
     inptext = get_input(mol, tmp, parameters)
     if task.startswith('tors'):
-        package = 'torsscan'
+        package = task
     prefix = ob.get_smiles_filename(mol) + '_' + package
     inpfile = prefix + '.inp'
     outfile = prefix + '.out'
@@ -712,8 +713,9 @@ def check_output(s):
         completed = True
     elif "Variable memory released" in s:
         completed = True
-    elif "Projected Frequencies" in s:
-        completed = True
+    elif "Task: Submitting EStokTP job..." in s:
+        if 'completed' in s:
+            completed = True
     else:
         completed = False
     return completed
@@ -756,7 +758,7 @@ def get_output_package(out,filename=False):
         p = 'nwchem'
     elif "Variable memory released" in out:
         p = 'molpro'
-    elif "Unprojected Frequencies (cm-1):" in out:
+    elif "Task: Submitting EStokTP job.." in out:
         p = 'torsscan'
     else:
         p = None
