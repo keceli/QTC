@@ -174,17 +174,16 @@ def run(s):
         tempdir = parameters['qctemplate']
     else:
         tempdir = io.join_path(*[parameters['qtcdirectory'],'templates'])
-    if not package:
-        if parameters['qctemplate']:
-            parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
-        else:
-            runqc = False
-            parseqc = False
-            runthermo = False
+    if not parameters['qckeyword']:
+        runqc = False
+        parseqc = False
+        runthermo = False      
+    if task=='composite':
+        parameters['qctemplate'] = ''
     elif task.startswith('tors'):
         templatename = task + '_template' + '.txt'
         parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
-    elif not package.startswith('compos'):
+    else:
         templatename = '{0}_{1}_template.txt'.format(task,package)
         templatename =  io.join_path(*[tempdir,templatename])
         if not io.check_file(templatename):
@@ -193,12 +192,12 @@ def run(s):
         parameters['qctemplate'] = templatename
     if parameters['writefiles']:
         parameters['parseqc'] = True
-    parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
+    if parameters['qctemplate']:
+        parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
     nrotor = ob.get_nrotor(mol)
-    nrotor = 1
     parameters['nrotor'] = nrotor
     msg  = "Formula = {0}\n".format(formula)
     msg += "SMILES = {0}\n".format(s)
@@ -257,6 +256,8 @@ def run(s):
     if runqc:
         if qcpackage in available_packages:
             msg += qc.run(mol, parameters, mult)
+        elif task == 'composite':
+            msg = qc.run_extrapolation(mol, parameters)
         elif qcpackage == 'qcscript':
             msg += "Running qcscript...\n"
             geofile = smilesname + '.geo'

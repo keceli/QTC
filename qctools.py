@@ -232,7 +232,7 @@ def parse_qckeyword(parameters, calcindex=0):
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('tors'):
             #task = 'torsscan'
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,freqdir,anharmdir,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
             parameters['freqdir'] = qcdirectory
@@ -568,28 +568,25 @@ def run(mol, parameters, mult=None):
     else:
         run = True
     if run:
-        if task == 'composite' :
-            msg += run_extrapolation(mol, parameters)
-        else:
-            io.write_file(inptext, inpfile)
-            if io.check_file(inpfile, timeout=1):
-                if package in  ['nwchem', 'torsscan','torsopt']:
-                    command = parameters['qcexe'] + ' ' + inpfile
-                    msg += io.execute(command,stdoutfile=outfile,merge=True)
-                elif package in  ['molpro']:
-                    command = parameters['qcexe'] + ' ' + inpfile
-                    msg += io.execute(command,stdoutfile=outfile,merge=True)
-                    logfile = prefix + '.log'
-                    if io.check_file(logfile):
-                        io.append_file(io.read_file(logfile),filename=outfile)
-                        io.rm(logfile)
-                else:
-                    command = parameters['qcexe'] + ' ' + inpfile + ' ' + outfile
-                    msg += io.execute(command)
-                if io.check_file(outfile, timeout=1):
-                    msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
+        io.write_file(inptext, inpfile)
+        if io.check_file(inpfile, timeout=1):
+            if package in  ['nwchem', 'torsscan','torsopt']:
+                command = parameters['qcexe'] + ' ' + inpfile
+                msg += io.execute(command,stdoutfile=outfile,merge=True)
+            elif package in  ['molpro']:
+                command = parameters['qcexe'] + ' ' + inpfile
+                msg += io.execute(command,stdoutfile=outfile,merge=True)
+                logfile = prefix + '.log'
+                if io.check_file(logfile):
+                    io.append_file(io.read_file(logfile),filename=outfile)
+                    io.rm(logfile)
             else:
-                msg += 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
+                command = parameters['qcexe'] + ' ' + inpfile + ' ' + outfile
+                msg += io.execute(command)
+            if io.check_file(outfile, timeout=1):
+                msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
+        else:
+            msg += 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
     return msg
 
 
