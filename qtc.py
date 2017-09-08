@@ -166,7 +166,7 @@ def run(s):
             parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
         elif package.startswith('mol'):
             parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
-       else:
+        else:
             parameters['qcexe'] = parameters[package]
     if task.startswith('tors'):
         parameters['qcexe'] = parameters['torsscan']

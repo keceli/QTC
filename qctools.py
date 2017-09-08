@@ -52,7 +52,11 @@ def get_input(x, template, parameters):
         #    inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
         #    inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         if parameters['optdir']:
-            inp = inp.replace("QTC(OPTDIR)", io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(x).strip() + '.xyz'])) 
+            xyzfile =  io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(x).strip() + '.xyz'])
+            if io.check_file('xyzfile'):
+                inp = inp.replace("QTC(OPTDIR)",xyzfile)
+            else:
+                inp = inp.replace("QTC(OPTDIR)", 'false') 
         else:
             inp = inp.replace("QTC(OPTDIR)", 'false') 
         inp = inp.replace(      "QTC(NMC)", str(4**parameters['nrotor']) )
