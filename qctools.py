@@ -145,6 +145,14 @@ def update_qckeyword(keyword):
     keyword = keyword.replace('/dz','/cc-pvdz')
     keyword = keyword.replace('/tz','/cc-pvtz')
     keyword = keyword.replace('/qz','/cc-pvqz')
+    keyword = keyword.replace('ccpvdz/','cc-pvdz/')
+    keyword = keyword.replace('ccpvtz/','cc-pvtz/')
+    keyword = keyword.replace('ccpvqz/','cc-pvqz/')
+    keyword = keyword.replace('/augcc','/aug-cc')
+    keyword = keyword.replace('/sto3g','/sto-3g')
+    keyword = keyword.replace('631g','6-31g')
+    keyword = keyword.replace('6-31gs','6-31g*')
+    keyword = keyword.replace('torscan/','torsscan/')
     return keyword
 
 def parse_qckeyword(parameters, calcindex=0):
