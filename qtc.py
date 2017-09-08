@@ -51,7 +51,10 @@ def get_args():
     """)
     parser.add_argument('-i', '--input', type=str,
                         default='qclist.txt',
-                        help='INPUT can be a text file containing a list of inchi or smiles strings or it can be a single string containing inchi or smiles strings separated by commas')
+                        help='INPUT can be a text file containing a list of inchi or smiles strings, or it can be a single string containing inchi or smiles strings separated by commas')
+    parser.add_argument('-j', '--jsoninput', type=str,
+                        default='queue.json',
+                        help='Input file in  json format, i.e. RMG queue.json files')
     parser.add_argument('-p', '--qcnproc', type=int,
                         default=1,
                         help='Number of processors for each quantum chemistry calculation')
@@ -153,19 +156,16 @@ def run(s):
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
-    package = parameters['qcpackage'].lower()
+    package = parameters['qcpackage']
     task    = parameters['qctask']
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
     optdir = parameters['optdir']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
-        if qcnproc > 1:
-            if package.startswith('nwc'):
-                parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
-            elif package.startswith('mol'):
-                parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
-            else:
-                parameters['qcexe'] = parameters[package]
+        if package.startswith('nwc'):
+            parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
+        elif package.startswith('mol'):
+            parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
         else:
             parameters['qcexe'] = parameters[package]
     if task.startswith('tors'):
@@ -177,14 +177,23 @@ def run(s):
     if not package:
         if parameters['qctemplate']:
             parameters['qcpackage'] = qc.get_package(parameters['qctemplate'])
+        else:
+            runqc = False
+            parseqc = False
+            runthermo = False
     elif task.startswith('tors'):
         templatename = task + '_template' + '.txt'
         parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
     elif not package.startswith('compos'):
-        templatename = package + '_template' + '.txt'
-        parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
+        templatename = '{0}_{1}_template.txt'.format(task,package)
+        templatename =  io.join_path(*[tempdir,templatename])
+        if not io.check_file(templatename):
+            templatename = '{0}_template.txt'.format(package)
+            templatename =  io.join_path(*[tempdir,templatename])            
+        parameters['qctemplate'] = templatename
     if parameters['writefiles']:
         parameters['parseqc'] = True
+    parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
@@ -193,22 +202,26 @@ def run(s):
     msg += "SMILES = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "Number of rotors = {0}\n".format(nrotor)
-    if nrotor == 0 and task.startswith('tors'):
-        msg += '{0} is not possible for {1}.'.format(parameters['qctask'], s)
-        return
+#    if nrotor == 0 and task.startswith('tors'):
+#        msg += 'Passing {0} for {1}.'.format(parameters['qctask'], s)
+#        return
     msg += 'Task = {0}\n'.format(parameters['qctask'])
     msg += 'Method = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis = {0}\n'.format(parameters['qcbasis'])
-    msg += 'Package = {0}\n'.format(parameters['qcpackage'])  
+    msg += 'Package = {0}\n'.format(parameters['qcpackage'])
+    msg += 'Template = {0}\n'.format(parameters['qctemplate'])
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
     smilesdir = io.join_path(parameters['database'], smilesdir)
     parameters['smilesdir'] = smilesdir
     workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
-    parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     qcpackage = parameters['qcpackage']
     qcscript = io.get_path(parameters['qcscript'])
     qcoutput = smilesname + '_' + qcpackage + '.out'
+    if task.startswith('tors'):
+        qcoutput = smilesname + '_' + task + '.out'
+    else:
+        qcoutput = smilesname + '_' + qcpackage + '.out'
     xyzpath = parameters['xyzpath']
     xyzfile = ''
     if xyzpath:
@@ -256,13 +269,10 @@ def run(s):
         msg = ''
     if parseqc:
         printp('Parsing ...')
-        print parameters['qctask'] 
+        if io.check_file('geom1.xyz'):
+            parameters['optdir'] = io.pwd()
         if parameters['qctask'] == 'composite':
             printp('Nothing to parse for {}'.format(parameters['qctask'] ))
-        elif io.check_file('geom1.xyz'):
-            xyzfilename = smilesname + '.xyz'
-            io.cp('geom1.xyz',xyzfilename)
-            parameters['optdir'] = io.pwd()
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput,aslines=False)
             if qc.check_output(out):
@@ -279,30 +289,30 @@ def run(s):
     printp(msg)
     msg = ''                                   
     if runthermo:
-        groupstext = tc.get_new_groups()
-        io.write_file(groupstext, 'new.groups')
-        if parameters['qctask'] == 'torsscan':
-            printp('TorsScan TODO')
-        else: 
-            if parameters['qckeyword'].split(',')[parameters['calcindex']].startswith('comp'):
-                d = {}
-                freqs = []
-            else:
-                d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
-                xyz = next(db.gen_dict_extract('xyz',d))
-                freqs = next(db.gen_dict_extract('harmonic frequencies',d))
-                xmat   = next(db.gen_dict_extract('xmat',d))
-            hf0, hfset = hf.main_keyword(mol,parameters)
-            hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
-            hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
-            parameters['heat'] = hf0
-            io.write_file(hftxt,s + '.hf0k')
-            if len(freqs) > 0:
-                msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters,xmat=xmat)
-                if io.check_file('thermp.out'):
-                    import patools as pa
-                    lines = io.read_file('thermp.out')
-                    msg += 'delHf(298) = {} kcal'.format(pa.get_298(lines))
+        if not io.check_file('new.groups'):
+            groupstext = tc.get_new_groups()
+            io.write_file(groupstext, 'new.groups')
+        if task.startswith('comp'):
+            d = {}
+            freqs = []
+        else:
+            d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
+            xyz = next(db.gen_dict_extract('xyz',d))
+            freqs = next(db.gen_dict_extract('harmonic frequencies',d))
+            parameters['prjfreqs'] = next(db.gen_dict_extract('projected frequencies',d))
+            parameters['messhindered'] = next(db.gen_dict_extract('mess hindered input',d))
+            xmat   = next(db.gen_dict_extract('xmat',d))
+        hf0, hfset = hf.main_keyword(mol,parameters)
+        hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
+        hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
+        parameters['heat'] = hf0
+        io.write_file(hftxt,s + '.hf0k')
+        if len(freqs) > 0:
+            msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters,xmat=xmat)
+            if io.check_file('thermp.out'):
+                import patools as pa
+                lines = io.read_file('thermp.out')
+                msg += 'delHf(298) = {} kcal'.format(pa.get_298(lines))
     io.cd(cwd)
     printp(msg)
     return
@@ -329,9 +339,12 @@ def main(arg_update={}):
     beginindex = args.first
     endindex = args.last
     inp = args.input
+    jsonfile = args.jsoninput
     nproc = args.nproc
     if io.check_file(inp):
         mylist = io.read_list(inp)
+    elif io.check_file(jsonfile):
+        mylist = db.get_smiles_from_json(jsonfile)  
     else:
         mylist = inp.split(',')
     if endindex:
@@ -349,26 +362,40 @@ def main(arg_update={}):
     printp("QTC: Number of species       = {0}".format(len(mylist)))
     init = timer()
     printp("QTC: Initialization time (s) = {0:.2f}".format(init-start))
-    if nproc == 1:
+    if parameters['runthermo']:
         for s in mylist:
-            parameters['optdir'] = ''
-            parameters['freqdir'] = ''
-            parameters['anharmdir'] = ''
-            parameters['qcdirectory'] = ''
-            parameters['optlevel'] = ''
-            parameters['freqlevel'] = ''
-            parameters['heat'] = None
+            formula = ob.get_formula(s)
+            _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['hfbasis'].split())
+            for basismol in basismolecules:
+                if basismol not in mylist:
+                    msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
+                    mylist = [basismol] + mylist
+                    printp(msg)
+            
+    if parameters['qckeyword']:
+        if nproc == 1:
+            for s in mylist:
+                parameters['optdir'] = ''
+                parameters['freqdir'] = ''
+                parameters['anharmdir'] = ''
+                parameters['qcdirectory'] = ''
+                parameters['optlevel'] = ''
+                parameters['freqlevel'] = ''
+                parameters['heat'] = None
+                for i in range(ncalc):
+                    parameters['calcindex'] = i
+                    if parameters['qckeyword']:
+                        qc.parse_qckeyword(parameters, calcindex=i)
+                    printp('Running QTC for {0}' .format(s))
+                    run(s)
+        else:
             for i in range(ncalc):
                 parameters['calcindex'] = i
                 if parameters['qckeyword']:
                     qc.parse_qckeyword(parameters, calcindex=i)
-                run(s)
+                pool = multiprocessing.Pool(nproc)
     else:
-        for i in range(ncalc):
-            parameters['calcindex'] = i
-            if parameters['qckeyword']:
-                qc.parse_qckeyword(parameters, calcindex=i)
-            pool = multiprocessing.Pool(nproc)
+        printp("You need to specify qckeyword with -k to run calculations")
     end = timer()
     printp("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     printp("QTC: Total time (s)          = {0:.2f}".format(end-start))
