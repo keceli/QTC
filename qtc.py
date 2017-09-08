@@ -398,6 +398,7 @@ def main(arg_update={}):
                     qc.parse_qckeyword(parameters, calcindex=i)
                 pool = multiprocessing.Pool(nproc)
     else:
+        pprint(mylist)
         printp("You need to specify qckeyword with -k to run calculations")
     end = timer()
     printp("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
