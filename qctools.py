@@ -59,7 +59,7 @@ def get_input(x, template, parameters):
                 inp = inp.replace("QTC(OPTDIR)", 'false') 
         else:
             inp = inp.replace("QTC(OPTDIR)", 'false') 
-        inp = inp.replace(      "QTC(NMC)", str(4**parameters['nrotor']) )
+        inp = inp.replace(      "QTC(NMC)", str(3**parameters['nrotor']+2) )
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:

@@ -14,13 +14,13 @@ No. of transition states: 0
 ============
 QTC options 
 ============
-Use QTC xyz: QTC(OPTDIR)
+Use QTC xyz: False
              False - make openbabel xyz from smiles
              prog/method/basis - uses xyz in database (recommended)
              logfilename.log - makes torsscan parse out xyz from logfile in cwd
              True - xyz in testchem form in cwd
 
-Use xyz as (start-starting geometry, 0-level0 geometry): 0
+Use xyz as (start-starting geometry, 0-level0 geometry): start
 
 ==============
 BLUES options   
@@ -36,12 +36,12 @@ EStoKTP options
 No. MC  sampling points: QTC(NMC)
 Scan interval (degrees): 360
 No. of steps on the PES: 12
-Multidim scan (2 or 3D): auto
+Multidim scan (2 or 3D): 2
 
 ------------------------------------------------ 
    Module      :    Program    :      Theory
 ------------------------------------------------
-Opt            :               :
+Opt          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)
 Opt_1          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)
 1dTau          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)  
 MdTau          :               :
@@ -58,5 +58,5 @@ Precomputed heat of formation (hf0kreac1, hf0kreac2, hf0kTS1, ... in kcal): QTC(
 Basis for heat of formation: QTC(HFBASIS) 
 Anharmonic (0 for level0 theory, 1 for level1 theory, false for off, or prog/meth/bas): QTC(ANHARMLOC)
 Overwrite anharmonic: false
-Parse all: true
+Parse all: false
 
