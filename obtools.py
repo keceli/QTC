@@ -71,6 +71,9 @@ def get_mol(s, make3D=False):
         else:   
             frm = get_format(s)
             mol = pybel.readstring(frm, s)
+    else:
+        print 'Incompetible type for ob.get_mol', type(s)
+        return None
     if make3D:
         mol.make3D()
     return mol
@@ -485,13 +488,13 @@ def fetch_inchi(s):
     try:
         import cirpy
     except:
-        r = 'requires_cirpy'
+        r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
     if cirpy:
         r = cirpy.resolve(s,'inchi')  
     return r
         
 
-def fetch_name(s):
+def fetch_IUPAC_name(s):
     """
     Return IUPAC name for a given smiles or inchi string.
     Requires cirpy module and internet connection
