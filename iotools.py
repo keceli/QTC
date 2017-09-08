@@ -340,6 +340,8 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False):
     else:
         commandstr = ' '.join(command)
     msg = 'Running Popen with command: {0}\n'.format(commandstr)
+    print(msg)
+    msg =''
     process = Popen(command, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
     if merge:
