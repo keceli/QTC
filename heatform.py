@@ -766,7 +766,6 @@ def comp_coefficients(molform, basis='auto'):
         atomlist = get_atomlist(molform)
         if 'H' not in atomlist:
             atomlist.append('H')
-        print atomlist
         basis    = select_basis(atomlist,basisselection)
         basisselection += 1
        
@@ -802,8 +801,9 @@ def E_QTC(bas, opt, en, freq, parameters):
 
     E, zpve = 0, 0
     zpvetype = 'zpve'
-
-    if len(opt) > 1:
+    if len(opt) == 4:
+        opt = '/'.join(opt)
+    elif len(opt) > 1:
         optprog, optmethod, optbasis = opt[0], opt[1], opt[2]
         opt = 'opt/' + '/'.join([optmethod, optbasis, optprog])
     else:
@@ -817,15 +817,16 @@ def E_QTC(bas, opt, en, freq, parameters):
         en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
         enefile = 'doesntexist'
 
-    if freq != None:
+    if freq:
         freqprog, freqmethod, freqbasis = freq[0], freq[1], freq[2]
         task = 'freq'
         if anharm:
             zpvetype = 'anzpve'
             task = 'anharm'
         freq = task + '/' + '/'.join([freqmethod, freqbasis, freqprog])
-        freq = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype) 
-
+        freq = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype)
+    if not io.check_file(freq):
+        freq = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
     if not io.check_file(en):
         qtc.main(parameters)
     E = io.read_file(en).strip()
@@ -866,6 +867,8 @@ def main_keyword(mol,parameters):
         key = io.fix_path(key)
         if key.startswith('opt'):
             optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+        if key.startswith('tors'):
+            optlevel = key.split('/')
         elif key.startswith('freq') or key.startswith('anh'):
             freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         elif key.startswith('en'):
@@ -873,6 +876,7 @@ def main_keyword(mol,parameters):
         elif key.startswith('comp'):
             enlevel  = ['composite' + '/' + key.split('/')[1]]
             extrap   = True
+    freqlevel = parameters['freqlevel']
     if not enlevel:
         enlevel = ['']
     molform = ob.get_formula(mol)
