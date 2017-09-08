@@ -11,7 +11,7 @@ try:
     from pymongo import MongoClient
 except:
     pass
-
+import json
 def start_mongo(dbpath,logpath,mongoexe='mongod'):
     """
     Starts a mongo session.
@@ -34,6 +34,23 @@ def get_database(collection,db='mydatabase'):
 
 def insert_entry(entry,db,efilter={}):
     return db.replace_one(efilter,entry,upsert=True)
+
+
+def get_smiles_from_json(jsonfile):
+    """
+    Opens and reads a .json file created by RMG. 
+    Builds a list of strings contains SMILES.
+    Needs to convert from unicode to str.
+    """
+    with open(jsonfile) as f:
+        j = json.load(f)
+    nitem = len(j)
+    smileslist = ['']*nitem
+    i = 0
+    for d in j :
+        smileslist[i] = d['SMILES'].encode('ascii','ignore')
+        i += 1
+    return smileslist
 
 def gen_dict_extract(key, var):
     """
