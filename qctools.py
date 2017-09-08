@@ -38,29 +38,24 @@ def get_input(x, template, parameters):
     if natom == 1:
         task = 'energy'
     inp = template
-    if task == 'torsscan':
+    if task.startswith('tors'):
         #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
         #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
-        if len(parameters['optlevel'].split('/')) > 1:
-            optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
-            if optpackage != 'molpro' or optpackage.startswith('g'):
-                optpackage = 'g09'
-            if optpackage.startswith('gau'):
-                optpackage = 'g09'
-            inp = inp.replace("QTC(TSPACKAGE)", optpackage)
-            inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
-            inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
-            inp = inp.replace(    "QTC(TEST1)",         '')
-            inp = inp.replace(    "QTC(TEST2)",         '')
-            inp = inp.replace(    "QTC(TEST3)",         '')
+        #if len(parameters['optlevel'].split('/')) > 1:
+        #    optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
+        #    if optpackage != 'molpro' or optpackage.startswith('g'):
+        #        optpackage = 'g09'
+        #    if optpackage.startswith('gau'):
+        #        optpackage = 'g09'
+        #    inp = inp.replace("QTC(TSPACKAGE)", optpackage)
+        #    inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
+        #    inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
+        if parameters['optdir']:
+            inp = inp.replace("QTC(OPTDIR)", io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(x).strip() + '.xyz'])) 
         else:
-            inp = inp.replace("QTC(TSPACKAGE)",    package)
-            inp = inp.replace( "QTC(TSMETHOD)",     method)
-            inp = inp.replace(  "QTC(TSBASIS)",      basis)
-            inp = inp.replace(    "QTC(TEST1)",    package)
-            inp = inp.replace(    "QTC(TEST2)",     method)
-            inp = inp.replace(    "QTC(TEST3)",      basis)
+            inp = inp.replace("QTC(OPTDIR)", 'false') 
+        inp = inp.replace(      "QTC(NMC)", str(4**parameters['nrotor']) )
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
@@ -209,8 +204,12 @@ def parse_qckeyword(parameters, calcindex=0):
         else:
             print('ERROR! Invalid qckeyword: {0}'.format(tokens))
             return        
-        if task.startswith('opt') or task.startswith('geo') or task.startswith('min'):
+        if task.startswith('opt')  or task.startswith('geo') or task.startswith('min'):
             task = 'opt'
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
+            parameters['optdir'] = qcdirectory
+            parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+        elif task.startswith('torso'):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
@@ -229,7 +228,7 @@ def parse_qckeyword(parameters, calcindex=0):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('tors'):
-            task = 'torsscan'
+            #task = 'torsscan'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,freqdir,anharmdir,task,method,basis,package]))
             if 'qcpackage' in parameters:
                 if parameters['qcpackage'].startswith('gau'):
@@ -540,7 +539,7 @@ def run(mol, parameters, mult=None):
         else:
             io.write_file(inptext, inpfile)
             if io.check_file(inpfile, timeout=1):
-                if package in  ['nwchem', 'torsscan']:
+                if package in  ['nwchem', 'torsscan','torsopt']:
                     command = parameters['qcexe'] + ' ' + inpfile
                     msg += io.execute(command,stdoutfile=outfile,merge=True)
                 elif package in  ['molpro']:
