@@ -38,7 +38,7 @@ def get_input(x, template, parameters):
     if natom == 1:
         task = 'energy'
     inp = template
-    if task == 'torsscan':
+    if task.startswith('tors'):
         #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
         #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
         #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
@@ -68,7 +68,6 @@ def get_input(x, template, parameters):
         else:
             inp = inp.replace(   "QTC(HOF)", 'false')
 
-        parameters['runthermo'] = False
         if parameters['anharmonic'] == True:
             inp = inp.replace('QTC(ANHARMLOC)', parameters['optlevel'] + '/' + parameters['freqlevel'])
         else:
@@ -84,7 +83,7 @@ def get_input(x, template, parameters):
                 task = '{0} {1}'.format(method, task) 
         elif package == 'gaussian':
             if task == 'opt':
-                task = 'opt=(maxcyc=50)'
+                task = 'opt=(maxcyc=50,internal)'
             elif task == 'energy':
                 task = ''
             elif task == 'anharm':
@@ -229,8 +228,11 @@ def parse_qckeyword(parameters, calcindex=0):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('tors'):
-            task = 'torsscan'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,freqdir,anharmdir,task,method,basis,package]))
+            parameters['optdir'] = qcdirectory
+            parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+            parameters['freqdir'] = qcdirectory
+            parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
             if 'qcpackage' in parameters:
                 if parameters['qcpackage'].startswith('gau'):
                     parameters['qcpackage'] = 'g09'
@@ -266,11 +268,13 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     energy = 0
     energies = {}
     hrmfreqs = []
+    prjfreqs = []
     anhrmfreqs = []
     xmat= []
     zpve= 0.0
     anzpve= None
     parsed = False
+    messhindered = None
     if package == 'nwchem':
         method = get_nwchem_method(s)
         calculation = get_nwchem_calculation(s)
@@ -309,6 +313,28 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if type(xmat) == str:
                 xmat = []
         parsed = True
+    elif package == 'torsscan':
+        optlevel, method, energy = get_torsscan_info(s)
+        if io.check_file('geom1.xyz'):
+            xyz = io.read_file('geom1.xyz', aslines=False)
+            parsed = True
+            if io.check_file('hrproj_freq.dat'):
+                freqlines = io.read_file('hrproj_freq.dat',aslines=True)
+                for line in freqlines:
+                    if float(line) > 0.:
+                        prjfreqs.append(float(line))
+            if io.check_file('RTproj_freq.dat'):
+                freqlines = io.read_file('RTproj_freq.dat',aslines=True)
+                for line in freqlines:
+                    if float(line) > 0.:
+                        hrmfreqs.append(line)
+            fname = 'me_files/reac1_zpe.me'
+            if io.check_file(fname):
+                zpve = float(io.read_file(fname, aslines=False))                
+            fname = 'me_files/reac1_hr.me'
+            if io.check_file(fname):
+                messhindered = io.read_file(fname, aslines=False)
+            
     if parsed:
         if write:
             fname = smilesname + '.xyz'
@@ -337,7 +363,10 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                   'geometry':{
                    'xyz':xyz,
                    'harmonic frequencies' : hrmfreqs,
-                   'xmat': xmat }}}}}}}
+                   'projected frequencies': prjfreqs,
+                   'zpve': zpve,
+                   'xmat': xmat,
+                   'mess hindered input': messhindered }}}}}}}
         if calculation == 'geometry optimization':
             for key,value in energies.iteritems():
                 if key is not method:
@@ -366,11 +395,11 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                 if len(xmat) > 0:
                     io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
                 io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
-            if xyz != None:
+            if xyz:
                 io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
-            if geo != None:
+            if geo:
                 io.db_store_opt_prop(geo, smilesname,  'geo', None, package, method, basis)
-            if zmat != None:
+            if zmat:
                 io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
     return d
 
@@ -515,7 +544,7 @@ def run(mol, parameters, mult=None):
     tmp = io.read_file(template)
     inptext = get_input(mol, tmp, parameters)
     if task.startswith('tors'):
-        package = task
+        package = 'torsscan'
     prefix = ob.get_smiles_filename(mol) + '_' + package
     inpfile = prefix + '.inp'
     outfile = prefix + '.out'
@@ -718,6 +747,8 @@ def get_output_package(out,filename=False):
         p = 'nwchem'
     elif "Variable memory released" in out:
         p = 'molpro'
+    elif "Unprojected Frequencies (cm-1):" in out:
+        p = 'torsscan'
     else:
         p = None
     return p
@@ -1369,6 +1400,37 @@ def get_nwchem_frequencies(inp, filename=False, minfreq=10):
                 if freq > minfreq:
                     freqs.append(freq)
     return freqs
+
+def get_torsscan_info(s):
+    """
+    Returns electronic prog/method/basis as a string and energy as a float in hartree units.
+    Sample torsscan output
+Optimized at : g09/b3lyp/sto-3g
+Prog  : gaussian
+Method: b3lyp
+Basis:  sto-3g
+Energy: -114.179051157 A.U.
+Rotational Constants:120.49000, 23.49807, 22.51838 GHz
+    """
+    lines  =s.splitlines()
+    optlevel = ''
+    prog = ''
+    method = ''
+    basis = ''
+    energy = ''
+    for line in lines:
+        line = line.strip()
+        if 'Optimized at' in line:
+            optlevel = line.split()[-1]
+        elif line.startswith('Prog'):
+            prog = line.split()[-1]
+        elif line.startswith('Method'):
+            method = line.split()[-1]
+        elif line.startswith('Basis'):
+            basis = line.split()[-1]
+        elif line.startswith('Energy'):
+            energy = float(line.replace('A.U.','').split()[-1])
+    return optlevel,  '{}/{}/{}'.format('torsscan',method,basis), energy
 
 
 def print_list(s):
