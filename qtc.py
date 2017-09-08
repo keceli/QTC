@@ -161,12 +161,12 @@ def run(s):
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
     optdir = parameters['optdir']
-    if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan' ]:
+    if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
         if package.startswith('nwc'):
             parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
         elif package.startswith('mol'):
             parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
-        else:
+       else:
             parameters['qcexe'] = parameters[package]
     if task.startswith('tors'):
         parameters['qcexe'] = parameters['torsscan']
@@ -198,7 +198,9 @@ def run(s):
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
     nrotor = ob.get_nrotor(mol)
-    msg = "Formula = {0}\n".format(formula)
+    nrotor = 1
+    parameters['nrotor'] = nrotor
+    msg  = "Formula = {0}\n".format(formula)
     msg += "SMILES = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "Number of rotors = {0}\n".format(nrotor)

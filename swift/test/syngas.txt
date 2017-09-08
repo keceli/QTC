@@ -1,0 +1,16 @@
+
+! Copied from /home/keceli/pacc/databases/syngas/syngas.txt
+
+[H]
+[H][H]
+[O]
+C
+[OH]
+O
+[O][O]
+O[O]
+OO
+[C-]#[O+]
+[CH]=O
+O=C=O
+N#N
