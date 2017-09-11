@@ -803,11 +803,11 @@ def E_QTC(bas, opt, en, freq, parameters):
     zpvetype = 'zpve'
     if len(opt) == 4:
         opt = '/'.join(opt)
-    elif len(opt) > 1:
+    elif opt and len(opt) > 1:
         optprog, optmethod, optbasis = opt[0], opt[1], opt[2]
         opt = 'opt/' + '/'.join([optmethod, optbasis, optprog])
     else:
-        optprog, optmethod, optbasis = None
+        optprog, optmethod, optbasis = None, None, None
 
     if len(en) > 1:
         enprog, enmethod, enbasis = en[0], en[1], en[2]
@@ -858,6 +858,7 @@ def main_keyword(mol,parameters):
     dbdir  = parameters['database']
     index  = parameters['calcindex']
     xyz    = parameters['xyzpath']
+    natom = ob.get_natom(mol)
     optlevel  = 'sp'
     extrap    = False
     enlevel   = None
@@ -866,11 +867,29 @@ def main_keyword(mol,parameters):
     for key in qckeys[:index+1]:
         key = io.fix_path(key)
         if key.startswith('opt'):
-            optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+            if natom ==1:
+                key.replace('opt','energy')
+                enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+                optlevel = ''
+            else:
+                optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         if key.startswith('tors'):
-            optlevel = key.split('/')
+            if natom ==1:
+                key.replace('torsscan','energy')
+                key.replace('torsopt','energy')
+                enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+                optlevel = ''
+            else:
+                optlevel = key.split('/')
         elif key.startswith('freq') or key.startswith('anh'):
-            freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+            if natom ==1:
+                key.replace('freq','energy')
+                key.replace('anharm','energy')
+                enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+                freqlevel = ''
+            else:
+                freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+             
         elif key.startswith('en'):
             enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
         elif key.startswith('comp'):

@@ -67,7 +67,7 @@ def get_mol(s, make3D=False):
         mol = s
     elif type(s) is str:
         if '.xyz' in s:
-            mol = pybel.readfile('xyz', s)
+            mol = pybel.readfile('xyz', s).next()
         else:   
             frm = get_format(s)
             mol = pybel.readstring(frm, s)

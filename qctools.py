@@ -29,14 +29,13 @@ def get_input(x, template, parameters):
     zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
+    smiles = ob.get_smiles(mol)
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
     heat = parameters['heat']          
     task    = parameters['qctask']
     nproc   = parameters['qcnproc']
-    if natom == 1:
-        task = 'energy'
     inp = template
     if task.startswith('tors'):
         #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
@@ -114,6 +113,7 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(NOPEN)", str(nopen))
     inp = inp.replace("QTC(UNIQUENAME)", uniquename)
     inp = inp.replace("QTC(SMILESNAME)", smilesname)
+    inp = inp.replace("QTC(SMILES)", smiles)
     inp = inp.replace("QTC(ZMAT)", zmat)
     inp = inp.replace("QTC(GEO)", geo)
     inp = inp.replace("QTC(XYZ)", xyz)
@@ -189,6 +189,11 @@ def parse_qckeyword(parameters, calcindex=0):
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
     task = tokens[0]
+    if parameters['natom'] == 1:
+        if task in ['opt', 'freq', 'torsscan', 'torsopt', 'anharm']:
+            print('{0} can not be run for 1 atom, switching to energy calculation'.format(task))
+            task = 'energy'
+            parameters['task'] = task
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
         task = 'composite'
         if len(tokens) > 2:
@@ -220,7 +225,7 @@ def parse_qckeyword(parameters, calcindex=0):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-        elif task.startswith('torso'):
+        elif task.startswith('tors'):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
@@ -628,13 +633,15 @@ def run_extrapolation_keyword(mol, parameters):
     enefile = smilesname + '.ene'  
     inpfile = smilesname + '_' + method  + '.inp'  
     for i in range(0,calcindex):
-        parse_qckeyword(parameters, i)
+        parameters = parse_qckeyword(parameters, i)
         smilesdir = parameters['smilesdir']
         enedir  = io.join_path(*[smilesdir,parameters['qcdirectory']])
         enepath = io.join_path(*[enedir, enefile])
         if io.check_file(enepath):
             e[i] = float(io.read_file(enepath))
             msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
+        else:
+            msg += ('E({0}) can not be found at "{1}" \n'.format(i,enepath))
     print(msg)
     msg = ''
     exec(formula)

@@ -29,10 +29,9 @@ By ECP-PACC team
 """
 """
 TODO: 
-1)When optimization fails, restart from the last geometry
- 2) Remove space from qckeyword:  done
- 3) Gaussian molpro bug for deltaH: 
- 4) Double prll fails
+When optimization fails, restart from the last geometry
+hof=0 at 0 K should also be at room T
+Delete NWChem scratch files
 """
 def get_args():
     """
@@ -43,7 +42,7 @@ def get_args():
                                      #formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                      description=
     """
-    April 18, 2017
+    September 11, 2017
 
     Performs quantum chemistry calculations to calculate thermochemical parameters.
     Writes NASA polynomials in different formats.
@@ -161,6 +160,12 @@ def run(s):
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
     optdir = parameters['optdir']
+    mol = ob.get_mol(s,make3D=True)
+    mult = ob.get_mult(mol)
+    formula = ob.get_formula(mol)
+    nrotor = ob.get_nrotor(mol)
+    parameters['nrotor'] = nrotor
+
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
         if package.startswith('nwc'):
             parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
@@ -194,11 +199,7 @@ def run(s):
         parameters['parseqc'] = True
     if parameters['qctemplate']:
         parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
-    mol = ob.get_mol(s,make3D=True)
-    mult = ob.get_mult(mol)
-    formula = ob.get_formula(mol)
-    nrotor = ob.get_nrotor(mol)
-    parameters['nrotor'] = nrotor
+
     msg  = "Formula = {0}\n".format(formula)
     msg += "SMILES = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
@@ -236,8 +237,7 @@ def run(s):
     if xyzfile:
         msg += "XYZ file = '{0}'\n".format(xyzfile)
         xyz = io.read_file(xyzfile)
-        coords = ob.get_coordinates_array(xyz)
-        mol = ob.set_xyz(mol, coords)
+        mol = ob.get_mol(xyz)
     else:
         msg += "XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath)
     printp(msg)
@@ -385,6 +385,8 @@ def main(arg_update={}):
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
                 parameters['heat'] = None
+                mol = ob.get_mol(s,make3D=True)
+                parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
                     parameters['calcindex'] = i
                     if parameters['qckeyword']:
