@@ -149,9 +149,6 @@ def run(s):
     It uses and modifies 'parameters', which is defined as a global variable.
     Not pure.
     """
-    printp('\n')
-    printp(100*'*')
-    printp('\n')
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
@@ -236,8 +233,7 @@ def run(s):
             xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
     if xyzfile:
         msg += "XYZ file = '{0}'\n".format(xyzfile)
-        xyz = io.read_file(xyzfile)
-        mol = ob.get_mol(xyz)
+        mol = ob.get_mol(xyzfile)
     else:
         msg += "XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath)
     printp(msg)
@@ -296,6 +292,8 @@ def run(s):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')
         if task.startswith('comp'):
+            if parameters['freqdir']:
+                qc
             d = {}
             freqs = []
         else:
@@ -315,7 +313,7 @@ def run(s):
             if io.check_file('thermp.out'):
                 import patools as pa
                 lines = io.read_file('thermp.out')
-                msg += 'delHf(298) = {} kcal'.format(pa.get_298(lines))
+                msg += 'delHf(298) = {} kcal/mol'.format(pa.get_298(lines))
     io.cd(cwd)
     printp(msg)
     return
@@ -362,10 +360,11 @@ def main(arg_update={}):
     printp('QTC: Given arguments         =')
     for param in parameters:
         printp('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
-    printp("QTC: Number of species       = {0}".format(len(mylist)))
     init = timer()
     printp("QTC: Initialization time (s) = {0:.2f}".format(init-start))
-    if parameters['runthermo']:
+    runthermo = parameters['runthermo']
+    if runthermo:
+        printp("QTC: Initial number of species       = {0}".format(len(mylist)))
         for s in mylist:
             formula = ob.get_formula(s)
             _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['hfbasis'].split())
@@ -374,10 +373,37 @@ def main(arg_update={}):
                     msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
                     mylist = [basismol] + mylist
                     printp(msg)
-            
+    printp("QTC: Number of species       = {0}".format(len(mylist)))            
     if parameters['qckeyword']:
         if nproc == 1:
             for s in mylist:
+                parameters['runthermo'] = False
+                parameters['optdir'] = ''
+                parameters['freqdir'] = ''
+                parameters['anharmdir'] = ''
+                parameters['qcdirectory'] = ''
+                parameters['optlevel'] = ''
+                parameters['freqlevel'] = ''
+                parameters['heat'] = None
+                mol = ob.get_mol(s,make3D=True)
+                parameters['natom'] = ob.get_natom(mol)
+                for i in range(ncalc):
+                    parameters['calcindex'] = i                        
+                    printp('\n' + 100*'*' + '\n')
+                    printp('Running QTC')
+                    parameters = qc.parse_qckeyword(parameters, calcindex=i)
+                    run(s)
+        else:
+            for i in range(ncalc):
+                parameters['calcindex'] = i
+                if parameters['qckeyword']:
+                    qc.parse_qckeyword(parameters, calcindex=i)
+                pool = multiprocessing.Pool(nproc)
+        if runthermo:
+            printp('\n' + 100*'#' + '\n')
+            printp("Starting thermo calculations")
+            for s in mylist:
+                parameters['runthermo'] = runthermo
                 parameters['optdir'] = ''
                 parameters['freqdir'] = ''
                 parameters['anharmdir'] = ''
@@ -389,16 +415,10 @@ def main(arg_update={}):
                 parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
                     parameters['calcindex'] = i
-                    if parameters['qckeyword']:
-                        qc.parse_qckeyword(parameters, calcindex=i)
-                    printp('Running QTC for {0}' .format(s))
-                    run(s)
-        else:
-            for i in range(ncalc):
-                parameters['calcindex'] = i
-                if parameters['qckeyword']:
-                    qc.parse_qckeyword(parameters, calcindex=i)
-                pool = multiprocessing.Pool(nproc)
+                    printp('\n' + 100*'*' + '\n')
+                    printp('Running QTC')
+                    parameters = qc.parse_qckeyword(parameters, calcindex=i)
+                    run(s)            
     else:
         pprint(mylist)
         printp("You need to specify qckeyword with -k to run calculations")

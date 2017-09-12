@@ -6,6 +6,7 @@ import obtools as ob
 import iotools as io
 import numpy as np
 import patools as pa
+from Cython.Build.Dependencies import package
 try:
     import cclib
 except:
@@ -182,8 +183,6 @@ def parse_qckeyword(parameters, calcindex=0):
     keyword = parameters['qckeyword']
     xyzdir = parameters['xyzpath']
     optdir   = parameters['optdir']
-    freqdir  = parameters['freqdir']
-    anharmdir = parameters['anharmdir']
     package = 'nwchem'
     calcs = keyword.split(',')
     currentcalc = calcs[calcindex]
@@ -191,7 +190,7 @@ def parse_qckeyword(parameters, calcindex=0):
     task = tokens[0]
     if parameters['natom'] == 1:
         if task in ['opt', 'freq', 'torsscan', 'torsopt', 'anharm']:
-            print('{0} can not be run for 1 atom, switching to energy calculation'.format(task))
+            print('Switching to Task: energy, since Task: {0} can not be run for 1 atom'.format(task))
             task = 'energy'
             parameters['task'] = task
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
@@ -229,6 +228,8 @@ def parse_qckeyword(parameters, calcindex=0):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+            parameters['freqdir'] = qcdirectory
+            parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('freq') or task.startswith('harm') or task.startswith('hrm'):
             task = 'freq'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
@@ -243,19 +244,19 @@ def parse_qckeyword(parameters, calcindex=0):
             task = 'energy'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
-        elif task.startswith('tors'):
-            #task = 'torsscan'
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
-            #parameters['optdir'] = qcdirectory
-            parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-            parameters['freqdir'] = qcdirectory
-            parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
-            if 'qcpackage' in parameters:
-                if parameters['qcpackage'].startswith('gau'):
-                    parameters['qcpackage'] = 'g09'
-            parameters['tspackage'] = package
-            parameters[ 'tsmethod'] = method
-            parameters[  'tsbasis'] = basis
+#         elif task.startswith('tors'):
+#             #task = 'torsscan'
+#             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+#             #parameters['optdir'] = qcdirectory
+#             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+#             parameters['freqdir'] = qcdirectory
+#             parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
+#             if 'qcpackage' in parameters:
+#                 if parameters['qcpackage'].startswith('gau'):
+#                     parameters['qcpackage'] = 'g09'
+#             parameters['tspackage'] = package
+#             parameters[ 'tsmethod'] = method
+#             parameters[  'tsbasis'] = basis
         else:
             print('ERROR! Invalid qckeyword task: {0}'.format(task))
             return      
@@ -270,6 +271,84 @@ def parse_qckeyword(parameters, calcindex=0):
     return parameters 
 
 
+def parse_results(filename, parameters):
+    """
+    Returns a dictionary containing results for the given quantum chemistry output.
+    package: <str>
+    method : <str>
+    file: <str>
+    hostname: <str>
+    xyz: <str>
+    xmat: <str>  anharmonicity X matrix from VPT2
+    hindered rotor potential: <str> messpf input section for rotors 
+    number of basis functions: <int>
+    nuclear repulsion energy: <float>
+    energy: <float> in atomic units (Hartree)
+    zpve: <float> in cm^-1
+    anharmonic zpve: <float> in cm^-1
+    harmonic frequencies: <[float]> in cm^-1
+    anharmonic frequencies: <[float]> in cm^-1
+    projected frequencies: <[float]> in cm^-1
+    """
+    import iotools
+    r = {}
+    r['file'] = ''
+    r['package'] = ''
+    r['method'] = ' '
+    r['hostname'] = ' '
+    r['xyz'] = ' '
+    r['xmat'] = ' '
+    r['hindered rotor potential'] = ' ' 
+    r['number of basis functions'] = 0
+    r['nuclear repulsion energy:' ]= 0.
+    r['energy' ]= 0.
+    r['zpve'] = 0.
+    r['anharmonic zpve'] = 0.
+    r['harmonic frequencies' ]= []
+    r['anharmonic frequencies'] = []
+    r['projected frequencies' ]= []
+    if io.check_file(filename,timeout=1):
+        r['file'] = io.get_path(filename)
+        out = io.read_file(filename,asline=False)
+        package = get_output_package(out)
+        if package:
+            r['package'] = package
+        else:
+            print('"{0}" can not be parsed.'.format(r['file']))
+            return r
+    else:
+        print('"{0}" can not be found at {1}'.format(filename,io.pwd()))
+        return r
+#     r['xyz'] = get_xyz(out, package)
+#     r['xmat'] = get_xyz(out, package)
+#     r['hindered rotor potential'] = get_xyz(out, package) 
+#     r['number of basis functions'] = get_xyz(out, package)
+#     r['nuclear repulsion energy:' ]= get_xyz(out, package)
+#     r['energy' ]= get_xyz(out, package)
+#     r['zpve'] = get_xyz(out, package)
+#     r['anharmonic zpve'] = get_xyz(out, package)
+#     r['harmonic frequencies' ]= get_xyz(out, package)
+#     r['anharmonic frequencies'] = get_xyz(out, package)
+#     r['projected frequencies' ]= get_xyz(out, package)
+    return r
+
+
+def get_xyz(out,package=None):
+    """
+    Return xyz as a string from a qc output.
+    """
+    xyz = ''
+    if package is None:
+        package = get_output_package(out)
+    if package == 'nwchem':
+        xyz = get_nwchem_xyz(out)
+    elif package == 'gaussian':
+        xyz = pa.gaussian_xyz(out)
+    elif package == 'molpro':
+        xyz = pa.molpro_xyz(out)
+    return xyz
+        
+        
 def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     package = get_output_package(s)
     if type(s) is list:
@@ -332,27 +411,29 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         parsed = True
     elif package == 'torsscan':
         optlevel, method, energy = get_torsscan_info(s)
-        if io.check_file('geom1.xyz'):
-            xyz = io.read_file('geom1.xyz', aslines=False)
-            energy = float(xyz.splitlines()[1])
-            parsed = True
-            if io.check_file('hrproj_freq.dat'):
-                freqlines = io.read_file('hrproj_freq.dat',aslines=True)
-                for line in freqlines:
-                    if float(line) > 0.:
-                        prjfreqs.append(float(line))
-            if io.check_file('RTproj_freq.dat'):
-                freqlines = io.read_file('RTproj_freq.dat',aslines=True)
-                for line in freqlines:
-                    if float(line) > 0.:
-                        hrmfreqs.append(line)
-            fname = 'me_files/reac1_zpe.me'
-            if io.check_file(fname):
-                zpve = float(io.read_file(fname, aslines=False))                
-            fname = 'me_files/reac1_hr.me'
-            if io.check_file(fname):
-                messhindered = io.read_file(fname, aslines=False)
-            
+        if io.check_file('geom.log'):
+                out = io.read_file('geom.log', aslines=False)
+                xyz = pa.gaussian_xyz(out)
+                method, energy = pa.gaussian_energy(out)
+                hrmfreqs = pa.gaussian_freqs(out)
+                parsed = True
+        if io.check_file('hrproj_freq.dat'):
+            freqlines = io.read_file('hrproj_freq.dat',aslines=True)
+            for line in freqlines:
+                if float(line) > 0.:
+                    prjfreqs.append(float(line))
+        if io.check_file('RTproj_freq.dat'):
+            freqlines = io.read_file('RTproj_freq.dat',aslines=True)
+            for line in freqlines:
+                if float(line) > 0.:
+                    hrmfreqs.append(line)
+        fname = 'me_files/reac1_zpe.me'
+        if io.check_file(fname):
+            zpve = float(io.read_file(fname, aslines=False))                
+        fname = 'me_files/reac1_hr.me'
+        if io.check_file(fname):
+            messhindered = io.read_file(fname, aslines=False)
+
     if parsed:
         if write:
             fname = smilesname + '.xyz'
@@ -1225,7 +1306,7 @@ def get_nwchem_xyz(inp,filename=False):
     """
     Returns geometry in xyz format by parsing NWChem output file.
     
-    Sample output:
+    Sample NWChem output:
  Output coordinates in angstroms (scale by  1.889725989 to convert to a.u.)
 
   No.       Tag          Charge          X              Y              Z
@@ -1254,7 +1335,7 @@ def get_nwchem_xyz(inp,filename=False):
             natom += 1
         else:
             break
-    xyz = '{0}\nParsed by QTC from NWChem output file\n{1}'.format(natom, geolines)
+    xyz = '{0}\nParsed by QTC from NWChem output file\n{1}\n\n'.format(natom, geolines)
     return xyz
 
 
