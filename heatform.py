@@ -723,12 +723,12 @@ def convert_to_smiles(basis):
 
 def AU_to_kcal(E, printout=True):
     if printout:
-        lines =  '\n        delHf(0K)'
-        lines += '\nA.U. \t'
+        lines =  '\n \t delHf(0K)'
+        lines += '\n Hartree/atom \t'
         lines += str(E) + '\t'
-        lines += '\nkJ   \t'
+        lines += '\n kJ/mol \t'
         lines += str(E/ .00038088) + '\t'
-        lines += '\nkcal   \t'
+        lines += '\n kcal/mol \t'
         lines += str(E *  627.503) + '\t'
         print lines
     hf0k = E * 627.503
@@ -793,61 +793,95 @@ def comp_coefficients(molform, basis='auto'):
 def E_QTC(bas, opt, en, freq, parameters):
     ### Check dictionary ###
     from testdb import db
-    import qtc
-
-    parameters['input'] = bas
+    import qctools as qc
+    import iotools as io
     dbdir = parameters['database']
     anharm = parameters['anharmonic']
-
-    E, zpve = 0, 0
+    natom = ob.get_natom(bas)
+    parameters['natom'] = natom
+    calcindex = parameters['calcindex']
+    parameters = qc.parse_qckeyword(parameters, calcindex)
     zpvetype = 'zpve'
-    if len(opt) == 4:
-        opt = '/'.join(opt)
-    elif opt and len(opt) > 1:
-        optprog, optmethod, optbasis = opt[0], opt[1], opt[2]
-        opt = 'opt/' + '/'.join([optmethod, optbasis, optprog])
+    if anharm:
+        zpvetype = 'anzpve'
+    enfile = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['qcdirectory'], bas + '.ene' ])
+    zpvefile = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
+    if io.check_file(enfile):
+        en = float(io.read_file(enfile).strip())
+        print('Energy from "{0}": {1} Hartree '.format(enfile,en))
     else:
-        optprog, optmethod, optbasis = None, None, None
-
-    if len(en) > 1:
-        enprog, enmethod, enbasis = en[0], en[1], en[2]
-        en = 'energy/' + '/'.join([enmethod, enbasis, enprog])
-        en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en, bas + '.ene')
+        en = 0.0
+        print('Energy file "{0}" not found'.format(enfile))
+    if io.check_file(zpvefile):
+        zpve = float(io.read_file(zpvefile).strip())
+        print('ZPVE from "{0}": {1} Hartree'.format(zpvefile, zpve))
     else:
-        en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
-        enefile = 'doesntexist'
+        zpve = 0.0
+        print('ZPVE file "{0}" not found'.format(zpvefile))
+#    zpve = io.read_file(freq).strip()
+#     if len(opt) == 4:
+#         opt = '/'.join(opt)
+#     elif opt and len(opt) > 1:
+#         optprog, optmethod, optbasis = opt[0], opt[1], opt[2]
+#         opt = 'opt/' + '/'.join([optmethod, optbasis, optprog])
+#     else:
+#         optprog, optmethod, optbasis = None, None, None
+# 
+#     if len(en) > 1:
+#         enprog, enmethod, enbasis = en[0], en[1], en[2]
+#         en = 'energy/' + '/'.join([enmethod, enbasis, enprog])
+#         en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en, bas + '.ene')
+#     else:
+#         en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
+#         enefile = 'doesntexist'
+# 
+#     if freq:
+#         freqprog, freqmethod, freqbasis = freq[0], freq[1], freq[2]
+#         task = 'freq'
+#         if anharm:
+#             zpvetype = 'anzpve'
+#             task = 'anharm'
+#         freq = task + '/' + '/'.join([freqmethod, freqbasis, freqprog])
+#         freq = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype)
+#     if not io.check_file(freq):
+#         freq = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
+#     if not io.check_file(en):
+#         #print('Run QTC without -T to complete all energy calculations, then rerun QTC with -T')
+#         #qtc.main(parameters)
+#         en = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['qcdirectory'], bas + '.ene' ])
+#        # print'en file not found', en
+#     E = io.read_file(en).strip()
+#     E = float(E)
+#     print '{}   E: {:5g}  pulled from: {}'.format(bas, E, en)
+# 
+#     if freq != None:
+#         if not io.check_file(freq):
+#             qtc.main(parameters)
+#         if io.check_file(freq):        
+#             zpve = io.read_file(freq).strip()
+#             zpve = float(zpve)
+#             print '{} ZPVE: {:5g}  pulled from: {}'.format(bas, zpve, freq)
+#         else:
+#             zpve = 0.0
+#             print 'ZPVE not found assumed 0.0'
+#     else:
+#         print 'Zero point vibrational energy NOT accounted for'
+#         zpve = 0
+    return  float(en) + float(zpve)
 
-    if freq:
-        freqprog, freqmethod, freqbasis = freq[0], freq[1], freq[2]
-        task = 'freq'
-        if anharm:
-            zpvetype = 'anzpve'
-            task = 'anharm'
-        freq = task + '/' + '/'.join([freqmethod, freqbasis, freqprog])
-        freq = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype)
-    if not io.check_file(freq):
-        freq = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
-    if not io.check_file(en):
-        qtc.main(parameters)
-    E = io.read_file(en).strip()
-    E = float(E)
-    print '{}   E: {:5g}  pulled from: {}'.format(bas, E, en)
 
-    if freq != None:
-        if not io.check_file(freq):
-            qtc.main(parameters)
-        if io.check_file(freq):        
-            zpve = io.read_file(freq).strip()
-            zpve = float(zpve)
-            print '{} ZPVE: {:5g}  pulled from: {}'.format(bas, zpve, freq)
-        else:
-            zpve = 0.0
-            print 'ZPVE not found assumed 0.0'
-    else:
-        print 'Zero point vibrational energy NOT accounted for'
-        zpve = 0
-    return  float(E) + float(zpve)
-
+def get_total_energy(mol, parameters):
+    import qctools as qc
+    natom = ob.get_natom(mol)
+    parameters['natom'] = natom
+    calcindex = parameters['calcindex']
+    parameters = qc.parse_qckeyword(parameters, calcindex)
+    dbdir = parameters['database']
+    anharm = parameters['anharmonic']
+    if anharm:
+        zpvetype = 'anzpve'    
+    
+    
 def main_keyword(mol,parameters):
     
  #   mol    = ob.get_mol(s)
@@ -987,7 +1021,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
     hfdire = io.db_sp_path(enprog, enmethod, enbasis, mol, None, optprog, optmethod, optbasis)
     if '_' not in mol:
         if not io.check_file(hfdire + '/' + mol + '.hf0k'):
-            io.db_store_sp_prop('Energy (kcal)\tBasis\n----------------------------------',mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
+            io.db_store_sp_prop('Energy (kcal/mol)\tBasis\n----------------------------------',mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
         s = '\n' + str(hf0k) + '\t' + '  '.join(basis) 
         io.db_append_sp_prop(s,mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
         
