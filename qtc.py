@@ -9,6 +9,7 @@ import dbtools as db
 import heatform as hf
 from pprint import pprint
 import sys
+from patools import energy
 __updated__ = "2017-07-13"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
@@ -156,13 +157,17 @@ def run(s):
     task    = parameters['qctask']
     runthermo = parameters['runthermo']
     qcnproc = parameters['qcnproc']
+    qckeyword = parameters['qckeyword']
+    calcindex = parameters['calcindex']
     optdir = parameters['optdir']
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
     nrotor = ob.get_nrotor(mol)
+    natom = ob.get_natom(mol)
+    label = qc.get_qc_label(natom, qckeyword, calcindex)
     parameters['nrotor'] = nrotor
-
+    parameters['label'] = label
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
         if package.startswith('nwc'):
             parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
@@ -208,6 +213,7 @@ def run(s):
     msg += 'Method = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis = {0}\n'.format(parameters['qcbasis'])
     msg += 'Package = {0}\n'.format(parameters['qcpackage'])
+    msg += 'Label = {0}\n'.format(parameters['label'])
     msg += 'Template = {0}\n'.format(parameters['qctemplate'])
     smilesname = ob.get_smiles_filename(s)
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
@@ -267,16 +273,30 @@ def run(s):
         printp(msg)
         msg = ''
     if parseqc:
-        printp('Parsing ...')
+        printp('Parsing output...')
         if io.check_file('geom1.xyz'):
             parameters['optdir'] = io.pwd()
         if parameters['qctask'] == 'composite':
-            printp('Nothing to parse for {}'.format(parameters['qctask'] ))
+            enefile = smilesname + '.ene'
+            if io.check_file(enefile):
+                energy = float(io.read_file(enefile).strip())
+                parameters['results']['energy'] = energy
+            else:
+                msg += 'Can not find "{0}".\n'.format(enefile)
+                msg += 'Can not run thermo\n'
+                runthermo = False
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput,aslines=False)
             if qc.check_output(out):
-                d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
-                pprint(d)
+                results = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
+                for key in results.keys():
+                    val = results[key]
+                    if hasattr(val, "any"):
+                        if val.any():
+                            parameters['results'][key] = results[key]
+                    else:
+                        if val:
+                            parameters['results'][key] = results[key]
             else:
                 msg += 'Failed calculation in "{0}".\n'.format(qcoutput)
                 msg += 'Can not run thermo\n'
@@ -286,34 +306,28 @@ def run(s):
             msg += 'Can not run thermo\n'
             runthermo = False
     printp(msg)
+    pprint(parameters['results'])
+    parameters['all results'][s].update({label:parameters['results']})
     msg = ''                                   
     if runthermo:
+        hof, hfset = hf.main_keyword(mol,parameters)
+        hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
+        hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
+        parameters['results']['heat of formation at 0 K'] = hof
+        parameters['results']['heat of formation basis'] = hfset
+        io.write_file(hftxt,s + '.hofk')
         if not io.check_file('new.groups'):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')
-        if task.startswith('comp'):
-            if parameters['freqdir']:
-                qc
-            d = {}
-            freqs = []
-        else:
-            d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
-            xyz = next(db.gen_dict_extract('xyz',d))
-            freqs = next(db.gen_dict_extract('harmonic frequencies',d))
-            parameters['prjfreqs'] = next(db.gen_dict_extract('projected frequencies',d))
-            parameters['messhindered'] = next(db.gen_dict_extract('mess hindered input',d))
-            xmat   = next(db.gen_dict_extract('xmat',d))
-        hf0, hfset = hf.main_keyword(mol,parameters)
-        hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
-        hftxt += '\n' + str(hf0) + '\t' + '  '.join(hfset) 
-        parameters['heat'] = hf0
-        io.write_file(hftxt,s + '.hf0k')
-        if len(freqs) > 0:
-            msg += tc.write_chemkin_polynomial(mol, xyz, freqs, hf0, parameters,xmat=xmat)
+        if 'harmonic frequencies' in parameters['results']:
+            msg += tc.write_chemkin_polynomial2(mol, parameters)
             if io.check_file('thermp.out'):
                 import patools as pa
                 lines = io.read_file('thermp.out')
-                msg += 'delHf(298) = {} kcal/mol'.format(pa.get_298(lines))
+                hof298 = pa.get_298(lines)
+                parameters['results']['heat of formation at 298 K'] = hof298
+                msg += 'delHf(298) = {0} kcal/mol'.format(hof298)
+        parameters['all results'][s].update({label:parameters['results']})
     io.cd(cwd)
     printp(msg)
     return
@@ -327,6 +341,7 @@ def main(arg_update={}):
     start  = timer()
     args = get_args()
     parameters = vars(args)
+    parameters['all results'] = {}
     for key in arg_update:
         parameters[key] = arg_update[key]
     if parameters['qckeyword']:
@@ -384,7 +399,8 @@ def main(arg_update={}):
                 parameters['qcdirectory'] = ''
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
-                parameters['heat'] = None
+                parameters['results'] = {}
+                parameters['all results'].update({s:{}}) 
                 mol = ob.get_mol(s,make3D=True)
                 parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
@@ -423,6 +439,10 @@ def main(arg_update={}):
         pprint(mylist)
         printp("You need to specify qckeyword with -k to run calculations")
     end = timer()
+    if 'all results' in parameters:
+        printp('\n' + 100*'-' + '\n')
+        pprint('All results')
+        pprint(parameters['all results'])
     printp("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     printp("QTC: Total time (s)          = {0:.2f}".format(end-start))
     printp("QTC: Date and time           = {0}".format(io.get_date()))

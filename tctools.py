@@ -397,6 +397,73 @@ def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[], hindered=None):
     inp += 'End\n'
     return inp
 
+
+def get_messpf_input(mol,parameters):
+    """
+    Write input file for mess partition function program
+    Temperature(step[K],size)        100.   30
+    RelativeTemperatureIncrement            0.001
+    Species CH4
+    RRHO
+    Geometry[angstrom] 5 !pm3
+    C -0.0000 0.0000 0.0000
+    H 1.0870 0.0000 0.0000
+    H -0.3623 1.0249 0.0000
+    H -0.3623 -0.5124 0.8876
+    H -0.3623 -0.5124 -0.8876
+    Core RigidRotor
+    SymmetryFactor 1
+    End
+    Frequencies[1/cm] 9 !pm3
+    1362.16 1362.39 1362.48 1451.03 1451.06 3207.47 3207.48 3207.50 3311.01
+    ZeroEnergy[kcal/mol] 28.481 ! pm3
+    ElectronicLevels[1/cm]  1
+    0 1
+    End
+    """
+    label = parameters['label']
+    results = parameters['results']
+    xyz = results['xyz']
+    sym = 1
+    natom = len(mol.atoms)
+    formula = mol.formula
+    multiplicity = mol.spin
+    inp  = 'Temperature(step[K],size)        100.   30\n'
+    inp += 'RelativeTemperatureIncrement            0.001\n'
+    inp += 'Species {0}\n'.format(formula)
+    inp += 'RRHO\n'
+    inp += 'Geometry[angstrom] {0} !{1}\n'.format(natom,label)
+    inp += ''.join(xyz.splitlines(True)[2:])
+    inp += '\nCore RigidRotor\n'
+    inp += 'SymmetryFactor {0}\n'.format(sym)
+    inp += 'End\n'
+    if 'hindered potential' in results:
+        inp += results['hindered potential' ]
+    if 'projected frequencies' in results:
+        freqs = results['projected frequencies']
+    elif 'anharmonic frequencies' in results:
+        freqs = results['anharmonic frequencies']
+    if 'harmonic frequencies' in results:
+        freqs = results['harmonic frequencies']    
+    inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
+    inp += ' '.join(freqs) + '\n'
+    if 'xmat' in results:
+        xmat = results['xmat']
+        inp += ' Anharmonicities[1/cm]\n'
+        for i in range( len(xmat)):
+            for j in range(i+1):
+                inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
+        inp += ' End\n'
+    if 'anharmonic zpve' in results:
+        zpve = results['anharmonic zpve']
+    else:
+        zpve = results['zpve']
+    inp += 'ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
+    inp += 'ElectronicLevels[1/cm]  1\n'
+    inp += '0 {0}\n'.format(multiplicity)
+    inp += 'End\n'
+    return inp
+
 def run_pf(messpf='messpf',inputfile='pf.inp'):
     """
     Runs mess to generate partition function
@@ -523,6 +590,35 @@ def write_chemkin_polynomial(mol, xyz, freqs, deltaH,parameters, xmat=[], zpe=0.
     msg += 'Writing chemkin file {0}.\n'.format(chemkinfile)
     try:
         msg += write_chemkin_file(deltaH, tag, name, chemkinfile)
+    except:
+        "Failed to write polynomials"
+    return msg
+
+
+def write_chemkin_polynomial2(mol, parameters):
+    """
+    A driver to perform all operations to write NASA polynomial in
+    chemkin format. Assumes quantum chemistry calculation is performed.
+    """
+    messpfinput = 'pf.inp'
+    messpfoutput = 'pf.log'
+    name = mol.formula
+    tag = parameters['label']
+    hof = parameters['results']['heat of formation at 0 K']
+    inp = get_messpf_input(mol, parameters)
+    io.write_file(inp, messpfinput)
+    msg = 'Running {0} to generate partition function.\n'.format(parameters['messpf'])
+    msg += io.execute([parameters['messpf'],messpfinput])
+    msg += 'Running thermp .\n'
+    inp = get_thermp_input(mol.formula, hof)
+    msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp']) 
+    msg += 'Running pac99.\n'
+    msg += run_pac99(name)
+    msg += 'Converting to chemkin format.\n'
+    chemkinfile = name + '.ckin'
+    msg += 'Writing chemkin file {0}.\n'.format(chemkinfile)
+    try:
+        msg += write_chemkin_file(hof, tag, name, chemkinfile)
     except:
         "Failed to write polynomials"
     return msg
