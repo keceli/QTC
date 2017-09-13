@@ -6,6 +6,7 @@ import obtools as ob
 import iotools as io
 import numpy as np
 import patools as pa
+from Cython.Build.Dependencies import package
 try:
     import cclib
 except:
@@ -29,14 +30,20 @@ def get_input(x, template, parameters):
     zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
+    smiles = ob.get_smiles(mol)
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
-    heat = parameters['heat']          
+    if 'results' in parameters.keys():
+        results = parameters['results']
+        if 'HoF at 0 K' in results.keys():
+            heat = results['HoF at 0 K']
+        else:
+            heat = 0.
+    else:
+        heat = 0.    
     task    = parameters['qctask']
     nproc   = parameters['qcnproc']
-    if natom == 1:
-        task = 'energy'
     inp = template
     if task.startswith('tors'):
         if parameters['optdir']:
@@ -102,6 +109,7 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(NOPEN)", str(nopen))
     inp = inp.replace("QTC(UNIQUENAME)", uniquename)
     inp = inp.replace("QTC(SMILESNAME)", smilesname)
+    inp = inp.replace("QTC(SMILES)", smiles)
     inp = inp.replace("QTC(ZMAT)", zmat)
     inp = inp.replace("QTC(GEO)", geo)
     inp = inp.replace("QTC(XYZ)", xyz)
@@ -170,13 +178,16 @@ def parse_qckeyword(parameters, calcindex=0):
     keyword = parameters['qckeyword']
     xyzdir = parameters['xyzpath']
     optdir   = parameters['optdir']
-    freqdir  = parameters['freqdir']
-    anharmdir = parameters['anharmdir']
     package = 'nwchem'
     calcs = keyword.split(',')
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
     task = tokens[0]
+    if parameters['natom'] == 1:
+        if task in ['opt', 'freq', 'torsscan', 'torsopt', 'anharm']:
+            print('Switching to Task: energy, since Task: {0} can not be run for 1 atom'.format(task))
+            task = 'energy'
+            parameters['task'] = task
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
         task = 'composite'
         if len(tokens) > 2:
@@ -208,10 +219,12 @@ def parse_qckeyword(parameters, calcindex=0):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-        elif task.startswith('torso'):
+        elif task.startswith('tors'):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
+            parameters['freqdir'] = qcdirectory
+            parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('freq') or task.startswith('harm') or task.startswith('hrm'):
             task = 'freq'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
@@ -226,20 +239,6 @@ def parse_qckeyword(parameters, calcindex=0):
             task = 'energy'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
-        elif task.startswith('tors'):
-            #task = 'torsscan'
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
-            #parameters['optdir'] = qcdirectory
-            parameters['optdir'] = qcdirectory
-            parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-            parameters['freqdir'] = qcdirectory
-            parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
-            if 'qcpackage' in parameters:
-                if parameters['qcpackage'].startswith('gau'):
-                    parameters['qcpackage'] = 'g09'
-            parameters['tspackage'] = package
-            parameters[ 'tsmethod'] = method
-            parameters[  'tsbasis'] = basis
         else:
             print('ERROR! Invalid qckeyword task: {0}'.format(task))
             return      
@@ -254,6 +253,120 @@ def parse_qckeyword(parameters, calcindex=0):
     return parameters 
 
 
+def get_qc_label(natom, qckeyword, calcindex):
+    """
+    Returns a string that can be used as a label for
+    a given quantum chemistry calculation with natom, qckeyword
+    and calcindex. The string considers dependencies of the
+    corresponding calculation.
+    """
+    calcs = qckeyword.split(',')
+    if natom == 1:
+        qckeyword = qckeyword.replace('opt', 'energy')
+        qckeyword = qckeyword.replace('freq', 'energy')
+        qckeyword = qckeyword.replace('anharm', 'energy')
+        qckeyword = qckeyword.replace('torsscan', 'energy')
+        qckeyword = qckeyword.replace('torsopt', 'energy')
+        calcs = qckeyword.split(',')
+        calc  = calcs[calcindex]
+        if calc.startswith('compos'):
+            label = ','.join(calcs[0:calcindex+1])
+        else:
+            label = calcs[calcindex]
+    else:
+        calc  = calcs[calcindex]
+        if calc.startswith('compos'):
+            label = ','.join(calcs[0:calcindex+1])
+        else:
+            labels = []
+            for i in range(0,calcindex):
+                if calcs[i].startswith('energy') or calcs[i].startswith('compos'):
+                    pass
+                else:
+                    labels.append(calcs[i])
+            labels.append(calcs[calcindex])
+            label = ','.join(labels)
+    return label
+
+
+def parse_results(filename, parameters):
+    """
+    Returns a dictionary containing results for the given quantum chemistry output.
+    package: <str>
+    method : <str>
+    file: <str>
+    hostname: <str>
+    xyz: <str>
+    xmat: <str>  anharmonicity X matrix from VPT2
+    hindered rotor potential: <str> messpf input section for rotors 
+    number of basis functions: <int>
+    nuclear repulsion energy: <float>
+    energy: <float> in atomic units (Hartree)
+    zpve: <float> in cm^-1
+    anharmonic zpve: <float> in cm^-1
+    harmonic frequencies: <[float]> in cm^-1
+    anharmonic frequencies: <[float]> in cm^-1
+    projected frequencies: <[float]> in cm^-1
+    """
+    import iotools
+    r = {}
+    r['file'] = ''
+    r['package'] = ''
+    r['method'] = ' '
+    r['hostname'] = ' '
+    r['xyz'] = ' '
+    r['xmat'] = ' '
+    r['hindered rotor potential'] = ' ' 
+    r['number of basis functions'] = 0
+    r['nuclear repulsion energy:' ]= 0.
+    r['energy' ]= 0.
+    r['zpve'] = 0.
+    r['anharmonic zpve'] = 0.
+    r['harmonic frequencies' ]= []
+    r['anharmonic frequencies'] = []
+    r['projected frequencies' ]= []
+    if io.check_file(filename,timeout=1):
+        r['file'] = io.get_path(filename)
+        out = io.read_file(filename,asline=False)
+        package = get_output_package(out)
+        if package:
+            r['package'] = package
+        else:
+            print('"{0}" can not be parsed.'.format(r['file']))
+            return r
+    else:
+        print('"{0}" can not be found at {1}'.format(filename,io.pwd()))
+        return r
+#     r['xyz'] = get_xyz(out, package)
+#     r['xmat'] = get_xyz(out, package)
+#     r['hindered rotor potential'] = get_xyz(out, package) 
+#     r['number of basis functions'] = get_xyz(out, package)
+#     r['nuclear repulsion energy:' ]= get_xyz(out, package)
+#     r['energy' ]= get_xyz(out, package)
+#     r['zpve'] = get_xyz(out, package)
+#     r['anharmonic zpve'] = get_xyz(out, package)
+#     r['harmonic frequencies' ]= get_xyz(out, package)
+#     r['anharmonic frequencies'] = get_xyz(out, package)
+#     r['projected frequencies' ]= get_xyz(out, package)
+    return r
+
+
+def get_xyz(out,package=None):
+    """
+    Return xyz as a string from a qc output.
+    """
+    xyz = ''
+    if package is None:
+        package = get_output_package(out)
+    if package == 'nwchem':
+        xyz = get_nwchem_xyz(out)
+    elif package == 'gaussian':
+        xyz = pa.gaussian_xyz(out)
+    elif package == 'molpro':
+        xyz = pa.molpro_xyz(out)
+    return xyz
+        
+        
 def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     package = get_output_package(s)
     if type(s) is list:
@@ -268,13 +381,15 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     nbasis = 0
     energy = 0
     energies = {}
-    hrmfreqs = []
-    prjfreqs = []
-    anhrmfreqs = []
+    freqs = []
+    pfreqs = []
+    afreqs = []
     xmat= []
     hessian= ''
     zpve= 0.0
-    anzpve= 0.0
+    azpve = 0.0
+    hof0 = 0.
+    hof298 = 0.
     parsed = False
     messhindered = None
     RPHtinput = None
@@ -287,7 +402,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         nbasis = basisinfo['number of basis functions']
         energies = get_nwchem_energies(lines)
         energy = energies[method]
-        hrmfreqs = get_nwchem_frequencies(lines)
+        freqs = get_nwchem_frequencies(lines)
         parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
@@ -298,52 +413,54 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         calculation    = pa.molpro_calc(s)
         basis          = pa.molpro_basisset(s)
         zmat           = pa.molpro_zmat(s)
-        hrmfreqs       = pa.molpro_freqs(s)
         hessian        = pa.molpro_hessian(s)
+        freqs       = pa.molpro_freqs(s)
         parsed = True
     elif package == 'gaussian':
         method, energy = pa.gaussian_energy(s)
         zpve           = pa.gaussian_zpve(s)
-        anzpve         = pa.gaussian_anzpve(s)
+        azpve       = pa.gaussian_anzpve(s)
         calculation    = pa.gaussian_calc(s)
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
         xyz            = pa.gaussian_xyz(s)
         geo            = pa.gaussian_geo(s)
-        hrmfreqs       = pa.gaussian_freqs(s)
-        anhrmfreqs  = get_gaussian_fundamentals(s)[:,1]
         hessian        = pa.gaussian_hessian(s)
-        if sum(anhrmfreqs) > 0:
+        freqs       = pa.gaussian_freqs(s)
+        afreqs  = get_gaussian_fundamentals(s)[:,1]
+        if sum(afreqs) > 0:
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
             if type(xmat) == str:
                 xmat = []
         parsed = True
     elif package == 'torsscan':
         optlevel, method, energy = get_torsscan_info(s)
-        if io.check_file('geom1.xyz'):
-            xyz = io.read_file('geom1.xyz', aslines=False)
-            energy = float(xyz.splitlines()[1])
-            parsed = True
-            if io.check_file('hrproj_freq.dat'):
-                freqlines = io.read_file('hrproj_freq.dat',aslines=True)
-                for line in freqlines:
-                    if float(line) > 0.:
-                        prjfreqs.append(float(line))
-            if io.check_file('RTproj_freq.dat'):
-                freqlines = io.read_file('RTproj_freq.dat',aslines=True)
-                for line in freqlines:
-                    if float(line) > 0.:
-                        hrmfreqs.append(line)
-            fname = 'me_files/reac1_zpe.me'
-            if io.check_file(fname):
-                zpve = float(io.read_file(fname, aslines=False))                
-            fname = 'me_files/reac1_hr.me'
-            if io.check_file(fname):
-                messhindered = io.read_file(fname, aslines=False)
-            fname = 'RPHt_input_data.dat'
-            if io.check_file(fname):
-                RPHtinput = io.read_file(fname, aslines=False)
-            
+        if io.check_file('geom.log'):
+                out = io.read_file('geom.log', aslines=False)
+                xyz = pa.gaussian_xyz(out)
+                method, energy = pa.gaussian_energy(out)
+                freqs = pa.gaussian_freqs(out)
+                parsed = True
+        if io.check_file('hrproj_freq.dat'):
+            freqlines = io.read_file('hrproj_freq.dat',aslines=True)
+            for line in freqlines:
+                if float(line) > 0.:
+                    pfreqs.append(float(line))
+        if io.check_file('RTproj_freq.dat'):
+            freqlines = io.read_file('RTproj_freq.dat',aslines=True)
+            for line in freqlines:
+                if float(line) > 0.:
+                    freqs.append(line)
+        fname = 'me_files/reac1_zpe.me'
+        if io.check_file(fname):
+            zpve = float(io.read_file(fname, aslines=False))                
+        fname = 'me_files/reac1_hr.me'
+        if io.check_file(fname):
+            messhindered = io.read_file(fname, aslines=False)
+         fname = 'RPHt_input_data.dat'
+         if io.check_file(fname):
+             RPHtinput = io.read_file(fname, aslines=False)
+
     if parsed:
         if write:
             fname = smilesname + '.xyz'
@@ -353,39 +470,37 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if zpve:
                 fname = smilesname + '.zpve'
                 io.write_file(str(zpve), fname)
-            if anzpve:
+            if azpve:
                 fname = smilesname + '.anzpve'
-                io.write_file(str(anzpve), fname)
-            if len(hrmfreqs) > 0:
+                io.write_file(str(azpve), fname)
+            if len(freqs) > 0:
                 fname = smilesname + '.hrm'
-                io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )
-            if sum(anhrmfreqs) > 0:
+                io.write_file('\n'.join(str(x) for x in freqs), fname )
+            if sum(afreqs) > 0:
                 fname = smilesname + '.anhrm'
-                io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
-        d = {optlevel:
-             {package:
-              {calculation:
-               {method:
-                {basis:{
-                 'number of basis functions':nbasis,
-                 'energy':energy,
-                  'geometry':{
-                   'xyz':xyz,
-                   'harmonic frequencies' : hrmfreqs,
-                   'projected frequencies': prjfreqs,
-                   'zpve': zpve,
-                   'xmat': xmat,
-                   'mess hindered input': messhindered,
-                   'RPHt input': RPHtinput,
-                   'Hessian'   : hessian }}}}}}}
-        if calculation == 'geometry optimization':
-            for key,value in energies.iteritems():
-                if key is not method:
-                    d[optlevel][package][calculation][method][basis]['geometry'].update({
-                        'single point':{key:{basis:{'number of basis functions':nbasis,'energy':value}}}})
-                    if write:
-                        fname = '{0}_{1}.ene'.format(method,smilesname)
-                        io.write_file(str(energy), fname)
+                io.write_file('\n'.join(str(x) for x in afreqs), fname)
+        d = {'number of basis functions':nbasis,
+               'energy':energy,
+               'xyz':xyz,
+               'harmonic frequencies' : freqs,
+               'anharmonic frequencies' : afreqs,
+               'projected frequencies': pfreqs,
+               'zpve': zpve,
+               'anharmonic zpve': azpve,
+               'xmat': xmat,
+               'hindered potential': messhindered,
+               'RPHt input': RPHtinput,
+               'Hessian'   : hessian,
+               'HoF at 0 K': hof0,
+               'HoF at 298 K': hof298}
+#         if calculation == 'geometry optimization':
+#             for key,value in energies.iteritems():
+#                 if key is not method:
+#                     d[optlevel][package][calculation][method][basis]['geometry'].update({
+#                         'single point':{key:{basis:{'number of basis functions':nbasis,'energy':value}}}})
+#                     if write:
+#                         fname = '{0}_{1}.ene'.format(method,smilesname)
+#                         io.write_file(str(energy), fname)
         if store:
             if optlevel == 'sp':
                 if energy:
@@ -627,13 +742,15 @@ def run_extrapolation_keyword(mol, parameters):
     enefile = smilesname + '.ene'  
     inpfile = smilesname + '_' + method  + '.inp'  
     for i in range(0,calcindex):
-        parse_qckeyword(parameters, i)
+        parameters = parse_qckeyword(parameters, i)
         smilesdir = parameters['smilesdir']
         enedir  = io.join_path(*[smilesdir,parameters['qcdirectory']])
         enepath = io.join_path(*[enedir, enefile])
         if io.check_file(enepath):
             e[i] = float(io.read_file(enepath))
             msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
+        else:
+            msg += ('E({0}) can not be found at "{1}" \n'.format(i,enepath))
     print(msg)
     msg = ''
     exec(formula)
@@ -1217,7 +1334,7 @@ def get_nwchem_xyz(inp,filename=False):
     """
     Returns geometry in xyz format by parsing NWChem output file.
     
-    Sample output:
+    Sample NWChem output:
  Output coordinates in angstroms (scale by  1.889725989 to convert to a.u.)
 
   No.       Tag          Charge          X              Y              Z
@@ -1246,7 +1363,7 @@ def get_nwchem_xyz(inp,filename=False):
             natom += 1
         else:
             break
-    xyz = '{0}\nParsed by QTC from NWChem output file\n{1}'.format(natom, geolines)
+    xyz = '{0}\nParsed by QTC from NWChem output file\n{1}\n\n'.format(natom, geolines)
     return xyz
 
 

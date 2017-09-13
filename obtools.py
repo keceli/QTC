@@ -67,7 +67,7 @@ def get_mol(s, make3D=False):
         mol = s
     elif type(s) is str:
         if '.xyz' in s:
-            mol = pybel.readfile('xyz', s)
+            mol = pybel.readfile('xyz', s).next()
         else:   
             frm = get_format(s)
             mol = pybel.readstring(frm, s)
@@ -386,7 +386,7 @@ def get_smiles(x):
     Returns open-babel canonical smiles.
     """
     if type(x) is pybel.Molecule:
-        s = x.write(format='can').strip()
+        s = x.write(format='can').strip().split()[0]
     elif type(x) is str:
         s = x.strip()
     else:
@@ -402,7 +402,7 @@ def get_smiles_filename(x):
     they are replaced by abdeqtrl.
     """
     if type(x) is pybel.Molecule:
-        s = x.write(format='can').strip()
+        s = x.write(format='can').strip().split()[0]
     elif type(x) is str:
         x = get_mol(x)
         s = x.write(format='can').strip()
