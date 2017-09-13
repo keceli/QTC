@@ -74,7 +74,7 @@ def get_mol(s, make3D=False):
     else:
         print 'Incompetible type for ob.get_mol', type(s)
         return None
-    if make3D:
+    if make3D and mol.dim < 3:
         mol.make3D()
     return mol
     
@@ -91,7 +91,7 @@ def get_multiplicity(x):
     >>> [get_multiplicity(mol) for mol in mols]
     [2, 1, 3, 1]
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     return mol.spin
 
 
@@ -165,7 +165,7 @@ def get_natom(x):
     >>> [get_natom(mol) for mol in mols]
     [4, 9, 2, 3]
     """
-    mol = get_mol(x)
+    mol = get_mol(x,make3D=True)
     return len(mol.atoms)
 
 
@@ -179,7 +179,7 @@ def get_natom_heavy(x):
     >>> [get_natom_heavy(mol) for mol in mols]
     [1, 3, 2, 1]
     """
-    mol = get_mol(x)
+    mol = get_mol(x,make3D=True)
     return mol.OBMol.NumHvyAtoms()
 
 
@@ -212,7 +212,7 @@ def get_charge(x):
     Return charge.
     TODO
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     return mol.OBMol.GetTotalCharge()
 
 
@@ -225,7 +225,7 @@ def get_xyz(x):
     >>> print get_xyz(mol).splitlines()[0]
     14
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     return mol.write(format='xyz')
 
 
@@ -251,7 +251,7 @@ def get_geo(x):
     Note: coordinates are not deterministic.
     Each run gives a different set of coordinates.
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     xyz = mol.write(format='xyz').splitlines(True)
     natom = int(xyz[0].strip())
     return ''.join(xyz[2:natom+2])
@@ -279,7 +279,7 @@ def get_zmat(x):
     d5= 120.00
     <BLANKLINE>
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     return '\n'.join(mol.write('gzmat').splitlines()[5:])
 
 
@@ -305,7 +305,7 @@ def get_inchi_key(x, mult=0, extra=''):
     """
     Returns a unique key composed of inchikey and multiplicity
     >>> mol = get_mol('[O][O]')
-    >>> get_unique_key(mol)
+    >>> get_inchi_key(mol)
     'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
     """
     mol = get_mol(x)
@@ -318,10 +318,10 @@ def get_unique_name(x, mult=0, extra=''):
     """
     Returns a unique key composed of inchikey and multiplicity
     >>> mol = get_mol('[O][O]')
-    >>> get_unique_key(mol)
+    >>> get_unique_name(mol)
     'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     if mult == 0:
         mult = mol.spin
     return mol.write("inchikey").strip() + str(mult) + extra
@@ -335,7 +335,7 @@ def get_unique_path(x, mult=0, method=''):
     database/C/C/CH4/VNWKTOKETHGBQD-UHFFFAOYSA-N1/pm6
     """
     import iotools as io
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     if mult == 0:
         mult = mol.spin
     formula = get_formula(mol)
@@ -354,7 +354,7 @@ def get_smiles_path(x, mult=0, method='',basis=''):
     code that generates the smiles string.
     """
     import iotools as io
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     if mult == 0:
         mult = mol.spin
     s = get_smiles_filename(mol)    
@@ -471,7 +471,11 @@ def fetch_smiles(s):
     >>> fetch_smiles('methane')
     'C'
     """
-    import cirpy
+    try:
+        import cirpy
+    except:
+        r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
+        return    
     if cirpy:
         return cirpy.resolve(s,'smiles')
     else:
@@ -489,6 +493,7 @@ def fetch_inchi(s):
         import cirpy
     except:
         r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
+        return
     if cirpy:
         r = cirpy.resolve(s,'inchi')  
     return r
@@ -498,10 +503,14 @@ def fetch_IUPAC_name(s):
     """
     Return IUPAC name for a given smiles or inchi string.
     Requires cirpy module and internet connection
-    >>> print fetch_name('C=O')
+    >>> print fetch_IUPAC_name('C=O')
     FORMALDEHYDE
     """
-    import cirpy
+    try:
+        import cirpy
+    except:
+        r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
+        return    
     frm = get_format(s)
     if frm == 'smi':
         name = cirpy.resolve(s,'iupac_name',resolvers=['smiles'])
