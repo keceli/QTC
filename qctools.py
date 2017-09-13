@@ -271,6 +271,42 @@ def parse_qckeyword(parameters, calcindex=0):
     return parameters 
 
 
+def get_qc_label(natom, qckeyword, calcindex):
+    """
+    Returns a string that can be used as a label for
+    a given quantum chemistry calculation with natom, qckeyword
+    and calcindex. The string considers dependencies of the
+    corresponding calculation.
+    """
+    calcs = qckeyword.split(',')
+    if natom == 1:
+        qckeyword = qckeyword.replace('opt', 'energy')
+        qckeyword = qckeyword.replace('freq', 'energy')
+        qckeyword = qckeyword.replace('anharm', 'energy')
+        qckeyword = qckeyword.replace('torsscan', 'energy')
+        qckeyword = qckeyword.replace('torsopt', 'energy')
+        calcs = qckeyword.split(',')
+        calc  = calcs[calcindex]
+        if calc.startswith('compos'):
+            label = ','.join(calcs[0:calcindex+1])
+        else:
+            label = calcs[calcindex]
+    else:
+        calc  = calcs[calcindex]
+        if calc.startswith('compos'):
+            label = ','.join(calcs[0:calcindex+1])
+        else:
+            labels = []
+            for i in range(0,calcindex):
+                if calcs[i].startswith('energy') or calcs[i].startswith('compos'):
+                    pass
+                else:
+                    labels.append(calcs[i])
+            labels.append(calcs[calcindex])
+            label = ','.join(labels)
+    return label
+
+
 def parse_results(filename, parameters):
     """
     Returns a dictionary containing results for the given quantum chemistry output.
@@ -452,28 +488,24 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if sum(anhrmfreqs) > 0:
                 fname = smilesname + '.anhrm'
                 io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
-        d = {optlevel:
-             {package:
-              {calculation:
-               {method:
-                {basis:{
-                 'number of basis functions':nbasis,
-                 'energy':energy,
-                  'geometry':{
-                   'xyz':xyz,
-                   'harmonic frequencies' : hrmfreqs,
-                   'projected frequencies': prjfreqs,
-                   'zpve': zpve,
-                   'xmat': xmat,
-                   'mess hindered input': messhindered }}}}}}}
-        if calculation == 'geometry optimization':
-            for key,value in energies.iteritems():
-                if key is not method:
-                    d[optlevel][package][calculation][method][basis]['geometry'].update({
-                        'single point':{key:{basis:{'number of basis functions':nbasis,'energy':value}}}})
-                    if write:
-                        fname = '{0}_{1}.ene'.format(method,smilesname)
-                        io.write_file(str(energy), fname)
+        d = {'number of basis functions':nbasis,
+               'energy':energy,
+               'xyz':xyz,
+               'harmonic frequencies' : hrmfreqs,
+               'anharmonic frequencies' : anhrmfreqs,
+               'projected frequencies': prjfreqs,
+               'zpve': zpve,
+               'anharmonic zpve': anzpve,
+               'xmat': xmat,
+               'mess hindered input': messhindered}
+#         if calculation == 'geometry optimization':
+#             for key,value in energies.iteritems():
+#                 if key is not method:
+#                     d[optlevel][package][calculation][method][basis]['geometry'].update({
+#                         'single point':{key:{basis:{'number of basis functions':nbasis,'energy':value}}}})
+#                     if write:
+#                         fname = '{0}_{1}.ene'.format(method,smilesname)
+#                         io.write_file(str(energy), fname)
         if store:
             if optlevel == 'sp':
                 if energy:
