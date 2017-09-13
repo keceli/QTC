@@ -798,7 +798,6 @@ def E_QTC(bas, opt, en, freq, parameters):
     parameters['input'] = bas
     dbdir = parameters['database']
     anharm = parameters['anharmonic']
-
     E, zpve = 0, 0
     zpvetype = 'zpve'
     if len(opt) == 4:
@@ -825,8 +824,8 @@ def E_QTC(bas, opt, en, freq, parameters):
             task = 'anharm'
         freq = task + '/' + '/'.join([freqmethod, freqbasis, freqprog])
         freq = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype)
-    if not io.check_file(freq):
-        freq = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
+    #if not io.check_file(freq):
+    #    freq = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
     if not io.check_file(en):
         qtc.main(parameters)
     E = io.read_file(en).strip()
@@ -840,6 +839,10 @@ def E_QTC(bas, opt, en, freq, parameters):
             zpve = io.read_file(freq).strip()
             zpve = float(zpve)
             print '{} ZPVE: {:5g}  pulled from: {}'.format(bas, zpve, freq)
+        elif io.check_file(freq.replace('.anzpve','.zpve')):        
+            zpve = io.read_file(freq.replace('.anzpve','.zpve')).strip()
+            zpve = float(zpve)
+            print '{} ZPVE: {:5g}  pulled from: {}'.format(bas, zpve, freq.replace('.anzpve','.zpve'))
         else:
             zpve = 0.0
             print 'ZPVE not found assumed 0.0'
@@ -862,6 +865,7 @@ def main_keyword(mol,parameters):
     extrap    = False
     enlevel   = None
     freqlevel = None
+    freqlevel = parameters['freqlevel']
 
     for key in qckeys[:index+1]:
         key = io.fix_path(key)
@@ -876,7 +880,6 @@ def main_keyword(mol,parameters):
         elif key.startswith('comp'):
             enlevel  = ['composite' + '/' + key.split('/')[1]]
             extrap   = True
-    freqlevel = parameters['freqlevel']
     if not enlevel:
         enlevel = ['']
     molform = ob.get_formula(mol)
