@@ -401,6 +401,7 @@ def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[], hindered=None):
 def get_messpf_input(mol,parameters):
     """
     Write input file for mess partition function program
+    AtomDistanceMin[angstrom] 0.6
     Temperature(step[K],size)        100.   30
     RelativeTemperatureIncrement            0.001
     Species CH4
@@ -428,7 +429,8 @@ def get_messpf_input(mol,parameters):
     natom = len(mol.atoms)
     formula = mol.formula
     multiplicity = mol.spin
-    inp  = 'Temperature(step[K],size)        100.   30\n'
+    inp   = 'AtomDistanceMin[angstrom] 0.6\n'
+    inp += 'Temperature(step[K],size)        100.   30\n'
     inp += 'RelativeTemperatureIncrement            0.001\n'
     inp += 'Species {0}\n'.format(formula)
     inp += 'RRHO\n'
