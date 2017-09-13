@@ -34,7 +34,14 @@ def get_input(x, template, parameters):
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
-    heat = parameters['heat']          
+    if 'results' in parameters.keys():
+        results = parameters['results']
+        if 'HoF at 0 K' in results.keys():
+            heat = results['HoF at 0 K']
+        else:
+            heat = 0.
+    else:
+        heat = 0.    
     task    = parameters['qctask']
     nproc   = parameters['qcnproc']
     inp = template
@@ -399,12 +406,14 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     nbasis = 0
     energy = 0
     energies = {}
-    hrmfreqs = []
-    prjfreqs = []
-    anhrmfreqs = []
+    freqs = []
+    pfreqs = []
+    afreqs = []
     xmat= []
     zpve= 0.0
-    anzpve= None
+    azpve = 0.0
+    hof0 = 0.
+    hof298 = 0.
     parsed = False
     messhindered = None
     if package == 'nwchem':
@@ -416,7 +425,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         nbasis = basisinfo['number of basis functions']
         energies = get_nwchem_energies(lines)
         energy = energies[method]
-        hrmfreqs = get_nwchem_frequencies(lines)
+        freqs = get_nwchem_frequencies(lines)
         parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
@@ -427,20 +436,20 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         calculation    = pa.molpro_calc(s)
         basis          = pa.molpro_basisset(s)
         zmat           = pa.molpro_zmat(s)
-        hrmfreqs       = pa.molpro_freqs(s)
+        freqs       = pa.molpro_freqs(s)
         parsed = True
     elif package == 'gaussian':
         method, energy = pa.gaussian_energy(s)
         zpve           = pa.gaussian_zpve(s)
-        anzpve       = pa.gaussian_anzpve(s)
+        azpve       = pa.gaussian_anzpve(s)
         calculation    = pa.gaussian_calc(s)
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
         xyz            = pa.gaussian_xyz(s)
         geo            = pa.gaussian_geo(s)
-        hrmfreqs       = pa.gaussian_freqs(s)
-        anhrmfreqs  = get_gaussian_fundamentals(s)[:,1]
-        if sum(anhrmfreqs) > 0:
+        freqs       = pa.gaussian_freqs(s)
+        afreqs  = get_gaussian_fundamentals(s)[:,1]
+        if sum(afreqs) > 0:
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
             if type(xmat) == str:
                 xmat = []
@@ -451,18 +460,18 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                 out = io.read_file('geom.log', aslines=False)
                 xyz = pa.gaussian_xyz(out)
                 method, energy = pa.gaussian_energy(out)
-                hrmfreqs = pa.gaussian_freqs(out)
+                freqs = pa.gaussian_freqs(out)
                 parsed = True
         if io.check_file('hrproj_freq.dat'):
             freqlines = io.read_file('hrproj_freq.dat',aslines=True)
             for line in freqlines:
                 if float(line) > 0.:
-                    prjfreqs.append(float(line))
+                    pfreqs.append(float(line))
         if io.check_file('RTproj_freq.dat'):
             freqlines = io.read_file('RTproj_freq.dat',aslines=True)
             for line in freqlines:
                 if float(line) > 0.:
-                    hrmfreqs.append(line)
+                    freqs.append(line)
         fname = 'me_files/reac1_zpe.me'
         if io.check_file(fname):
             zpve = float(io.read_file(fname, aslines=False))                
@@ -479,25 +488,27 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if zpve:
                 fname = smilesname + '.zpve'
                 io.write_file(str(zpve), fname)
-            if anzpve:
+            if azpve:
                 fname = smilesname + '.anzpve'
-                io.write_file(str(anzpve), fname)
-            if len(hrmfreqs) > 0:
+                io.write_file(str(azpve), fname)
+            if len(freqs) > 0:
                 fname = smilesname + '.hrm'
-                io.write_file('\n'.join(str(x) for x in hrmfreqs), fname )
-            if sum(anhrmfreqs) > 0:
+                io.write_file('\n'.join(str(x) for x in freqs), fname )
+            if sum(afreqs) > 0:
                 fname = smilesname + '.anhrm'
-                io.write_file('\n'.join(str(x) for x in hrmfreqs), fname)
+                io.write_file('\n'.join(str(x) for x in afreqs), fname)
         d = {'number of basis functions':nbasis,
                'energy':energy,
                'xyz':xyz,
-               'harmonic frequencies' : hrmfreqs,
-               'anharmonic frequencies' : anhrmfreqs,
-               'projected frequencies': prjfreqs,
+               'harmonic frequencies' : freqs,
+               'anharmonic frequencies' : afreqs,
+               'projected frequencies': pfreqs,
                'zpve': zpve,
-               'anharmonic zpve': anzpve,
+               'anharmonic zpve': azpve,
                'xmat': xmat,
-               'mess hindered input': messhindered}
+               'hindered potential': messhindered,
+               'HoF at 0 K': hof0,
+               'HoF at 298 K': hof298}
 #         if calculation == 'geometry optimization':
 #             for key,value in energies.iteritems():
 #                 if key is not method:
