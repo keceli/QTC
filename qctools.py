@@ -39,18 +39,6 @@ def get_input(x, template, parameters):
         task = 'energy'
     inp = template
     if task.startswith('tors'):
-        #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
-        #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
-        #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
-        #if len(parameters['optlevel'].split('/')) > 1:
-        #    optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
-        #    if optpackage != 'molpro' or optpackage.startswith('g'):
-        #        optpackage = 'g09'
-        #    if optpackage.startswith('gau'):
-        #        optpackage = 'g09'
-        #    inp = inp.replace("QTC(TSPACKAGE)", optpackage)
-        #    inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
-        #    inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         if parameters['optdir']:
             xyzfile =  io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(x).strip() + '.xyz'])
             if io.check_file('xyzfile'):
@@ -101,7 +89,7 @@ def get_input(x, template, parameters):
             elif task.lower().startswith('energy'):
                 task = ''
             elif task.lower().startswith('freq'):
-                task = 'frequencies'
+                task = '{frequencies;print,hessian}'
     
     if nopen == 0:
         scftype = 'RHF'
@@ -242,6 +230,7 @@ def parse_qckeyword(parameters, calcindex=0):
             #task = 'torsscan'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             #parameters['optdir'] = qcdirectory
+            parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
             parameters['freqdir'] = qcdirectory
             parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
@@ -283,10 +272,12 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     prjfreqs = []
     anhrmfreqs = []
     xmat= []
+    hessian= ''
     zpve= 0.0
-    anzpve= None
+    anzpve= 0.0
     parsed = False
     messhindered = None
+    RPHtinput = None
     if package == 'nwchem':
         method = get_nwchem_method(s)
         calculation = get_nwchem_calculation(s)
@@ -308,11 +299,12 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         basis          = pa.molpro_basisset(s)
         zmat           = pa.molpro_zmat(s)
         hrmfreqs       = pa.molpro_freqs(s)
+        hessian        = pa.molpro_hessian(s)
         parsed = True
     elif package == 'gaussian':
         method, energy = pa.gaussian_energy(s)
         zpve           = pa.gaussian_zpve(s)
-        anzpve       = pa.gaussian_anzpve(s)
+        anzpve         = pa.gaussian_anzpve(s)
         calculation    = pa.gaussian_calc(s)
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
@@ -320,6 +312,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         geo            = pa.gaussian_geo(s)
         hrmfreqs       = pa.gaussian_freqs(s)
         anhrmfreqs  = get_gaussian_fundamentals(s)[:,1]
+        hessian        = pa.gaussian_hessian(s)
         if sum(anhrmfreqs) > 0:
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
             if type(xmat) == str:
@@ -347,6 +340,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             fname = 'me_files/reac1_hr.me'
             if io.check_file(fname):
                 messhindered = io.read_file(fname, aslines=False)
+            fname = 'RPHt_input_data.dat'
+            if io.check_file(fname):
+                RPHtinput = io.read_file(fname, aslines=False)
             
     if parsed:
         if write:
@@ -379,7 +375,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                    'projected frequencies': prjfreqs,
                    'zpve': zpve,
                    'xmat': xmat,
-                   'mess hindered input': messhindered }}}}}}}
+                   'mess hindered input': messhindered,
+                   'RPHt input': RPHtinput,
+                   'Hessian'   : hessian }}}}}}}
         if calculation == 'geometry optimization':
             for key,value in energies.iteritems():
                 if key is not method:
@@ -401,8 +399,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                 if energy:
                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
                 if zpve:
-                    print 'is it overwriting?'
                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
+                if zpve:
+                    io.db_store_sp_prop(str(anzpve), smilesname,'anzpve', None, package, method, basis, opt1, opt2, opt3)
                 if len(hrmfreqs) > 0:
                     io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
                 if len(xmat) > 0:

@@ -302,8 +302,25 @@ def run(s):
             d = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'])
             xyz = next(db.gen_dict_extract('xyz',d))
             freqs = next(db.gen_dict_extract('harmonic frequencies',d))
+            hessian = next(db.gen_dict_extract('Hessian',d))
+            RPHt    = next(db.gen_dict_extract('RPHt input',d))
             parameters['prjfreqs'] = next(db.gen_dict_extract('projected frequencies',d))
             parameters['messhindered'] = next(db.gen_dict_extract('mess hindered input',d))
+            if RPHt:
+                parameters['RPHtinput'] = next(db.gen_dict_extract('RPHt input',d))
+            if hessian and 'RPHtinput' in parameters:
+                RPHt, geolines = parameters['RPHtinput'].split('geometry')
+                geolines, gradlines = geolines.split('gradient')
+                xyz = xyz.splitlines()[2:]
+                RPHt += 'geometry\n'
+                for i, line in enumerate( geolines.splitlines()[1:]):
+                    RPHt += '\t' + '\t'.join(line.split()[0:3]) + '\t' + '\t'.join(xyz[i].split()[1:]) + '\n'
+                RPHt += 'gradient' +  gradlines.split('Hessian')[0] + 'Hessian\n' + hessian
+                parameters['RPHtinput'] = RPHt
+                RPHtexe = '/lcrc/project/PACC/codes/EStokTP/exe/RPHt.exe'
+                RPHtfile = 'RPHt_input_data.dat'
+                io.write_file(RPHt,RPHtfile)
+                io.execute(RPHtexe  + ' ' + RPHtfile)
             xmat   = next(db.gen_dict_extract('xmat',d))
         hf0, hfset = hf.main_keyword(mol,parameters)
         hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
