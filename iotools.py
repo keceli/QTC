@@ -9,7 +9,7 @@ TODO: Add unit tests. Seperate IO vs OS
 import time
 import os
 from os.path import isfile
-
+import logging
 __updated__ = "2017-07-13"
 
 
@@ -71,7 +71,7 @@ def mv(oldname,newname):
     try:
         os.rename(oldname,newname)
     except:
-        print('Command "mv {0} {1}" failed' .format(oldname, newname))
+        logging.debug('Command "mv {0} {1}" failed' .format(oldname, newname))
     return 
 
 def pwd():
@@ -171,7 +171,7 @@ def check_file(filename, timeout=0, verbose=False):
                 exists = True
                 break
     if not exists and verbose:
-        print('"{0}" file not found.'.format(filename))
+        logging.debug('"{0}" file not found.'.format(filename))
     return exists
 
 
@@ -232,7 +232,7 @@ def get_line_number(keyword, lines=None, filename=None,getlastone=False):
     """
     num = -1
     if lines is None and filename is None:
-        print 'List of lines or a filename to be read is required for get_line_number'
+        logging.debug('List of lines or a filename to be read is required for get_line_number')
     elif filename:
         lines = read_file(filename, aslines=True)
 
@@ -251,7 +251,7 @@ def get_line_numbers(keyword, lines=None, filename=None):
     Returns -1 if keyword is not found
     """
     if lines is None and filename is None:
-        print 'List of lines or a filename to be read is required for get_line_numbers'
+        logging.debug('List of lines or a filename to be read is required for get_line_numbers')
     elif filename:
         lines = read_file(filename, aslines=True)
     nums = []
@@ -340,7 +340,7 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False):
     else:
         commandstr = ' '.join(command)
     msg = 'Running Popen with command: {0}\n'.format(commandstr)
-    print(msg)
+    logging.debug(msg)
     msg =''
     process = Popen(command, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
@@ -549,7 +549,7 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     freqs  =  pa.freqs(lines)
     
     if prog == None or method == None or basis == None:
-        print 'Parsing error, check lines'
+        logging.debug('Parsing error, check lines')
         return 
     if optprog == None:
        optprog, optmethod, optbasis = prog, method, basis

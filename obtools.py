@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-06-26"
+__updated__ = "2017-09-23"
 
 def get_format(s):
     """
@@ -425,9 +425,11 @@ def get_smiles_filename(x):
 def smiles2formula(filename):
     import iotools as io
     mols = io.read_list(filename)
+    s = ''
     for mol in mols:
         formula = get_formula(mol)
-        print mol,  formula
+        s += '{0} {1}\n'.format(mol,  formula)
+    return s
 
 def get_coordinates_array(xyz):
     """

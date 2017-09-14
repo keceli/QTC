@@ -9,7 +9,7 @@ from os.path import isfile
 import iotools as io
 import obtools as ob
 import qctools as qc
-
+import logging
 """
 Thermochemistry tools.
 Requires:
@@ -18,7 +18,7 @@ MESS partition function code
 PAC99
 thermp
 """
-__updated__ = "2017-07-07"
+__updated__ = "2017-09-23"
 
 
 def get_stoichometry(formula,element):

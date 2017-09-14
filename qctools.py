@@ -6,13 +6,13 @@ import obtools as ob
 import iotools as io
 import numpy as np
 import patools as pa
-from Cython.Build.Dependencies import package
+import logging
 try:
     import cclib
 except:
     pass
 
-__updated__ = "2017-08-31"
+__updated__ = "2017-09-13"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 def get_input(x, template, parameters):
@@ -135,9 +135,9 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(NPROC)", str(nproc))   
     inp = inp.replace('QTC(ANHARMLOC)', 'false')
     if "QTC(" in inp:
-        print(66*'#')
-        print("Error in template file: \n" + inp)
-        print(66*'#')
+        logging.info(66*'#')
+        logging.info("Error in template file: \n" + inp)
+        logging.info(66*'#')
     return inp
 
 def update_qckeyword(keyword):
@@ -197,7 +197,7 @@ def parse_qckeyword(parameters, calcindex=0):
     task = tokens[0]
     if parameters['natom'] == 1:
         if task in ['opt', 'freq', 'torsscan', 'torsopt', 'anharm']:
-            print('Switching to Task: energy, since Task: {0} can not be run for 1 atom'.format(task))
+            logging.info('Setting Task = energy, since {0} can not be run for 1 atom'.format(task))
             task = 'energy'
             parameters['task'] = task
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
@@ -209,7 +209,7 @@ def parse_qckeyword(parameters, calcindex=0):
             method = 'generic'
             parameters['formula'] = tokens[1]
         else:
-            print('ERROR! Invalid qckeyword: {0}'.format(tokens))
+            logging.info('ERROR! Invalid qckeyword: {0}'.format(tokens))
             return
         qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method]))
         package = ''
@@ -224,7 +224,7 @@ def parse_qckeyword(parameters, calcindex=0):
             basis = ''
             package = tokens[2]
         else:
-            print('ERROR! Invalid qckeyword: {0}'.format(tokens))
+            logging.info('ERROR! Invalid qckeyword: {0}'.format(tokens))
             return        
         if task.startswith('opt')  or task.startswith('geo') or task.startswith('min'):
             task = 'opt'
@@ -265,7 +265,7 @@ def parse_qckeyword(parameters, calcindex=0):
 #             parameters[ 'tsmethod'] = method
 #             parameters[  'tsbasis'] = basis
         else:
-            print('ERROR! Invalid qckeyword task: {0}'.format(task))
+            logging.info('ERROR! Invalid qckeyword task: {0}'.format(task))
             return      
     parameters['qcdirectory'] = qcdirectory
     parameters['qcpackage'] = package
@@ -357,10 +357,10 @@ def parse_results(filename, parameters):
         if package:
             r['package'] = package
         else:
-            print('"{0}" can not be parsed.'.format(r['file']))
+            logging.info('"{0}" can not be parsed.'.format(r['file']))
             return r
     else:
-        print('"{0}" can not be found at {1}'.format(filename,io.pwd()))
+        logging.info('"{0}" can not be found at {1}'.format(filename,io.pwd()))
         return r
 #     r['xyz'] = get_xyz(out, package)
 #     r['xmat'] = get_xyz(out, package)
@@ -400,7 +400,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     elif type(s) is str:
         lines = s.splitlines()
     else:
-        print("First parameter in parse_output should be a string or list of strings")
+        logging.info("First parameter in parse_output should be a string or list of strings")
     d = {}
     [method,calculation,xyz,basis] = ['na']*4
     nbasis = 0
@@ -523,20 +523,19 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
                 if zpve:
                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
-                if len(hrmfreqs) > 0:
-                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
+                if len(freqs) > 0:
+                    io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
             else:
                 opt1, opt2, opt3 = optlevel.split('/')
                 if energy:
                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
                 if zpve:
-                    print 'is it overwriting?'
                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
-                if len(hrmfreqs) > 0:
-                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
+                if len(freqs) > 0:
+                    io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
                 if len(xmat) > 0:
                     io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
-                io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
+                io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
             if xyz:
                 io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
             if geo:
@@ -661,7 +660,7 @@ def get_symbol(atomno):
     """
     Returns the element symbol for a given atomic number.
     Returns 'X' for atomno=0
-    >>>print get_symbol(1)
+    >>>logging.info get_symbol(1)
     >>>H
     """
     syms = ['X',
@@ -749,7 +748,7 @@ def run_extrapolation_keyword(mol, parameters):
     msg = ''
     smilesname = ob.get_smiles_filename(mol)
     calcs = keyword.split(',')
-    print('Composite energy formula: {0}\n'.format(formula))
+    logging.info('Composite energy formula: {0}\n'.format(formula))
     ncalc = len(calcs) 
     calcindex = parameters['calcindex']
     e = [0.] * ncalc
@@ -766,14 +765,14 @@ def run_extrapolation_keyword(mol, parameters):
             msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
         else:
             msg += ('E({0}) can not be found at "{1}" \n'.format(i,enepath))
-    print(msg)
+    logging.info(msg)
     msg = ''
     exec(formula)
     if energy:
         io.write_file(str(energy),enefile )
         io.write_file(msg,inpfile )
-        print('Composite energy: {}\n'.format(energy))
-        print('Energy file: "{}"\n'.format(io.get_path(enefile)))
+        logging.info('Composite energy: {}\n'.format(energy))
+        logging.info('Energy file: "{}"\n'.format(io.get_path(enefile)))
     parse_qckeyword(parameters, calcindex)
     return msg
 
@@ -793,17 +792,17 @@ def run_extrapolation_template(s, parameters):
                 efile = io.join_path(*[edir,smilesname+'.ene'])
                 if io.check_file(efile,verbose=True):        
                     energies[i] = float(io.read_file(efile, aslines=False))
-                    print('Reading energy from {0} = {1}'.format(edir,energies[i]))
+                    logging.info('Reading energy from {0} = {1}'.format(edir,energies[i]))
     for line in lines:
         if 'energy=' in line:
             energy = 0
             exec(line)
-            print('Extrapolation based on formula: {0}'.format(line))        
-            print('Extrapolated energy = {0}'.format(energy))
+            logging.info('Extrapolation based on formula: {0}'.format(line))        
+            logging.info('Extrapolated energy = {0}'.format(energy))
         if 'filename=' in line:
             exec(line)
     if len(directories) < 1:
-        print('You have to specifies directories as a list in the template file')         
+        logging.info('You have to specifies directories as a list in the template file')         
     if energy:
         msg += 'Extrapolation successful'
         if parameters['writefiles']:
@@ -937,7 +936,7 @@ def get_gaussian_input(x, template, mult=0):
     inp = inp.replace("QTC(GEO)", geo)
     inp = inp.replace("QTC(XYZ)", xyz)
     if "QTC(" in inp:
-        print("Error in template file:\n" + inp)
+        logging.info("Error in template file:\n" + inp)
         return
     return inp
 
@@ -1195,7 +1194,7 @@ def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1,
     Note2: Doctest is also sensitive to whitespace at the end of lines.
     Hence, I used .strip() to awoid unnecessary whitespace.
     >>> xyz = "2\\n \\n H 0. 0. 0.\\n H 0. 0. 0.9\\n  \\n"
-    >>> print get_mopac_input(xyz,method='pm7',dothermo=True)
+    >>> logging.info get_mopac_input(xyz,method='pm7',dothermo=True)
     pm7 precise nosym threads=1 opt
     <BLANKLINE>
     <BLANKLINE>
@@ -1255,7 +1254,7 @@ def get_mopac_natom(lines):
     """
     Return the number of atoms from mopac output
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_natom(s)
+    >>> logging.info get_mopac_natom(s)
     5
     """
     import iotools as io
@@ -1271,7 +1270,7 @@ def get_mopac_xyz(lines):
     """
     Returns xyz string from mopac output lines.
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_xyz(s)
+    >>> logging.info get_mopac_xyz(s)
     5
     <BLANKLINE>
     C 0.0000 -0.0000 0.0000
@@ -1299,7 +1298,7 @@ def get_mopac_freq(lines):
     """
     Returns a float list of vibrational frequencies in cm-1.
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_freq(s)
+    >>> logging.info get_mopac_freq(s)
     [ 1362.21  1362.44  1362.56  1451.04  1451.06  3207.4   3207.46  3207.59
       3310.99]
     """
@@ -1321,7 +1320,7 @@ def get_mopac_zpe(lines):
     """
     Return zero point energy in kcal/mol from mopac output.
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_zpe(s)
+    >>> logging.info get_mopac_zpe(s)
     28.481
     """
     if type(lines) == str:
@@ -1335,7 +1334,7 @@ def get_mopac_deltaH(lines):
     """
     Return delta H in kcal/mol from mopac output.
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_deltaH(s)
+    >>> logging.info get_mopac_deltaH(s)
     -13.02534
     """
     if type(lines) == str:
@@ -1411,7 +1410,7 @@ def get_nwchem_energies(inp, filename=False):
             try:
                 energies[key] = float(lines[i].split()[-1])
             except:
-                print('Cannot parse {0}'.format(value))
+                logging.info('Cannot parse {0}'.format(value))
     return energies
 
 

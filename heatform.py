@@ -9,7 +9,7 @@ sys.path.insert(0, '/home/snelliott/projects/anl/QTC/')
 import iotools as io
 import patools as pa
 import obtools as ob
-
+import logging
 """
 Heatform determines the heat of formation for a molecule by using a basis of 
 molecules with well-determined heats of formation
@@ -311,9 +311,9 @@ def nest_2_dic(bas,key1,key2):
 
     if key1 in dic:
         if key2 in dic[key1]:
-            print '{} {}: {:5f}  pulled from dictionary testdb'.format(bas, key1, dic[key1][key2])
+            logging.info('{} {}: {:5f}  pulled from dictionary testdb'.format(bas, key1, dic[key1][key2]))
             return dic[key1][key2]
-    print 'Value for ' + str(key1) + ',' + str(key2) + ' not found -- ommitting its contribution'
+    logging.info('Value for ' + str(key1) + ',' + str(key2) + ' not found -- ommitting its contribution')
 
     return 0
 
@@ -605,7 +605,7 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
         zpvefile = io.join_path(fdire, bas + '.' + zpvetype)
     if io.check_file(enefile):
         E = io.read_file(enefile).strip()
-        print '{}    E:{:5} pulled from: {}'.format(bas, E, enefile)
+        logging.debug('{}    E:{:5} pulled from: {}'.format(bas, E, enefile))
         E = float(E)
     elif runE:
         if not io.check_file(coordsfile):
@@ -613,22 +613,22 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
         E = run_energy(bas, optprog, optmethod, optbasis, enprog, enmethod, enbasis, 'ene')
         io.mkdir(edire)
         io.write_file(str(E), enefile)
-        print '{}    E: {:5} saved to: {}'.format(bas, E,  enefile)
+        logging.debug('{}    E: {:5} saved to: {}'.format(bas, E,  enefile))
 
     if freq != None:
         if io.check_file(zpvefile):
             zpve= io.read_file(zpvefile).strip()
             zpve= float(zpve)
-            print '{} ZPVE: {:5} pulled from: {}'.format(bas, zpve, zpvefile)
+            logging.debug('{} ZPVE: {:5} pulled from: {}'.format(bas, zpve, zpvefile))
         elif runE:
             if not io.check_file(coordsfile):
                 run_opt(bas, optprog, optmethod, optbasis, True)
             zpve = run_energy(bas, optprog, optmethod, optbasis, freqprog, freqmethod, freqbasis, zpvetype)
             io.mkdir(fdire)
             io.write_file(str(zpve), zpvefile)
-            print '{} ZPVE: {:5} saved to: {}'.format(bas, zpve, zpvefile)
+            logging.debug('{} ZPVE: {:5} saved to: {}'.format(bas, zpve, zpvefile))
     else:
-        print 'Zero point vibrational energy NOT accounted for'
+        logging.debug('Zero point vibrational energy NOT accounted for')
         zpve = 0
 
     #print 'no energy for ' +  dic['stoich'] + ' at '+ theory + '/' + basisset 
@@ -650,8 +650,9 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm,dbdir='./'):
     E        - 0K heat of formation of molecule
    
     """
+    kj2au = 0.000380879803
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * 0.00038088
+        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * kj2au
         e    =  find_E(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
         E   -=  coefflist[i] * e
 
@@ -672,8 +673,9 @@ def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
     E        - 0K heat of formation of molecule
    
     """
+    kj2au = 0.000380879803
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * 0.00038088
+        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * kj2au
         e    =  E_QTC(bas, opt, en, freq, parameters)
         E   -=  coefflist[i] * e
     return E
@@ -730,7 +732,7 @@ def AU_to_kcal(E, printout=True):
         lines += str(E/ .00038088) + '\t'
         lines += '\n kcal/mol \t'
         lines += str(E *  627.503) + '\t'
-        print lines
+        logging.debug( lines)
     hf0k = E * 627.503
     return hf0k 
 
@@ -777,7 +779,7 @@ def comp_coefficients(molform, basis='auto'):
         stoich   = get_stoich(molform,atomlist)
         mat      = form_mat(basis,atomlist)
         basprint +='\n\nBasis is: ' + ', '.join(basis)
-        print basprint
+        logging.debug( basprint)
         #basprint +='\n'.join(['\t'.join([{}.format(el) for el in line] for line in mat])
     basprint += '\n  ' + molform + '\t\t' 
     basprint += '\t'.join([ob.get_formula(bas) for bas in basis])
@@ -806,18 +808,19 @@ def E_QTC(bas, opt, en, freq, parameters):
         zpvetype = 'anzpve'
     enfile = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['qcdirectory'], bas + '.ene' ])
     zpvefile = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
+    logging.info('Energies for {0}'.format(bas))
     if io.check_file(enfile):
         en = float(io.read_file(enfile).strip())
-        print('Energy from "{0}": {1} Hartree '.format(enfile,en))
+        logging.info('Energy from "{0}": {1} Hartree '.format(enfile,en))
     else:
         en = 0.0
-        print('Energy file "{0}" not found'.format(enfile))
+        logging.info('Energy file "{0}" not found'.format(enfile))
     if io.check_file(zpvefile):
         zpve = float(io.read_file(zpvefile).strip())
-        print('ZPVE from "{0}": {1} Hartree'.format(zpvefile, zpve))
+        logging.info('ZPVE from "{0}": {1} Hartree'.format(zpvefile, zpve))
     else:
         zpve = 0.0
-        print('ZPVE file "{0}" not found'.format(zpvefile))
+        logging.info('ZPVE file "{0}" not found'.format(zpvefile))
 #    zpve = io.read_file(freq).strip()
 #     if len(opt) == 4:
 #         opt = '/'.join(opt)
@@ -846,7 +849,7 @@ def E_QTC(bas, opt, en, freq, parameters):
 #     if not io.check_file(freq):
 #         freq = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
 #     if not io.check_file(en):
-#         #print('Run QTC without -T to complete all energy calculations, then rerun QTC with -T')
+#         #logging.info('Run QTC without -T to complete all energy calculations, then rerun QTC with -T')
 #         #qtc.main(parameters)
 #         en = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['qcdirectory'], bas + '.ene' ])
 #        # print'en file not found', en
@@ -943,7 +946,7 @@ def main_keyword(mol,parameters):
               basprint) 
     lines +=  '\n\nCoefficients are: '
     lines += ', '.join(['{}'.format(co) for co in clist])
-    print lines
+    logging.debug(lines)
 
     parameters['runthermo']=False
     parameters['xyzpath']=''
@@ -996,7 +999,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
               basprint) 
     lines +=  '\n\nCoefficients are: '
     lines += ', '.join(['{}'.format(co) for co in clist])
-    print lines + '\n'
+    logging.debug(lines + '\n')
     #print check(clist, basis, stoich,atomlist)
 
     #COMPUTE AND PRINT delH###
@@ -1004,13 +1007,13 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
         E = find_E(mol, optlevel, enlevel, freqlevel, runE, anharm)
     elif is_auto(E):
         E = pa.energy(loglines)[1]
-        print '{}    E: {:5} pulled from: {}'.format(mol, E, logfile)
+        logging.debug('{}    E: {:5} pulled from: {}'.format(mol, E, logfile))
         zpve = pa.zpve(loglines)
         if zpve == None:
-            print 'Zero point vibrational energy NOT accounted for'
+            logging.debug( 'Zero point vibrational energy NOT accounted for')
             zpve = 0
         else:
-            print '{} ZPVE: {:5} pulled from: {}'.format(mol, zpve, logfile)
+            logging.debug( '{} ZPVE: {:5} pulled from: {}'.format(mol, zpve, logfile))
         E = E + zpve
 
     E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)
@@ -1029,7 +1032,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
         lines += '----------------------------------\n' 
         lines += io.db_get_sp_prop(mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
         lines += '\n\n_________________________________________________\n\n'
-        print lines
+        logging.debug( lines)
 
     return hf0k, basis
 

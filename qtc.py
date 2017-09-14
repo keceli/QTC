@@ -7,10 +7,11 @@ import qctools as qc
 import tctools as tc
 import dbtools as db
 import heatform as hf
-from pprint import pprint
+import pprint
 import sys
+import logging
 from patools import energy
-__updated__ = "2017-07-13"
+__updated__ = "2017-09-13"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -33,6 +34,7 @@ TODO:
 When optimization fails, restart from the last geometry
 hof=0 at 0 K should also be at room T
 Delete NWChem scratch files
+Convert all smiles to canonical smiles at start
 """
 def get_args():
     """
@@ -67,22 +69,25 @@ def get_args():
     parser.add_argument('-t', '--qctemplate', type=str,
                         default='',
                         help='Path for the templates directory. Templates have a specific format for filenames. See qtc/templates.')
+    parser.add_argument('-l', '--loglevel', type=int,
+                        default=2,
+                        help='Verbosity level of logging, 0 for only errors, 3 for debugging')
+    parser.add_argument('-f', '--logfile', type=str,
+                        default= 'none',
+                        help='Log file prefix, use none for logging to STDOUT')
     parser.add_argument('-d', '--qcdirectory', type=str,
                         default='',
                         help='Path for the directory for running qc jobs')
-    parser.add_argument('-e', '--qcexe', type=str,
-                        default='',
-                        help='Path for the executable for qc calculations')
     parser.add_argument('-x', '--xyzpath', type=str,
                         default='',
                         help='Path for the directory for xyz file')
     parser.add_argument('-o', '--qcoutput', type=str,
                         default='',
                         help='Path for the qc output file')
-    parser.add_argument('-f', '--first', type=int,
+    parser.add_argument('-b', '--first', type=int,
                         default=0,
                         help='Beginning index of the species list')
-    parser.add_argument('-l', '--last', type=int,
+    parser.add_argument('-e', '--last', type=int,
                         help='Ending index of the species list')
     parser.add_argument('-B', '--hfbasis', type=str,
                         default='auto',
@@ -166,8 +171,10 @@ def run(s):
     nrotor = ob.get_nrotor(mol)
     natom = ob.get_natom(mol)
     label = qc.get_qc_label(natom, qckeyword, calcindex)
+    parameters['all results'][s].update({label:{}})
     parameters['nrotor'] = nrotor
     parameters['label'] = label
+    results = parameters['results']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
         if package.startswith('nwc'):
             parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
@@ -205,6 +212,7 @@ def run(s):
     msg  = "Formula = {0}\n".format(formula)
     msg += "SMILES = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
+    msg += "Number of atoms = {0}\n".format(natom)
     msg += "Number of rotors = {0}\n".format(nrotor)
 #    if nrotor == 0 and task.startswith('tors'):
 #        msg += 'Passing {0} for {1}.'.format(parameters['qctask'], s)
@@ -242,7 +250,7 @@ def run(s):
         mol = ob.get_mol(xyzfile)
     else:
         msg += "XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath)
-    printp(msg)
+    logging.info(msg)
     msg = ''
     cwd = io.pwd()
     io.mkdir(workdirectory)
@@ -252,7 +260,7 @@ def run(s):
     else:
         msg += ('I/O error, {0} directory not found.\n'.format(workdirectory))
         return -1
-    printp(msg)
+    logging.info(msg)
     msg = ''
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']          
     if runqc:
@@ -270,10 +278,10 @@ def run(s):
         else:
             msg = '{0} package not implemented\n'.format(qcpackage)
             msg += 'Available packages are {0}'.format(available_packages)
-        printp(msg)
+        logging.info(msg)
         msg = ''
     if parseqc:
-        printp('Parsing output...')
+        logging.info('Parsing output...')
         if io.check_file('geom1.xyz'):
             parameters['optdir'] = io.pwd()
         if parameters['qctask'] == 'composite':
@@ -296,7 +304,7 @@ def run(s):
                             parameters['results'][key] = results[key]
                     else:
                         if val:
-                            parameters['results'][key] = results[key]
+                            parameters['results'].update({key: results[key]})
             else:
                 msg += 'Failed calculation in "{0}".\n'.format(qcoutput)
                 msg += 'Can not run thermo\n'
@@ -305,9 +313,17 @@ def run(s):
             msg += 'Output file "{0}" not found.\n'.format(qcoutput)
             msg += 'Can not run thermo\n'
             runthermo = False
-    printp(msg)
-    pprint(parameters['results'])
-    parameters['all results'][s].update({label:parameters['results']})
+    logging.info(msg)
+    logging.info(pprint.pformat((parameters['results'])))
+    for key in results.keys():
+        val = results[key]
+        if hasattr(val, "any"):
+            if val.any():
+                parameters['all results'][s][label][key] = results[key]
+        else:
+            if val:
+                parameters['all results'][s][label].update({key: results[key]})
+ #   parameters['all results'][s].update({label:parameters['results']})
     msg = ''                                   
     if runthermo:
         hof, hfset = hf.main_keyword(mol,parameters)
@@ -315,6 +331,8 @@ def run(s):
         hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         parameters['results']['heat of formation at 0 K'] = hof
         parameters['results']['heat of formation basis'] = hfset
+        parameters['all results'][s][label]['heat of formation at 0 K'] = hof
+        parameters['all results'][s][label]['heat of formation basis'] = hfset
         io.write_file(hftxt,s + '.hofk')
         if not io.check_file('new.groups'):
             groupstext = tc.get_new_groups()
@@ -326,10 +344,10 @@ def run(s):
                 lines = io.read_file('thermp.out')
                 hof298 = pa.get_298(lines)
                 parameters['results']['heat of formation at 298 K'] = hof298
+                parameters['all results'][s][label]['heat of formation at 298 K'] = hof298
                 msg += 'delHf(298) = {0} kcal/mol'.format(hof298)
-        parameters['all results'][s].update({label:parameters['results']})
     io.cd(cwd)
-    printp(msg)
+    logging.info(msg)
     return
 
 
@@ -337,11 +355,27 @@ def main(arg_update={}):
     from socket import gethostname
     from timeit import default_timer as timer
     import os
+    from time import strftime as get_date_time
     global parameters
     start  = timer()
     args = get_args()
     parameters = vars(args)
     parameters['all results'] = {}
+    logfile = parameters['logfile']
+    if parameters['loglevel'] == 0:
+        loglevel = logging.ERROR
+    elif parameters['loglevel'] == 1:
+        loglevel = logging.WARNING
+    elif parameters['loglevel'] == 2:
+        loglevel = logging.INFO
+    elif parameters['loglevel'] == 3:
+        loglevel = logging.DEBUG
+    logging.addLevelName(logging.INFO, '')
+    if logfile is 'none':
+        logging.basicConfig(format='%(levelname)s %(message)s', level=loglevel)
+    else:
+        logfile = logfile + '_qtc_' + get_date_time("%Y%m%d-%H%M%S") + '.log'
+        logging.basicConfig(format='%(levelname)s %(message)s', filename=logfile, level=loglevel)
     for key in arg_update:
         parameters[key] = arg_update[key]
     if parameters['qckeyword']:
@@ -367,19 +401,19 @@ def main(arg_update={}):
         mylist = mylist[beginindex:endindex]
     else:
         mylist = mylist[beginindex:]        
-    printp(__logo__)
-    printp("QTC: Date and time           = {0}".format(io.get_date()))
-    printp("QTC: Last update             = {0}".format(__updated__))
-    printp("QTC: Number of processes     = {0}".format(nproc))
-    printp("QTC: Hostname                = {0}".format(gethostname()))
-    printp('QTC: Given arguments         =')
+    logging.info(__logo__)
+    logging.info("QTC: Date and time           = {0}".format(io.get_date()))
+    logging.info("QTC: Last update             = {0}".format(__updated__))
+    logging.info("QTC: Number of processes     = {0}".format(nproc))
+    logging.info("QTC: Hostname                = {0}".format(gethostname()))
+    logging.info('QTC: Given arguments         =')
     for param in parameters:
-        printp('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
+        logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
     init = timer()
-    printp("QTC: Initialization time (s) = {0:.2f}".format(init-start))
+    logging.info("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     runthermo = parameters['runthermo']
     if runthermo:
-        printp("QTC: Initial number of species       = {0}".format(len(mylist)))
+        logging.info("QTC: Number of species       = {0}".format(len(mylist)))
         for s in mylist:
             formula = ob.get_formula(s)
             _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['hfbasis'].split())
@@ -387,8 +421,10 @@ def main(arg_update={}):
                 if basismol not in mylist:
                     msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
                     mylist = [basismol] + mylist
-                    printp(msg)
-    printp("QTC: Number of species       = {0}".format(len(mylist)))            
+                    logging.info(msg)
+                    logging.info("QTC: Number of species required for thermo= {0}".format(len(mylist)))            
+    logging.info('List of species')
+    logging.info(pprint.pformat(mylist))
     if parameters['qckeyword']:
         if nproc == 1:
             for s in mylist:
@@ -404,9 +440,9 @@ def main(arg_update={}):
                 mol = ob.get_mol(s,make3D=True)
                 parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
-                    parameters['calcindex'] = i                        
-                    printp('\n' + 100*'*' + '\n')
-                    printp('Running QTC')
+                    parameters['calcindex'] = i
+                    logging.info('\n' + 100*'*' + '\n')
+                    logging.info('Running QTC')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)
         else:
@@ -416,8 +452,8 @@ def main(arg_update={}):
                     qc.parse_qckeyword(parameters, calcindex=i)
                 pool = multiprocessing.Pool(nproc)
         if runthermo:
-            printp('\n' + 100*'#' + '\n')
-            printp("Starting thermo calculations")
+            logging.info('\n' + 100*'#' + '\n')
+            logging.info("Starting thermo calculations")
             for s in mylist:
                 parameters['runthermo'] = runthermo
                 parameters['optdir'] = ''
@@ -426,26 +462,25 @@ def main(arg_update={}):
                 parameters['qcdirectory'] = ''
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
+                parameters['results'] = {}
                 parameters['heat'] = None
                 mol = ob.get_mol(s,make3D=True)
                 parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
                     parameters['calcindex'] = i
-                    printp('\n' + 100*'*' + '\n')
-                    printp('Running QTC')
+                    logging.info('\n' + 100*'*' + '\n')
+                    logging.info('Running QTC')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)            
     else:
-        pprint(mylist)
-        printp("You need to specify qckeyword with -k to run calculations")
+        logging.info("You need to specify qckeyword with -k to run calculations")
     end = timer()
     if 'all results' in parameters:
-        printp('\n' + 100*'-' + '\n')
-        pprint('All results')
-        pprint(parameters['all results'])
-    printp("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
-    printp("QTC: Total time (s)          = {0:.2f}".format(end-start))
-    printp("QTC: Date and time           = {0}".format(io.get_date()))
+        logging.info('\n' + 100*'-' + '\n')
+        logging.info(pprint.pformat((parameters['all results'])))
+    logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
+    logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
+    logging.info("QTC: Date and time           = {0}".format(io.get_date()))
 
 if __name__ == "__main__":
     main()
