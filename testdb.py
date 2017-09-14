@@ -2,7 +2,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'O2', 
 'charge'  : 0,
 'mult'    : 1,
-'delHf': {0:0,'sigma':0.0},
+'delHf': {0:0, 298:0, 'sigma':0.0},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -150.26605, 'sigma':0}},
     'm062x'   : {'6-311+g(d,p)':{'energy': -150.308589, 'sigma':0}},
@@ -32,7 +32,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'H2O', 
 'charge'  : 0,
 'mult'    : 1,
-'delHf': {0:-286.300, 298:-285.828, 'sigma':0.027},
+'delHf': {0:-238.931, 298:-241.834, 'sigma':0.027},
 'g09'     : { 
     'b3lyp'   : {'6-311+g(d,p)':{'energy': -76.434049, 'sigma':0}},
     'ccsd'    : {'cc-pvtz':{'energy': -76.3245455, 'sigma':0}},
@@ -93,14 +93,14 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'NH3', 
 'charge'  : 0,
 'mult'    : 1,
-'delHf': {0:-38.562, 'sigma':0.057}
+'delHf': {0:-38.562,298.:-45.554, 'sigma':0.03}
 },
 
 {'_id'    : 'N#N', 
 'stoich'  : 'N2', 
 'charge'  : 0,
 'mult'    : 1,
-'delHf': {0:0, 'sigma':0.0}
+'delHf': {0.:0., 298.:0., 'sigma':0.0}
 },
 
 {'_id'    : 'C=C', 
