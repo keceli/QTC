@@ -426,6 +426,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         energies = get_nwchem_energies(lines)
         energy = energies[method]
         freqs = get_nwchem_frequencies(lines)
+        zpve = get_zpve(freqs)
         parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
@@ -454,30 +455,20 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if type(xmat) == str:
                 xmat = []
         parsed = True
-    elif package == 'torsscan':
+    elif package.startswith('tors'):
         optlevel, method, energy = get_torsscan_info(s)
-        if io.check_file('geom.log'):
+        if io.check_file('geoms/reac1_l1.xyz'):
+            xyz = io.read_file('geoms/reac1_l1.xyz')
+            energy = float(xyz.splitlines()[1].strip())         
+            parsed = True
+        elif io.check_file('geom.log'):
                 out = io.read_file('geom.log', aslines=False)
                 xyz = pa.gaussian_xyz(out)
                 method, energy = pa.gaussian_energy(out)
                 freqs = pa.gaussian_freqs(out)
                 parsed = True
-        if io.check_file('hrproj_freq.dat'):
-            freqlines = io.read_file('hrproj_freq.dat',aslines=True)
-            for line in freqlines:
-                if float(line) > 0.:
-                    pfreqs.append(float(line))
-        if io.check_file('RTproj_freq.dat'):
-            freqlines = io.read_file('RTproj_freq.dat',aslines=True)
-            for line in freqlines:
-                if float(line) > 0.:
-                    freqs.append(line)
-        fname = 'me_files/reac1_zpe.me'
-        if io.check_file(fname):
-            zpve = float(io.read_file(fname, aslines=False))                
-        fname = 'me_files/reac1_hr.me'
-        if io.check_file(fname):
-            messhindered = io.read_file(fname, aslines=False)
+        if io.check_dir('me_files', 1):
+            freqs, pfreqs, zpve, messhindered = parse_me_files()
 
     if parsed:
         if write:
@@ -545,6 +536,17 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     return d
 
 
+def get_zpve(freqs):
+    """
+    Return zpve in au for given freq in 1/cm.
+    """
+    zpve = 0.0
+    for freq in freqs:
+        freq = float(freq)
+        zpve += freq
+    return zpve * 0.5 / 219474.63
+
+
 def get_listofstrings(array):
     """
     Return a list of strings from a given array
@@ -601,7 +603,43 @@ def parse_cclib(out):
     import cclib
     return cclib.io.ccread(out)
 
+def parse_me_files(path=None):
+    """
+    Parses files in me_files directory that TorsScan (EStoKTP) generates.
+    """
+    if path:
+        pass
+    else:
+        path = 'me_files'
+    
+    freqs = []
+    pfreqs = []
+    zpve = None
+    messhindered = None
+    
+    fname = io.join_path(path,'reac1_unpfr.me')
+    if io.check_file(fname):
+        out = io.read_file(fname, aslines=False)
+        freqs = get_mess_frequencies(out)
+        
+    fname = io.join_path(path,'reac1_fr.me')
+    if io.check_file(fname):
+        out = io.read_file(fname, aslines=False)
+        pfreqs = get_mess_frequencies(out)
+        
+    fname = io.join_path(path,'reac1_zpe.me')
+    if io.check_file(fname):
+        out = io.read_file(fname, aslines=False)
+        zpve = float(out)  
+                      
+    fname = io.join_path(path,'reac1_hr.me')
+    if io.check_file(fname):
+        messhindered = io.read_file(fname, aslines=False)   
 
+    if freqs == pfreqs:
+        pfreqs = []
+    return freqs, pfreqs, zpve, messhindered
+    
 def getcc_enthalpy(out):
     if type(out) is not cclib.parser.data.ccData_optdone_bool:
         if io.check_file(out, 1):
@@ -1537,10 +1575,11 @@ def get_nwchem_frequencies(inp, filename=False, minfreq=10):
         for num in nums:
             line = lines[num]
             for item in line.split()[1:]:
-                freq = float(item)
-                if freq > minfreq:
+                freq = item.strip()
+                if float(freq) > minfreq:
                     freqs.append(freq)
     return freqs
+
 
 def get_torsscan_info(s):
     """
@@ -1572,6 +1611,53 @@ Rotational Constants:120.49000, 23.49807, 22.51838 GHz
         elif line.startswith('Energy'):
             energy = float(line.replace('A.U.','').split()[-1])
     return optlevel,  '{}/{}/{}'.format('torsscan',method,basis), energy
+
+
+def get_mess_frequencies(out):
+    """
+    Return frequencies as a list of floats by parsing mess input file.
+    Input follows Frequencies line
+    Sample input file:
+    AtomDistanceMin[angstrom] 0.6
+    Temperature(step[K],size)        100.   30
+    RelativeTemperatureIncrement            0.001
+    Species H2O
+    RRHO
+    Geometry[angstrom] 3 !torsscan/b3lyp/sto-3g/gaussian
+     O  0.000000  0.000000  0.000000
+     H  0.000000  0.000000  1.027000
+     H  1.018909  0.000000  -0.128659
+    
+    Core RigidRotor
+    SymmetryFactor 1
+    End
+    Frequencies[1/cm] 3 !torsscan/b3lyp/sto-3g/gaussian
+    2016.9034 3614.5724 3839.1980
+    ZeroEnergy[kcal/mol] 0.0215757824512 ! torsscan/b3lyp/sto-3g/gaussian
+    ElectronicLevels[1/cm]  1
+    0 1
+    End
+    >>> out = io.read_file('sample_logfiles/CH4O_pf.inp')
+    >>> print qc.get_mess_frequencies(out)
+    [3690.23, 3425.92, 3353.85, 3218.7, 1684.07, 1662.1, 1604.55, 1582.52, 1178.31, 1152.3, 1081.44, 398.92]
+    """
+    out = out.lower()
+    lines = out.splitlines()
+    n = io.get_line_number('frequencies', lines)
+    freqs = []
+    for line in lines[n+1:]:
+        if line.islower(): #Returns false if line has no letters
+            break
+        elif line.strip():
+            items = line.split()
+            for item in items:
+                try:
+                    freqs.append(item)
+                except:
+                    logging.warning('Non-numeric string in frequency lines of mess input: {0}'.format(item))
+        else:
+            pass
+    return freqs
 
 
 def print_list(s):
