@@ -15,6 +15,36 @@ except:
 __updated__ = "2017-09-13"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
+
+def sort_species_list(slist, printinfo=False):
+    """
+    Sorts a species list of smiles by number of rotors, electrons and atoms. 
+    Optionally, prints info on the list
+    """
+    i = 0
+    tmplist= ['']*len(slist)
+    for s in slist:
+        smi = ob.get_smiles(s)
+        mol = ob.get_mol(smi,make3D=True)
+        nrotor = ob.get_nrotor(mol)
+        nelec = ob.get_nelectron(mol)
+        natom = ob.get_natom(mol)
+        nheavy = ob.get_natom_heavy(mol)
+        formula = ob.get_formula(mol)
+        mult = ob.get_multiplicity(mol)
+        tmplist[i] = [smi,formula,mult,nrotor,nelec,natom,nheavy]
+        i += 1
+    tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[3],x[4],x[5]))
+    sortedlist = [x[0] for x in tmplist]
+    if printinfo:
+        logging.info('-'*100)
+        logging.info('{0:30s} {1:20s} {2:>8s} {3:>8s} {4:>8s} {5:>8s} {6:>8s}'.format('SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
+        for s in tmplist:
+            logging.info('{0:30s} {1:20s} {2:8d} {3:8d} {4:8d} {5:8d} {6:8d}'.format(*s))
+        logging.info('-'*100)
+    return sortedlist
+
+
 def get_input(x, template, parameters):
     """
     Returns input file text for a qc calculation based on a given template.
@@ -36,8 +66,8 @@ def get_input(x, template, parameters):
     basis   = parameters[  'qcbasis']
     if 'results' in parameters.keys():
         results = parameters['results']
-        if 'HoF at 0 K' in results.keys():
-            heat = results['HoF at 0 K']
+        if 'deltaH0' in results.keys():
+            heat = results['deltaH0']
         else:
             heat = 0.
     else:
@@ -342,14 +372,14 @@ def parse_results(filename, parameters):
     r['xyz'] = ' '
     r['xmat'] = ' '
     r['hindered rotor potential'] = ' ' 
-    r['number of basis functions'] = 0
+    r['nbasis'] = 0
     r['nuclear repulsion energy:' ]= 0.
     r['energy' ]= 0.
     r['zpve'] = 0.
-    r['anharmonic zpve'] = 0.
-    r['harmonic frequencies' ]= []
-    r['anharmonic frequencies'] = []
-    r['projected frequencies' ]= []
+    r['azpve'] = 0.
+    r['freqs']= []
+    r['afreqs'] = []
+    r['pfreqs']= []
     if io.check_file(filename,timeout=1):
         r['file'] = io.get_path(filename)
         out = io.read_file(filename,asline=False)
@@ -365,14 +395,14 @@ def parse_results(filename, parameters):
 #     r['xyz'] = get_xyz(out, package)
 #     r['xmat'] = get_xyz(out, package)
 #     r['hindered rotor potential'] = get_xyz(out, package) 
-#     r['number of basis functions'] = get_xyz(out, package)
+#     r['nbasis'] = get_xyz(out, package)
 #     r['nuclear repulsion energy:' ]= get_xyz(out, package)
 #     r['energy' ]= get_xyz(out, package)
 #     r['zpve'] = get_xyz(out, package)
-#     r['anharmonic zpve'] = get_xyz(out, package)
-#     r['harmonic frequencies' ]= get_xyz(out, package)
+#     r[''azpve'] = get_xyz(out, package)
+#     r['freqs']= get_xyz(out, package)
 #     r['anharmonic frequencies'] = get_xyz(out, package)
-#     r['projected frequencies' ]= get_xyz(out, package)
+#     r['pfreqs']= get_xyz(out, package)
     return r
 
 
@@ -422,7 +452,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         xyz = get_nwchem_xyz(lines)
         basisinfo = get_nwchem_basis(lines)
         basis = basisinfo['basis']
-        nbasis = basisinfo['number of basis functions']
+        nbasis = basisinfo['nbasis']
         energies = get_nwchem_energies(lines)
         energy = energies[method]
         freqs = get_nwchem_frequencies(lines)
@@ -488,23 +518,23 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if sum(afreqs) > 0:
                 fname = smilesname + '.anhrm'
                 io.write_file('\n'.join(str(x) for x in afreqs), fname)
-        d = {'number of basis functions':nbasis,
+        d = {'nbasis':nbasis,
                'energy':energy,
                'xyz':xyz,
-               'harmonic frequencies' : freqs,
-               'anharmonic frequencies' : afreqs,
+               'freqs': [float(x) for x in freqs],
+               'afreqs': afreqs,
                'projected frequencies': pfreqs,
                'zpve': zpve,
-               'anharmonic zpve': azpve,
+               'azpve': azpve,
                'xmat': xmat,
                'hindered potential': messhindered,
-               'HoF at 0 K': hof0,
-               'HoF at 298 K': hof298}
+               'deltaH0': hof0,
+               'deltaH298': hof298}
 #         if calculation == 'geometry optimization':
 #             for key,value in energies.iteritems():
 #                 if key is not method:
 #                     d[optlevel][package][calculation][method][basis]['geometry'].update({
-#                         'single point':{key:{basis:{'number of basis functions':nbasis,'energy':value}}}})
+#                         'single point':{key:{basis:{'nbasis':nbasis,'energy':value}}}})
 #                     if write:
 #                         fname = '{0}_{1}.ene'.format(method,smilesname)
 #                         io.write_file(str(energy), fname)
@@ -725,8 +755,8 @@ def run(mol, parameters, mult=None):
     if task.startswith('tors'):
         package = task
     prefix = ob.get_smiles_filename(mol) + '_' + package
-    inpfile = prefix + '.inp'
-    outfile = prefix + '.out'
+    outfile = parameters['qcoutput']
+    inpfile = outfile.replace('out','inp')
     if io.check_file(outfile, timeout=1):
         if overwrite:
             msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
@@ -1520,7 +1550,7 @@ def get_nwchem_basis(inp, filename=False):
         basis = '_'.join(basis)
     else:
         basis = basis[0]
-    return {'basis': basis,'number of basis functions': nbasis}
+    return {'basis': basis,'nbasis': nbasis}
 
 
 def get_nwchem_frequencies(inp, filename=False, minfreq=10):

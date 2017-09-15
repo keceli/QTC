@@ -5,6 +5,7 @@ import iotools as io
 import obtools as ob
 import qctools as qc
 import tctools as tc
+import unittools as ut
 import dbtools as db
 import heatform as hf
 import pprint
@@ -95,6 +96,8 @@ def get_args():
     parser.add_argument('-D', '--database', type=str,
                         default= io.pwd(),
                         help='Heat of formation basis molecules')
+    parser.add_argument('-G', '--generate', action='store_true',
+                        help='Generates a sorted list of species')
     parser.add_argument('-Q', '--runqc', action='store_true',
                         help='Run quantum chemistry calculation')
     parser.add_argument('-P', '--parseqc', action='store_true',
@@ -230,11 +233,11 @@ def run(s):
     workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
     qcpackage = parameters['qcpackage']
     qcscript = io.get_path(parameters['qcscript'])
-    qcoutput = smilesname + '_' + qcpackage + '.out'
     if task.startswith('tors'):
         qcoutput = smilesname + '_' + task + '.out'
     else:
         qcoutput = smilesname + '_' + qcpackage + '.out'
+    parameters['qcoutput'] = qcoutput
     xyzpath = parameters['xyzpath']
     xyzfile = ''
     if xyzpath:
@@ -294,7 +297,7 @@ def run(s):
                 msg += 'Can not run thermo\n'
                 runthermo = False
         elif io.check_file(qcoutput, timeout=1,verbose=False):
-            out = io.read_file(qcoutput,aslines=False)
+            out = io.read_file(qcoutput, aslines=False)
             if qc.check_output(out):
                 results = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
                 for key in results.keys():
@@ -311,6 +314,7 @@ def run(s):
                 runthermo = False                
         else:
             msg += 'Output file "{0}" not found.\n'.format(qcoutput)
+            sys.exit(msg)
             msg += 'Can not run thermo\n'
             runthermo = False
     logging.info(msg)
@@ -324,28 +328,35 @@ def run(s):
             if val:
                 parameters['all results'][s][label].update({key: results[key]})
  #   parameters['all results'][s].update({label:parameters['results']})
-    msg = ''                                   
+    msg = '\n'
+    parameters['results']['deltaH298'] = 0
+    parameters['all results'][s][label]['deltaH298'] = 0                                    
     if runthermo:
         hof, hfset = hf.main_keyword(mol,parameters)
         hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
         hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
-        parameters['results']['heat of formation at 0 K'] = hof
+        parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
-        parameters['all results'][s][label]['heat of formation at 0 K'] = hof
+        parameters['all results'][s][label]['deltaH0'] = hof
         parameters['all results'][s][label]['heat of formation basis'] = hfset
         io.write_file(hftxt,s + '.hofk')
         if not io.check_file('new.groups'):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')
-        if 'harmonic frequencies' in parameters['results']:
+        hof298 = 0.
+        if 'freqs' in parameters['results']:
             msg += tc.write_chemkin_polynomial2(mol, parameters)
             if io.check_file('thermp.out'):
                 import patools as pa
                 lines = io.read_file('thermp.out')
                 hof298 = pa.get_298(lines)
-                parameters['results']['heat of formation at 298 K'] = hof298
-                parameters['all results'][s][label]['heat of formation at 298 K'] = hof298
                 msg += 'delHf(298) = {0} kcal/mol'.format(hof298)
+            else:
+                msg += 'thermp.out not found'
+        else:
+            msg += 'No harmonic frequency results found'
+        parameters['results']['deltaH298'] = hof298
+        parameters['all results'][s][label]['deltaH298'] = hof298   
     io.cd(cwd)
     logging.info(msg)
     return
@@ -422,10 +433,14 @@ def main(arg_update={}):
                     msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
                     mylist = [basismol] + mylist
                     logging.info(msg)
-                    logging.info("QTC: Number of species required for thermo= {0}".format(len(mylist)))            
-    logging.info('List of species')
-    logging.info(pprint.pformat(mylist))
-    if parameters['qckeyword']:
+                    logging.info("QTC: Number of species required for thermo= {0}".format(len(mylist)))
+    if parameters['generate']:
+        mylist = qc.sort_species_list(mylist, printinfo=True)
+        myliststr = '\n'.join(mylist)
+        io.write_file(myliststr, 'sorted.txt')
+    elif parameters['qckeyword']:
+        logging.info('List of species')
+        logging.info(pprint.pformat(mylist))
         if nproc == 1:
             for s in mylist:
                 parameters['runthermo'] = False
@@ -442,8 +457,8 @@ def main(arg_update={}):
                 for i in range(ncalc):
                     parameters['calcindex'] = i
                     logging.info('\n' + 100*'*' + '\n')
-                    logging.info('Running QTC')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
+                    runtime_i = timer()
                     run(s)
         else:
             for i in range(ncalc):
@@ -475,9 +490,18 @@ def main(arg_update={}):
     else:
         logging.info("You need to specify qckeyword with -k to run calculations")
     end = timer()
-    if 'all results' in parameters:
+    if parameters['all results']:
         logging.info('\n' + 100*'-' + '\n')
         logging.info(pprint.pformat((parameters['all results'])))
+        logging.info('\n' + 100*'-' + '\n')
+        if runthermo:
+            out   = '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('SMILES', 'deltaH(0)', 'deltaH(298)', 'Key')
+            out += '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('      ', ' [kj/mol]', '[kj/mol]', ' ')
+            for resultkey,resultval in parameters['all results'].iteritems():
+                for qcresultkey, qcresultval in sorted(resultval.iteritems(),key= lambda x: x[0]):
+                    out += '{0:30s} {1:15.5f} {2:15.5f}\t   {3:50s}\n'.format(
+                        resultkey, qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
+            logging.info(out)   
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
