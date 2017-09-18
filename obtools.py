@@ -374,14 +374,14 @@ def get_smiles_path(x, mult=0, method='',basis=''):
         s = x.write(format='can').strip().split()[0]
     elif type(x) is str:
         s = x    
+    formula = get_formula(s)
+    formula_noH = get_formula(s, stoichemetry=True, hydrogens=False)
+    elements_noH = get_formula(s, stoichemetry=False, hydrogens=False)
     s = get_smiles_filename(s)    
     if mult > 1:
         multstr = "-m{0}".format(mult)
     else:
         multstr = ''
-    formula = get_formula(s)
-    formula_noH = get_formula(s, stoichemetry=True, hydrogens=False)
-    elements_noH = get_formula(s, stoichemetry=False, hydrogens=False)
     dirs = 'database', elements_noH, formula_noH, formula, s+multstr, method, basis
     return io.join_path(*dirs)
 
@@ -408,7 +408,7 @@ def get_smiles_filename(x):
     Returns a suitable filename for a given smiles.
     Smiles strings may contain characters not suitable for file names,
     such as \/:*?"<>|(). Not sure if all these characters appear, but here
-    they are replaced by abdeqtrl.
+    they are replaced by an underscore, '_' followed by:
     """
     if type(x) is pybel.Molecule:    
         s = x.write(format='can').strip().split()[0]
@@ -416,16 +416,18 @@ def get_smiles_filename(x):
         s = x
     else:
         s = ''
-    s = s.replace('\\','-db-') #double back slash
-    s = s.replace('/','-sl-')
-    s = s.replace(':','-co-')
-    s = s.replace('*','-star-')
-    s = s.replace('?','-qm-')
-    s = s.replace('<','-la-')
-    s = s.replace('>','-ra-')
-    s = s.replace('|','-bs-')
-    s = s.replace('(','-lp-')
-    s = s.replace(')','-rp-')
+#   s = s.replace('[','_b')
+#   s = s.replace(']','_d')
+    s = s.replace(':','_i')
+    s = s.replace('|','_j')
+    s = s.replace('\\','_k') 
+    s = s.replace('/','_l')
+    s = s.replace('?','_m')
+    s = s.replace('(','_p')
+    s = s.replace(')','_q')
+    s = s.replace('*','_s')
+    s = s.replace('<','_v')
+    s = s.replace('>','_y')
     return s
 
 

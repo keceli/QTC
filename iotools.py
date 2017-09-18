@@ -144,15 +144,18 @@ def fix_path(s):
     """
     Returns a path with problematic characters replaced by safer ones.
     """
-    s = s.replace('\\','-db-') #double back slash
-    s = s.replace(':','-co-')
-    s = s.replace('*','-star-')
-    s = s.replace('?','-qm-')
-    s = s.replace('<','-la-')
-    s = s.replace('>','-ra-')
-    s = s.replace('|','-bs-')
-    s = s.replace('(','-lp-')
-    s = s.replace(')','-rp-')
+#   s = s.replace('[','_b')
+#   s = s.replace(']','_d')
+    s = s.replace(':','_i')
+    s = s.replace('|','_j')
+    s = s.replace('\\','_k') 
+    s = s.replace('/','_l')
+    s = s.replace('?','_m')
+    s = s.replace('(','_p')
+    s = s.replace(')','_q')
+    s = s.replace('*','_s')
+    s = s.replace('<','_v')
+    s = s.replace('>','_y')
     return s
 
 
