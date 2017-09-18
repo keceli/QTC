@@ -140,18 +140,20 @@ def read_file(filename, aslines=False):
     return tmp
 
 
-def fix_path(path):
+def fix_path(s):
     """
     Returns a path with problematic characters replaced by safer ones.
     """
-    path = path.replace(':','__')
-    path = path.replace('*','-star-')
-    path = path.replace('?','-qm-')
-    path = path.replace('<','-la-')
-    path = path.replace('>','-ra-')
-    path = path.replace('(','_')
-    path = path.replace(')','_')
-    return path
+    s = s.replace('\\','-db-') #double back slash
+    s = s.replace(':','-co-')
+    s = s.replace('*','-star-')
+    s = s.replace('?','-qm-')
+    s = s.replace('<','-la-')
+    s = s.replace('>','-ra-')
+    s = s.replace('|','-bs-')
+    s = s.replace('(','-lp-')
+    s = s.replace(')','-rp-')
+    return s
 
 
 def check_file(filename, timeout=0, verbose=False):
