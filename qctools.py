@@ -660,8 +660,10 @@ def parse_me_files(path=None):
     fname = io.join_path(path,'reac1_zpe.me')
     if io.check_file(fname):
         out = io.read_file(fname, aslines=False)
-        zpve = float(out)  
-                      
+        try:
+            zpve = float(out)  
+        except:
+            logging.error('Can not parse zpve for file {0}'.format(fname))             
     fname = io.join_path(path,'reac1_hr.me')
     if io.check_file(fname):
         messhindered = io.read_file(fname, aslines=False)   
@@ -754,22 +756,28 @@ def run(mol, parameters, mult=None):
     inptext = get_input(mol, tmp, parameters)
     if task.startswith('tors'):
         package = task
-    prefix = ob.get_smiles_filename(mol) + '_' + package
     outfile = parameters['qcoutput']
     inpfile = outfile.replace('out','inp')
+    prefix = outfile.replace('.out','')
+    run = True
     if io.check_file(outfile, timeout=1):
         if overwrite:
             msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
             run = True
         else:
             out = io.read_file(outfile)
-            if check_output(out):
+            if task.startswith('tors'):
+                if io.check_file('geom.xyz'):
+                    msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path('geom.xyz'))
+                    run = False                
+            elif check_output(out):
                 msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
                 run = False
             else: 
                 msg = 'Failed output found "{0}", renaming and running a new calculation\n'.format(io.get_path(outfile))
                 io.mv(outfile, 'failed_'+outfile)
                 run = True
+
     else:
         run = True
     if run:
@@ -797,7 +805,7 @@ def run(mol, parameters, mult=None):
 
 def run_extrapolation(mol,parameters):
     if parameters['qckeyword']:
-        msg = run_extrapolation_keyword(mol,parameters)
+        msg = run_extrapolation_keyword(parameters)
     elif parameters['qctemplate']:
         msg = run_extrapolation_template(mol, parameters)
     else:
@@ -805,7 +813,7 @@ def run_extrapolation(mol,parameters):
     return msg
 
 
-def run_extrapolation_keyword(mol, parameters):
+def run_extrapolation_keyword(parameters):
     """
     Parses qckeyword for composite method. 
     'opt/mp2/cc-pvdz/gaussian,freq/mp2/cc-pvtz/molpro,sp/mp2/cc-pvqz,composite/cbs-dtq/energy=0.1 * E[0] + 0.4 * E[1] + 0.5 * E[2]'
@@ -814,7 +822,7 @@ def run_extrapolation_keyword(mol, parameters):
     formula = parameters['formula'][0]
     method = parameters['qcmethod']
     msg = ''
-    smilesname = ob.get_smiles_filename(mol)
+    smilesname = parameters['smilesname']
     calcs = keyword.split(',')
     logging.info('Composite energy formula: {0}\n'.format(formula))
     ncalc = len(calcs) 
@@ -1684,7 +1692,7 @@ def get_mess_frequencies(out):
                 try:
                     freqs.append(item)
                 except:
-                    logging.warning('Non-numeric string in frequency lines of mess input: {0}'.format(item))
+                    logging.error('Non-numeric string in frequency lines of mess input: {0}'.format(item))
         else:
             pass
     return freqs

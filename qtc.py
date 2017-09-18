@@ -159,6 +159,7 @@ def run(s):
     Not pure.
     """
     global parameters
+    s = ob.get_smiles(s) # convert to open-babel canonical smiles
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
     package = parameters['qcpackage']
@@ -226,7 +227,8 @@ def run(s):
     msg += 'Package = {0}\n'.format(parameters['qcpackage'])
     msg += 'Label = {0}\n'.format(parameters['label'])
     msg += 'Template = {0}\n'.format(parameters['qctemplate'])
-    smilesname = ob.get_smiles_filename(s)
+    smilesname = io.fix_path(s)
+    parameters['smilesname' ] = smilesname
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
     smilesdir = io.join_path(parameters['database'], smilesdir)
     parameters['smilesdir'] = smilesdir
@@ -332,7 +334,7 @@ def run(s):
     parameters['results']['deltaH298'] = 0
     parameters['all results'][s][label]['deltaH298'] = 0                                    
     if runthermo:
-        hof, hfset = hf.main_keyword(mol,parameters)
+        hof, hfset = hf.main_keyword(s,parameters)
         hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
         hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         parameters['results']['deltaH0'] = hof
@@ -433,7 +435,7 @@ def main(arg_update={}):
                     msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
                     mylist = [basismol] + mylist
                     logging.info(msg)
-                    logging.info("QTC: Number of species required for thermo= {0}".format(len(mylist)))
+        logging.info("QTC: Number of species required for thermo= {0}".format(len(mylist)))
     if parameters['generate']:
         mylist = qc.sort_species_list(mylist, printinfo=True)
         myliststr = '\n'.join(mylist)

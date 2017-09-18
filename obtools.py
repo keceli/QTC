@@ -346,27 +346,6 @@ def get_unique_path(x, mult=0, method=''):
     return io.join_path(*dirs)
 
 
-def get_smiles_path(x, mult=0, method='',basis=''):
-    """
-    Returns a smiles based path for database directory.
-    Note that smiles strings are not unique. Even the 
-    canonical smiles strings are unique only for the same
-    code that generates the smiles string.
-    """
-    import iotools as io
-    mol = get_mol(x, make3D=True)
-    if mult == 0:
-        mult = mol.spin
-    s = get_smiles_filename(mol)    
-    if mult > 1:
-        s = s + "-m{0}".format(mult)
-    formula = get_formula(mol)
-    formula_noH = get_formula(mol, stoichemetry=True, hydrogens=False)
-    elements_noH = get_formula(mol, stoichemetry=False, hydrogens=False)
-    dirs = 'database', elements_noH, formula_noH, formula, s, method, basis
-    return io.join_path(*dirs)
-
-
 def get_formats():
     """
     Return available write formats in Open Babel.
@@ -381,38 +360,66 @@ def get_formats():
     return pybel.outformats
 
 
+def get_smiles_path(x, mult=0, method='',basis=''):
+    """
+    Returns a smiles based path for database directory.
+    Note that smiles strings are not unique. Even the 
+    canonical smiles strings are unique only for the same
+    code that generates the smiles string.
+    """
+    import iotools as io
+    if type(x) is pybel.Molecule:
+        if mult == 0:
+            mult = x.spin
+        s = x.write(format='can').strip().split()[0]
+    elif type(x) is str:
+        s = x    
+    s = get_smiles_filename(s)    
+    if mult > 1:
+        multstr = "-m{0}".format(mult)
+    else:
+        multstr = ''
+    formula = get_formula(s)
+    formula_noH = get_formula(s, stoichemetry=True, hydrogens=False)
+    elements_noH = get_formula(s, stoichemetry=False, hydrogens=False)
+    dirs = 'database', elements_noH, formula_noH, formula, s+multstr, method, basis
+    return io.join_path(*dirs)
+
+
 def get_smiles(x):
     """
     Returns open-babel canonical smiles.
+    >>> print ob.get_smiles('O')
+    O
+    >>> print ob.get_smiles('[H][O][H]')
+    O
+    >>> print ob.get_smiles('O-O')
+    OO
+    >>> print ob.get_smiles('[O]=[O]')
+    O=O
     """
-    if type(x) is pybel.Molecule:
-        s = x.write(format='can').strip().split()[0]
-    elif type(x) is str:
-        s = x.strip()
-    else:
-        s = 'smiles'
+    mol = get_mol(x)
+    s = mol.write(format='can').strip().split()[0]
     return s
 
 
 def get_smiles_filename(x):
     """
-    Returns a suitable filename for a given pybel.Molecule object or a string.
-    Smiles strings may contain characthers not suitable for file names,
+    Returns a suitable filename for a given smiles.
+    Smiles strings may contain characters not suitable for file names,
     such as \/:*?"<>|(). Not sure if all these characters appear, but here
     they are replaced by abdeqtrl.
     """
-    if type(x) is pybel.Molecule:
+    if type(x) is pybel.Molecule:    
         s = x.write(format='can').strip().split()[0]
     elif type(x) is str:
-        x = get_mol(x)
-        s = x.write(format='can').strip()
-        #s = x.strip()
+        s = x
     else:
-        return 'filename'           
+        s = ''
     s = s.replace('\\','-db-') #double back slash
     s = s.replace('/','-sl-')
     s = s.replace(':','-co-')
-    s = s.replace('*','-st-')
+    s = s.replace('*','-star-')
     s = s.replace('?','-qm-')
     s = s.replace('<','-la-')
     s = s.replace('>','-ra-')
