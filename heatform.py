@@ -750,8 +750,8 @@ def comp_coefficients(molform, basis='auto'):
         basprint = 'read basis from basis.dat'
 
     for bas in basis:
-         bas = ob.get_formula(ob.get_mol(bas))
-         atomlist.extend(get_atomlist(   bas))
+        bas = ob.get_formula(ob.get_mol(bas))
+        atomlist.extend(get_atomlist(   bas))
 
     #COMPUTE Atomlist, stoichlist, matrix, and coefficients
     atomlist = list(set(atomlist))
@@ -761,7 +761,7 @@ def comp_coefficients(molform, basis='auto'):
     ##Pick a new basis if current one produces singular matrix
     for i in range(5):
         if np.linalg.det(mat) != 0:
-             break
+            break
 
         basprint += '\nMatrix is singular -- select new basis'
 
@@ -797,30 +797,54 @@ def E_QTC(bas, opt, en, freq, parameters):
     from testdb import db
     import qctools as qc
     import iotools as io
-    dbdir = parameters['database']
-    anharm = parameters['anharmonic']
     natom = ob.get_natom(bas)
     parameters['natom'] = natom
     calcindex = parameters['calcindex']
     parameters = qc.parse_qckeyword(parameters, calcindex)
-    zpvetype = 'zpve'
-    if anharm:
-        zpvetype = 'anzpve'
-    enfile = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['qcdirectory'], bas + '.ene' ])
-    zpvefile = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
-    logging.info('Energies for {0}'.format(bas))
-    if io.check_file(enfile):
-        en = float(io.read_file(enfile).strip())
-        logging.info('Energy from "{0}": {1} Hartree '.format(enfile,en))
-    else:
-        en = 0.0
-        logging.info('Energy file "{0}" not found'.format(enfile))
-    if io.check_file(zpvefile):
-        zpve = float(io.read_file(zpvefile).strip())
-        logging.info('ZPVE from "{0}": {1} Hartree'.format(zpvefile, zpve))
-    else:
-        zpve = 0.0
-        logging.info('ZPVE file "{0}" not found'.format(zpvefile))
+    qckeyword = parameters['qckeyword']
+    qclabel = qc.get_qc_label(natom, qckeyword, calcindex)
+    en, zpve = 0., 0.
+    if 'energy' in parameters['all results'][bas][qclabel]:
+        en = parameters['all results'][bas][qclabel]['energy']
+    if en:
+        logging.debug('Energy for {0} = {1} Hartree'.format(qclabel,en))
+    else: 
+        logging.error('Energy not found for {0}'.format(qclabel))
+    for i in range(calcindex):
+        qclabel = qc.get_qc_label(natom, qckeyword, i)
+        if 'azpve' in parameters['all results'][bas][qclabel]:
+            zpve = parameters['all results'][bas][qclabel]['azpve']
+            if zpve:
+                logging.debug('ZPVE (anharmonic) for {0} = {1} Hartree'.format(qclabel,zpve))
+        elif 'zpve' in parameters['all results'][bas][qclabel]:
+            zpve = parameters['all results'][bas][qclabel]['zpve']
+            if zpve:
+                logging.debug('ZPVE (harmonic) for {0} = {1} Hartree'.format(qclabel,zpve))
+    
+    
+#     zpvetype = 'zpve'
+#     if anharm:
+#         zpvetype = 'anzpve'
+#     mult = ob.get_multiplicity(bas)
+#     smilesdir =  ob.get_smiles_path(bas,mult=mult)
+#     smilesdir = io.join_path(parameters['database'], smilesdir)
+#     enfile = io.join_path(*[smilesdir, parameters['qcdirectory'], bas + '.ene' ])
+#     zpvefile = io.join_path(*[smilesdir, parameters['freqdir'], bas + '.' + zpvetype])
+#     logging.info('Energies for {0}'.format(bas))
+#     if io.check_file(enfile):
+#         en = float(io.read_file(enfile).strip())
+#         logging.info('Energy from "{0}": {1} Hartree '.format(enfile,en))
+#     else:
+#         en = 0.0
+#         logging.info('Energy file "{0}" not found'.format(enfile))
+#     if io.check_file(zpvefile):
+#         zpve = float(io.read_file(zpvefile).strip())
+#         logging.info('ZPVE from "{0}": {1} Hartree'.format(zpvefile, zpve))
+#     else:
+#         zpve = 0.0
+#         logging.info('ZPVE file "{0}" not found'.format(zpvefile))
+        
+        
 #    zpve = io.read_file(freq).strip()
 #     if len(opt) == 4:
 #         opt = '/'.join(opt)
@@ -901,52 +925,52 @@ def main_keyword(mol,parameters):
     enlevel   = None
     freqlevel = None
 
-    for key in qckeys[:index+1]:
-        key = io.fix_path(key)
-        if key.startswith('opt'):
-            if natom ==1:
-                key.replace('opt','energy')
-                enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-                optlevel = ''
-            else:
-                optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-        if key.startswith('tors'):
-            if natom ==1:
-                key.replace('torsscan','energy')
-                key.replace('torsopt','energy')
-                enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-                optlevel = ''
-            else:
-                optlevel = key.split('/')
-        elif key.startswith('freq') or key.startswith('anh'):
-            if natom ==1:
-                key.replace('freq','energy')
-                key.replace('anharm','energy')
-                enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-                freqlevel = ''
-            else:
-                freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-             
-        elif key.startswith('en'):
-            enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-        elif key.startswith('comp'):
-            enlevel  = ['composite' + '/' + key.split('/')[1]]
-            extrap   = True
-    freqlevel = parameters['freqlevel']
-    if not enlevel:
-        enlevel = ['']
+#     for key in qckeys[:index+1]:
+#         key = io.fix_path(key)
+#         if key.startswith('opt'):
+#             if natom ==1:
+#                 key.replace('opt','energy')
+#                 enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+#                 optlevel = ''
+#             else:
+#                 optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+#         if key.startswith('tors'):
+#             if natom ==1:
+#                 key.replace('torsscan','energy')
+#                 key.replace('torsopt','energy')
+#                 enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+#                 optlevel = ''
+#             else:
+#                 optlevel = key.split('/')
+#         elif key.startswith('freq') or key.startswith('anh'):
+#             if natom ==1:
+#                 key.replace('freq','energy')
+#                 key.replace('anharm','energy')
+#                 enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+#                 freqlevel = ''
+#             else:
+#                 freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+#              
+#         elif key.startswith('en'):
+#             enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
+#         elif key.startswith('comp'):
+#             enlevel  = ['composite' + '/' + key.split('/')[1]]
+#             extrap   = True
+#     freqlevel = parameters['freqlevel']
+#     if not enlevel:
+#         enlevel = ['']
     molform = ob.get_formula(mol)
     clist, basis, basprint = comp_coefficients(molform, basis)
 
-    lines =  ('\n___________________________________________________\n\n' +
-              'HEAT OF FORMATION FOR: ' + smi + ' (' + molform + ')' +
-              '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
-              '\n\n___________________________________________________\n\n' +
-              '\nYou have chosen to ' + 
-              basprint) 
-    lines +=  '\n\nCoefficients are: '
-    lines += ', '.join(['{}'.format(co) for co in clist])
-    logging.debug(lines)
+#     lines =  ('\n___________________________________________________\n\n' +
+#               'HEAT OF FORMATION FOR: ' + smi + ' (' + molform + ')' +
+#               '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
+#               '\n\n___________________________________________________\n\n' +
+#               '\nYou have chosen to ' + 
+#               basprint) 
+#     lines +=  '\n\nCoefficients are: '
+#     lines += ', '.join(['{}'.format(co) for co in clist])
+#     logging.debug(lines)
 
     parameters['runthermo']=False
     parameters['xyzpath']=''
