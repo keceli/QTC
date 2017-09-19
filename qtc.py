@@ -453,7 +453,12 @@ def main(arg_update={}):
     if parameters['generate']:
         mylist = qc.sort_species_list(mylist, printinfo=True)
         myliststr = '\n'.join(mylist)
-        io.write_file(myliststr, 'sorted.txt')
+        sortedfile = io.join_path(io.get_path(inp, directory=True),'sorted.txt')
+        io.write_file(myliststr, sortedfile)
+        if io.check_file(sortedfile,1):
+            logging.info('Sorted SMILES file = {}'.format(sortedfile))
+        else:
+            logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     elif parameters['qckeyword']:
         logging.info('List of species')
         logging.info(pprint.pformat(mylist))

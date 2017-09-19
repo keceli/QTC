@@ -218,7 +218,7 @@ def cp(source, target):
     return
 
 
-def get_path(f,executable=False):
+def get_path(f, executable=False, directory=False):
     """
     Returns absolute path for a file or folder.
     """
@@ -226,6 +226,8 @@ def get_path(f,executable=False):
     import distutils.spawn as ds
     if executable:
         return ds.find_executable(f)
+    elif directory:
+        return os.path.dirname(os.path.abspath(f))
     else:
         return os.path.abspath(f)
 
