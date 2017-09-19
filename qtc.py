@@ -244,37 +244,38 @@ def run(s):
     xyzfile = ''
     if xyzpath:
         xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
-        msg += 'xyzpath = {0}\n'.format(xyzpath)
+        logging.info('XYZdir = {0}\n'.format(xyzpath))
     elif optdir:
         xyzfilename = smilesname + '.xyz'
-        msg += 'Optdir = {0}\n'.format(optdir)
+        logging.info('Optdir = {0}\n'.format(optdir))
         if io.check_file(io.join_path(*[smilesdir,optdir,xyzfilename])):
             xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
     if xyzfile:
-        msg += "XYZ file = '{0}'\n".format(xyzfile)
+        logging.info("XYZ file = '{0}'\n".format(xyzfile))
         mol = ob.get_mol(xyzfile)
     else:
-        msg += "XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath)
-    logging.info(msg)
-    msg = ''
+        logging.info("XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath))
     cwd = io.pwd()
     io.mkdir(workdirectory)
     if io.check_dir(workdirectory, 1):
         io.cd(workdirectory)
-        msg += "Run directory = '{0}'\n".format(workdirectory)
+        logging.info("Rundir = '{0}'\n".format(workdirectory))
     else:
-        msg += ('I/O error, {0} directory not found.\n'.format(workdirectory))
+        logging.error('I/O error, {0} directory not found.\n'.format(workdirectory))
         return -1
-    logging.info(msg)
-    msg = ''
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']          
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
+    runfile = 'RUNNING.tmp'
+    if io.check_file(runfile):
+        rungqc = False
+        logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     if runqc:
+        io.touch(runfile)
         if qcpackage in available_packages:
-            msg += qc.run(mol, parameters, mult)
+            msg = qc.run(mol, parameters, mult)
         elif task == 'composite':
             msg = qc.run_extrapolation(mol, parameters)
         elif qcpackage == 'qcscript':
-            msg += "Running qcscript...\n"
+            msg = "Running qcscript...\n"
             geofile = smilesname + '.geo'
             geo = ob.get_geo(mol)
             io.write_file(geo, geofile)
@@ -284,7 +285,7 @@ def run(s):
             msg = '{0} package not implemented\n'.format(qcpackage)
             msg += 'Available packages are {0}'.format(available_packages)
         logging.info(msg)
-        msg = ''
+        io.rm(runfile)
     if parseqc:
         logging.info('Parsing output...')
         if io.check_file('geom1.xyz'):
@@ -295,8 +296,8 @@ def run(s):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
             else:
-                msg += 'Can not find "{0}".\n'.format(enefile)
-                msg += 'Can not run thermo\n'
+                logging.error('Can not find "{0}".\n'.format(enefile))
+                logging.error('Can not run thermo\n')
                 runthermo = False
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput, aslines=False)
@@ -311,15 +312,13 @@ def run(s):
                         if val:
                             parameters['results'].update({key: results[key]})
             else:
-                msg += 'Failed calculation in "{0}".\n'.format(qcoutput)
-                msg += 'Can not run thermo\n'
+                logging.error('Failed calculation in "{0}".\n'.format(qcoutput))
+                logging.error('Can not run thermo\n')
                 runthermo = False                
         else:
-            msg += 'Output file "{0}" not found.\n'.format(qcoutput)
-            sys.exit(msg)
-            msg += 'Can not run thermo\n'
+            logging.error('Output file "{0}" not found.\n'.format(qcoutput))
+            sys.exit('Output problem')
             runthermo = False
-    logging.info(msg)
     logging.info(pprint.pformat((parameters['results'])))
     for key in results.keys():
         val = results[key]
