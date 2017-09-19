@@ -149,7 +149,7 @@ def fix_path(s):
     s = s.replace(':','_i')
     s = s.replace('|','_j')
     s = s.replace('\\','_k') 
-    s = s.replace('/','_l')
+#s = s.replace('/','_l')
     s = s.replace('?','_m')
     s = s.replace('(','_p')
     s = s.replace(')','_q')
