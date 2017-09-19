@@ -193,6 +193,25 @@ def update_qckeyword(keyword):
     keyword = keyword.replace('torscan/','torsscan/')
     return keyword
 
+
+def update_smiles_list(slist):
+    """
+    Replaces each smiles with open-babel canonical smiles.
+    Removes all inert species.
+    >>> sl = ['[Ne]','C','O-O','[O]O','O[O]']
+    >>> print qc.update_smiles_list(sl)
+    ['C', 'OO', 'O[O]', 'O[O]']
+    """
+    newlist = []
+    for s in slist:
+        if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
+            pass
+        else:
+            s = ob.get_smiles(s)
+            newlist.append(s)
+    return newlist
+
+
 def parse_qckeyword(parameters, calcindex=0):
     """
     Updates parameters based on qckeyword and given calcindex.

@@ -159,7 +159,6 @@ def run(s):
     Not pure.
     """
     global parameters
-    s = ob.get_smiles(s) # convert to open-babel canonical smiles
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
     package = parameters['qcpackage']
@@ -218,15 +217,13 @@ def run(s):
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "Number of atoms = {0}\n".format(natom)
     msg += "Number of rotors = {0}\n".format(nrotor)
-#    if nrotor == 0 and task.startswith('tors'):
-#        msg += 'Passing {0} for {1}.'.format(parameters['qctask'], s)
-#        return
     msg += 'Task = {0}\n'.format(parameters['qctask'])
     msg += 'Method = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis = {0}\n'.format(parameters['qcbasis'])
     msg += 'Package = {0}\n'.format(parameters['qcpackage'])
     msg += 'Label = {0}\n'.format(parameters['label'])
     msg += 'Template = {0}\n'.format(parameters['qctemplate'])
+    logging.info(msg)
     smilesname = io.fix_path(s)
     parameters['smilesname' ] = smilesname
     smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
@@ -404,7 +401,10 @@ def main(arg_update={}):
     jsonfile = args.jsoninput
     nproc = args.nproc
     if io.check_file(inp):
-        mylist = io.read_list(inp)
+        if inp.split('.')[-1] == 'json':
+            mylist = db.get_smiles_from_json(inp)
+        else:
+            mylist = io.read_list(inp)
     elif io.check_file(jsonfile):
         mylist = db.get_smiles_from_json(jsonfile)  
     else:
@@ -412,7 +412,8 @@ def main(arg_update={}):
     if endindex:
         mylist = mylist[beginindex:endindex]
     else:
-        mylist = mylist[beginindex:]        
+        mylist = mylist[beginindex:]
+    mylist = qc.update_smiles_list(mylist)
     logging.info(__logo__)
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
     logging.info("QTC: Last update             = {0}".format(__updated__))
