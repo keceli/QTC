@@ -205,7 +205,7 @@ def update_smiles_list(slist):
     newlist = []
     for s in slist:
         if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
-            pass
+            logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
             s = ob.get_smiles(s)
             newlist.append(s)
