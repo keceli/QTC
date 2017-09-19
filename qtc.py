@@ -92,7 +92,7 @@ def get_args():
                         help='Ending index of the species list')
     parser.add_argument('-B', '--hfbasis', type=str,
                         default='auto',
-                        help='Heat of formation basis molecules')
+                        help='List of SMILES (seperated by commas) for reference thermo species')
     parser.add_argument('-D', '--database', type=str,
                         default= io.pwd(),
                         help='Heat of formation basis molecules')
@@ -251,7 +251,15 @@ def run(s):
         logging.info("XYZ file = '{0}'\n".format(xyzfile))
         mol = ob.get_mol(xyzfile)
     else:
-        logging.info("XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath))
+        if natom == 1:
+            pass
+        elif task.startswith('tors') or task.startswith('opt'):
+            logging.info("XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath))
+        else:
+            logging.error('No optimized geometry found, skipping subsequent calculations')
+            runqc = False
+            parseqc = False
+            thermo = False
     cwd = io.pwd()
     io.mkdir(workdirectory)
     if io.check_dir(workdirectory, 1):
@@ -327,6 +335,8 @@ def run(s):
                 parameters['all results'][s][label].update({key: results[key]})
  #   parameters['all results'][s].update({label:parameters['results']})
     msg = '\n'
+    parameters['results']['deltaH0'] = 0
+    parameters['all results'][s][label]['deltaH0'] = 0   
     parameters['results']['deltaH298'] = 0
     parameters['all results'][s][label]['deltaH298'] = 0                                    
     if runthermo:
@@ -366,6 +376,7 @@ def main(arg_update={}):
     import os
     from time import strftime as get_date_time
     global parameters
+
     start  = timer()
     args = get_args()
     parameters = vars(args)
@@ -380,13 +391,23 @@ def main(arg_update={}):
     elif parameters['loglevel'] == 3:
         loglevel = logging.DEBUG
     logging.addLevelName(logging.INFO, '')
+    logging.addLevelName(logging.DEBUG, 'Debug:')
+    logging.addLevelName(logging.ERROR, 'ERROR:')
+    logging.addLevelName(logging.WARNING, 'WARNING:')
     if logfile is 'none':
-        logging.basicConfig(format='%(levelname)s %(message)s', level=loglevel)
+        logging.basicConfig(format='%(levelname)s%(message)s', level=loglevel)
     else:
         logfile = logfile + '_qtc_' + get_date_time("%Y%m%d-%H%M%S") + '.log'
-        logging.basicConfig(format='%(levelname)s %(message)s', filename=logfile, level=loglevel)
+        logging.basicConfig(format='%(levelname)s%(message)s', filename=logfile, level=loglevel)
     for key in arg_update:
         parameters[key] = arg_update[key]
+    logging.info(__logo__)
+    logging.info("QTC: Date and time           = {0}".format(io.get_date()))
+    logging.info("QTC: Last update             = {0}".format(__updated__))
+    logging.info("QTC: Hostname                = {0}".format(gethostname()))
+    logging.info('QTC: Given arguments         =')
+    for param in parameters:
+        logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
     if parameters['qckeyword']:
         parameters['qckeyword'] = qc.update_qckeyword(parameters['qckeyword'])
         ncalc = len(parameters['qckeyword'].split(','))
@@ -414,14 +435,7 @@ def main(arg_update={}):
     else:
         mylist = mylist[beginindex:]
     mylist = qc.update_smiles_list(mylist)
-    logging.info(__logo__)
-    logging.info("QTC: Date and time           = {0}".format(io.get_date()))
-    logging.info("QTC: Last update             = {0}".format(__updated__))
-    logging.info("QTC: Number of processes     = {0}".format(nproc))
-    logging.info("QTC: Hostname                = {0}".format(gethostname()))
-    logging.info('QTC: Given arguments         =')
-    for param in parameters:
-        logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
+
     init = timer()
     logging.info("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     runthermo = parameters['runthermo']
@@ -429,7 +443,7 @@ def main(arg_update={}):
         logging.info("QTC: Number of species       = {0}".format(len(mylist)))
         for s in mylist:
             formula = ob.get_formula(s)
-            _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['hfbasis'].split())
+            _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['hfbasis'].split(','))
             for basismol in basismolecules:
                 if basismol not in mylist:
                     msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)

@@ -807,93 +807,28 @@ def E_QTC(bas, opt, en, freq, parameters):
     if 'energy' in parameters['all results'][bas][qclabel]:
         en = parameters['all results'][bas][qclabel]['energy']
     if en:
-        logging.debug('Energy for {0} = {1} Hartree'.format(qclabel,en))
+        logging.debug('Energy for {0} {1} = {2} Hartree'.format(bas, qclabel,en))
     else: 
-        logging.error('Energy not found for {0}'.format(qclabel))
-    for i in range(calcindex):
-        qclabel = qc.get_qc_label(natom, qckeyword, i)
-        if 'azpve' in parameters['all results'][bas][qclabel]:
-            zpve = parameters['all results'][bas][qclabel]['azpve']
-            if zpve:
-                logging.debug('ZPVE (anharmonic) for {0} = {1} Hartree'.format(qclabel,zpve))
-        elif 'zpve' in parameters['all results'][bas][qclabel]:
-            zpve = parameters['all results'][bas][qclabel]['zpve']
-            if zpve:
-                logging.debug('ZPVE (harmonic) for {0} = {1} Hartree'.format(qclabel,zpve))
-    
-    
-#     zpvetype = 'zpve'
-#     if anharm:
-#         zpvetype = 'anzpve'
-#     mult = ob.get_multiplicity(bas)
-#     smilesdir =  ob.get_smiles_path(bas,mult=mult)
-#     smilesdir = io.join_path(parameters['database'], smilesdir)
-#     enfile = io.join_path(*[smilesdir, parameters['qcdirectory'], bas + '.ene' ])
-#     zpvefile = io.join_path(*[smilesdir, parameters['freqdir'], bas + '.' + zpvetype])
-#     logging.info('Energies for {0}'.format(bas))
-#     if io.check_file(enfile):
-#         en = float(io.read_file(enfile).strip())
-#         logging.info('Energy from "{0}": {1} Hartree '.format(enfile,en))
-#     else:
-#         en = 0.0
-#         logging.info('Energy file "{0}" not found'.format(enfile))
-#     if io.check_file(zpvefile):
-#         zpve = float(io.read_file(zpvefile).strip())
-#         logging.info('ZPVE from "{0}": {1} Hartree'.format(zpvefile, zpve))
-#     else:
-#         zpve = 0.0
-#         logging.info('ZPVE file "{0}" not found'.format(zpvefile))
-        
-        
-#    zpve = io.read_file(freq).strip()
-#     if len(opt) == 4:
-#         opt = '/'.join(opt)
-#     elif opt and len(opt) > 1:
-#         optprog, optmethod, optbasis = opt[0], opt[1], opt[2]
-#         opt = 'opt/' + '/'.join([optmethod, optbasis, optprog])
-#     else:
-#         optprog, optmethod, optbasis = None, None, None
-# 
-#     if len(en) > 1:
-#         enprog, enmethod, enbasis = en[0], en[1], en[2]
-#         en = 'energy/' + '/'.join([enmethod, enbasis, enprog])
-#         en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en, bas + '.ene')
-#     else:
-#         en = io.join_path(dbdir, ob.get_smiles_path(bas), opt, en[0], bas + '.ene')
-#         enefile = 'doesntexist'
-# 
-#     if freq:
-#         freqprog, freqmethod, freqbasis = freq[0], freq[1], freq[2]
-#         task = 'freq'
-#         if anharm:
-#             zpvetype = 'anzpve'
-#             task = 'anharm'
-#         freq = task + '/' + '/'.join([freqmethod, freqbasis, freqprog])
-#         freq = io.join_path(dbdir, ob.get_smiles_path(bas), opt, freq, bas + '.' + zpvetype)
-#     if not io.check_file(freq):
-#         freq = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['freqdir'], bas + '.' + zpvetype])
-#     if not io.check_file(en):
-#         #logging.info('Run QTC without -T to complete all energy calculations, then rerun QTC with -T')
-#         #qtc.main(parameters)
-#         en = io.join_path(*[dbdir, ob.get_smiles_path(bas),parameters['qcdirectory'], bas + '.ene' ])
-#        # print'en file not found', en
-#     E = io.read_file(en).strip()
-#     E = float(E)
-#     print '{}   E: {:5g}  pulled from: {}'.format(bas, E, en)
-# 
-#     if freq != None:
-#         if not io.check_file(freq):
-#             qtc.main(parameters)
-#         if io.check_file(freq):        
-#             zpve = io.read_file(freq).strip()
-#             zpve = float(zpve)
-#             print '{} ZPVE: {:5g}  pulled from: {}'.format(bas, zpve, freq)
-#         else:
-#             zpve = 0.0
-#             print 'ZPVE not found assumed 0.0'
-#     else:
-#         print 'Zero point vibrational energy NOT accounted for'
-#         zpve = 0
+        logging.error('Energy not found for {0} {1}'.format(bas, qclabel))
+    if 'azpve' in parameters['all results'][bas][qclabel]:
+        zpve = parameters['all results'][bas][qclabel]['azpve']
+        zpvelabel = 'anharmonic ' + qclabel
+    elif 'zpve' in parameters['all results'][bas][qclabel]:
+        zpve = parameters['all results'][bas][qclabel]['zpve']
+        zpvelabel = 'harmonic ' + qclabel
+    else:
+        for i in range(calcindex):
+            qclabel = qc.get_qc_label(natom, qckeyword, i)
+            if 'azpve' in parameters['all results'][bas][qclabel]:
+                zpve = parameters['all results'][bas][qclabel]['azpve']
+                zpvelabel = 'anharmonic ' + qclabel
+            elif 'zpve' in parameters['all results'][bas][qclabel]:
+                zpve = parameters['all results'][bas][qclabel]['zpve']
+                zpvelabel = 'harmonic ' + qclabel
+    if zpve:
+        logging.debug('ZPVE (harmonic) for {0} {1} = {2} Hartree'.format(bas,zpvelabel,zpve))
+    else: 
+        logging.error('ZPVE not found for {0} {1}'.format(bas, qclabel))
     return  float(en) + float(zpve)
 
 
@@ -913,7 +848,7 @@ def main_keyword(mol,parameters):
     
  #   mol    = ob.get_mol(s)
     smi = ob.get_smiles(mol)
-    basis  = parameters['hfbasis'].split()
+    basis  = parameters['hfbasis'].split(',')
     qckeys = parameters['qckeyword'].split(',')
     anharm = parameters['anharmonic']
     dbdir  = parameters['database']
@@ -924,41 +859,6 @@ def main_keyword(mol,parameters):
     extrap    = False
     enlevel   = None
     freqlevel = None
-
-#     for key in qckeys[:index+1]:
-#         key = io.fix_path(key)
-#         if key.startswith('opt'):
-#             if natom ==1:
-#                 key.replace('opt','energy')
-#                 enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-#                 optlevel = ''
-#             else:
-#                 optlevel = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-#         if key.startswith('tors'):
-#             if natom ==1:
-#                 key.replace('torsscan','energy')
-#                 key.replace('torsopt','energy')
-#                 enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-#                 optlevel = ''
-#             else:
-#                 optlevel = key.split('/')
-#         elif key.startswith('freq') or key.startswith('anh'):
-#             if natom ==1:
-#                 key.replace('freq','energy')
-#                 key.replace('anharm','energy')
-#                 enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-#                 freqlevel = ''
-#             else:
-#                 freqlevel= [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-#              
-#         elif key.startswith('en'):
-#             enlevel  = [key.split('/')[3], key.split('/')[1], key.split('/')[2]]
-#         elif key.startswith('comp'):
-#             enlevel  = ['composite' + '/' + key.split('/')[1]]
-#             extrap   = True
-#     freqlevel = parameters['freqlevel']
-#     if not enlevel:
-#         enlevel = ['']
     molform = ob.get_formula(mol)
     clist, basis, basprint = comp_coefficients(molform, basis)
 
