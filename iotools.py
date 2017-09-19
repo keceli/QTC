@@ -36,7 +36,10 @@ def rm(fname):
     Deletes a file with the given fname.
     """
     import os
-    os.remove(fname)
+    if check_file(fname):
+        os.remove(fname)
+    else:
+        logging.debug('Can not delete file. {} does not exist.'.format(fname))
     return
 
 
