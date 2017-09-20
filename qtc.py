@@ -86,7 +86,7 @@ def get_args():
                         default='',
                         help='Path for the qc output file')
     parser.add_argument('-b', '--first', type=int,
-                        default=0,
+                        default=1,
                         help='Beginning index of the species list')
     parser.add_argument('-e', '--last', type=int,
                         help='Ending index of the species list')
@@ -431,9 +431,9 @@ def main(arg_update={}):
     else:
         mylist = inp.split(',')
     if endindex:
-        mylist = mylist[beginindex:endindex]
+        mylist = mylist[beginindex-1:endindex]
     else:
-        mylist = mylist[beginindex:]
+        mylist = mylist[beginindex-1:]
     mylist = qc.update_smiles_list(mylist)
 
     init = timer()
@@ -457,6 +457,7 @@ def main(arg_update={}):
         io.write_file(myliststr, sortedfile)
         if io.check_file(sortedfile,1):
             logging.info('Sorted SMILES file = {}'.format(sortedfile))
+            logging.info('You can use qtc -b 1 -l 5, to compute species with indices 1,2,3,4,5.')
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     elif parameters['qckeyword']:

@@ -38,9 +38,11 @@ def sort_species_list(slist, printinfo=False):
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
         logging.info('-'*100)
-        logging.info('{0:30s} {1:20s} {2:>8s} {3:>8s} {4:>8s} {5:>8s} {6:>8s}'.format('SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
+        logging.info('{:>8s} {:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
+        i = 0
         for s in tmplist:
-            logging.info('{0:30s} {1:20s} {2:8d} {3:8d} {4:8d} {5:8d} {6:8d}'.format(*s))
+            i += 1
+            logging.info('{:8d} {:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,*s))
         logging.info('-'*100)
     return sortedlist
 
