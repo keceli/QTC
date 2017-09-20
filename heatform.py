@@ -815,9 +815,9 @@ def E_QTC(bas, opt, en, freq, parameters):
     if io.check_file(zpvefile):
         zpve = float(io.read_file(zpvefile).strip())
         print('ZPVE from "{0}": {1} Hartree'.format(zpvefile, zpve))
-    elif io.check_file(zpvefile.replace('.anzpve','.zpve')) or zpve == 'None':        
+    elif io.check_file(zpvefile.replace('.anzpve','.zpve')):        
         zpve = io.read_file(zpvefile.replace('.anzpve','.zpve')).strip()
-        print ('ZPVE from "{0}": {1} Hartree'.format(zpvefile.replace('.anzpve','.zpve'),zpve)
+        print ('ZPVE from "{0}": {1} Hartree'.format(zpvefile.replace('.anzpve','.zpve'),zpve))
     else:
         zpve = 0.0
         print('ZPVE file "{0}" not found'.format(zpvefile))
