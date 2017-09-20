@@ -457,9 +457,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         fname = 'me_files/reac1_hr.me'
         if io.check_file(fname):
             messhindered = io.read_file(fname, aslines=False)
-         fname = 'RPHt_input_data.dat'
-         if io.check_file(fname):
-             RPHtinput = io.read_file(fname, aslines=False)
+        fname = 'RPHt_input_data.dat'
+        if io.check_file(fname):
+            RPHtinput = io.read_file(fname, aslines=False)
 
     if parsed:
         if write:
@@ -1115,6 +1115,7 @@ def get_gaussian_xmatrix(s,nfreq):
             line = lines[iline]
             cols = line.split()
             ncol = len(cols) - 1
+            print cols[1:]
             xmat[irow,icol:icol+ncol] = [float(num.replace('D','E')) for num in cols[1:]]
         iline += 1
         line = lines[iline]
