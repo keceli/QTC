@@ -12,7 +12,7 @@ import pprint
 import sys
 import logging
 from patools import energy
-__updated__ = "2017-09-13"
+__updated__ = "2017-09-21"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -33,9 +33,10 @@ By ECP-PACC team
 """
 TODO: 
 When optimization fails, restart from the last geometry
-hof=0 at 0 K should also be at room T
 Delete NWChem scratch files
-Convert all smiles to canonical smiles at start
+Add torsX task/template
+Add auto stamp for logfile
+Check for negative energies in hindered potential
 """
 def get_args():
     """
@@ -75,7 +76,10 @@ def get_args():
                         help='Verbosity level of logging, 0 for only errors, 3 for debugging')
     parser.add_argument('-f', '--logfile', type=str,
                         default= 'none',
-                        help='Log file prefix, use none for logging to STDOUT')
+                        help='Log file prefix, use none for logging to STDOUT, include DATE if you want a date stamp')
+    parser.add_argument('-g', '--logindex', type=str,
+                        default= '',
+                        help='Log file index')
     parser.add_argument('-d', '--qcdirectory', type=str,
                         default='',
                         help='Path for the directory for running qc jobs')
@@ -116,6 +120,9 @@ def get_args():
                         help='Overwrite existing calculations. Be careful, data will be lost.')
     parser.add_argument('-A', '--anharmonic', action='store_true',
                         help='Anharmonic corrections')
+    parser.add_argument('--fix', type=int,
+                        default=0,
+                        help='If FIX > 0, interpolate negative energies in hindered potential input for mess')
     parser.add_argument('--mopac', type=str,
                         default='mopac',
                         help='Path for mopac executable')
@@ -404,6 +411,7 @@ def main(arg_update={}):
     parameters = vars(args)
     parameters['all results'] = {}
     logfile = parameters['logfile']
+    logindex = parameters['logindex']
     hostname = gethostname()
     if parameters['loglevel'] == 0:
         loglevel = logging.ERROR
@@ -418,9 +426,13 @@ def main(arg_update={}):
     logging.addLevelName(logging.ERROR, 'ERROR:')
     logging.addLevelName(logging.WARNING, 'WARNING:')
     if logfile is 'none':
-        logging.basicConfig(format='%(levelname)s%(message)s', level=loglevel)
+        if logindex:
+            logfile = 'qtc_' + logindex + '_' + hostname + '.log'
+        else:
+            logging.basicConfig(format='%(levelname)s%(message)s', level=loglevel)
     else:
-        logfile = logfile + '_qtc_'+ hostname + '_' + get_date_time("%y%m%d-%H%M%S") + '.log'
+        logfile = logfile + logindex + '_' + hostname + '.log'
+        logfile.replace('DATE', get_date_time("%y%m%d-%H%M%S"))
         logfile = io.get_unique_filename(logfile)
         logging.basicConfig(format='%(levelname)s%(message)s', filename=logfile, level=loglevel)
     for key in arg_update:
