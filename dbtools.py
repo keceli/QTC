@@ -37,21 +37,14 @@ def insert_entry(entry,db,efilter={}):
     return db.replace_one(efilter,entry,upsert=True)
 
 
-def get_smiles_from_json(jsonfile):
+def load_json_file(jsonfile):
     """
-    Opens and reads a .json file created by RMG. 
-    Builds a list of strings contains SMILES.
-    Needs to convert from unicode to str.
+    Opens and loads a .json file. 
     """
+    import json
     with open(jsonfile) as f:
         j = json.load(f)
-    nitem = len(j)
-    smileslist = ['']*nitem
-    i = 0
-    for d in j :
-        smileslist[i] = d['SMILES'].encode('ascii','ignore')
-        i += 1
-    return smileslist
+    return j
 
 def gen_dict_extract(key, var):
     """
