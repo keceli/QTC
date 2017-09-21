@@ -36,6 +36,8 @@ mkdir -pv /scratch/$USER
 #env -u PMI_FD -u PMI_RANK -u PMI_SIZE -u HYDI_CONTROL_FD  \
 #    $MOLPRO -d /scratch/wozniak "/home/wozniak/N#N_molpro.inp"
 
+set -x
+
 #/home/keceli/anaconda2/bin/python -u /home/keceli/qtc/qtc.py
 /home/keceli/anaconda2/bin/python \
      -u /home/keceli/pacc/codes/QTC/qtc.py \
