@@ -143,6 +143,19 @@ def read_file(filename, aslines=False):
     return tmp
 
 
+def get_unique_filename(fname):
+    """
+    Try to return a unique filename.
+    Not safe for race conditions.
+    """
+    counter = 1
+    uname = fname
+    while check_file(fname,timeout=0.01): 
+        uname = fname + '_' + str(counter)
+        counter += 1
+    return uname
+
+
 def fix_path(s):
     """
     Returns a path with problematic characters replaced by safer ones.
