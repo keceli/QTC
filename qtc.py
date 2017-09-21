@@ -249,7 +249,13 @@ def run(s):
             xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
     if xyzfile:
         logging.info("XYZ file = '{0}'\n".format(xyzfile))
-        mol = ob.get_mol(xyzfile)
+        try:
+            mol = ob.get_mol(xyzfile)
+        except:
+            logging.error('Not a valid xyz file {0}. Skipping following calculations.'.format(xyzfile))
+            runqc = False
+            parseqc = False
+            thermo = False
     else:
         if natom == 1:
             pass
