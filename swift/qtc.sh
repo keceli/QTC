@@ -41,7 +41,7 @@ set -x
 #/home/keceli/anaconda2/bin/python -u /home/keceli/qtc/qtc.py
 /home/keceli/anaconda2/bin/python \
      -u /home/keceli/pacc/codes/QTC/qtc.py \
-     -i $MOLECULE -f swift_torsopt-$INDEX \
+     -i $MOLECULE -f $INDEX \
      $( cat $CFG )
   
     # -k energy/mp2/sto-3g/gaussian
