@@ -95,7 +95,7 @@ def get_args():
                         help='List of SMILES (seperated by commas) for reference thermo species')
     parser.add_argument('-D', '--database', type=str,
                         default= io.pwd(),
-                        help='Heat of formation basis molecules')
+                        help='Path for database directory')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
     parser.add_argument('-Q', '--runqc', action='store_true',
@@ -226,7 +226,7 @@ def run(s):
     logging.info(msg)
     smilesname = io.fix_path(s)
     parameters['smilesname' ] = smilesname
-    smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
+    smilesdir =  ob.get_smiles_path(s, mult)
     smilesdir = io.join_path(parameters['database'], smilesdir)
     parameters['smilesdir'] = smilesdir
     workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
@@ -423,11 +423,13 @@ def main(arg_update={}):
     nproc = args.nproc
     if io.check_file(inp):
         if inp.split('.')[-1] == 'json':
-            mylist = db.get_smiles_from_json(inp)
+            jlist = db.load_json_file(inp)
+            mylist = qc.get_slabels_from_json(jlist)
         else:
             mylist = io.read_list(inp)
     elif io.check_file(jsonfile):
-        mylist = db.get_smiles_from_json(jsonfile)  
+        jlist = db.load_json_file(jsonfile)
+        mylist = qc.get_slabels_from_json(jlist)
     else:
         mylist = inp.split(',')
     if endindex:
@@ -445,9 +447,10 @@ def main(arg_update={}):
             formula = ob.get_formula(s)
             _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['hfbasis'].split(','))
             for basismol in basismolecules:
-                if basismol not in mylist:
+                smi = qc.get_slabel(basismol)
+                if smi not in mylist:
                     msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
-                    mylist = [basismol] + mylist
+                    mylist = [smi] + mylist
                     logging.info(msg)
         logging.info("QTC: Number of species required for thermo= {0}".format(len(mylist)))
     if parameters['generate']:
@@ -457,7 +460,7 @@ def main(arg_update={}):
         io.write_file(myliststr, sortedfile)
         if io.check_file(sortedfile,1):
             logging.info('Sorted SMILES file = {}'.format(sortedfile))
-            logging.info('You can use qtc -b 1 -l 5, to compute species with indices 1,2,3,4,5.')
+            logging.info('You can use qtc -b 1 -e 5, to compute species with indices 1,2,3,4,5.')
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     elif parameters['qckeyword']:
