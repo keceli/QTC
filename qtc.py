@@ -404,6 +404,7 @@ def main(arg_update={}):
     parameters = vars(args)
     parameters['all results'] = {}
     logfile = parameters['logfile']
+    hostname = gethostname()
     if parameters['loglevel'] == 0:
         loglevel = logging.ERROR
     elif parameters['loglevel'] == 1:
@@ -419,14 +420,15 @@ def main(arg_update={}):
     if logfile is 'none':
         logging.basicConfig(format='%(levelname)s%(message)s', level=loglevel)
     else:
-        logfile = logfile + '_qtc_' + get_date_time("%Y%m%d-%H%M%S") + '.log'
+        logfile = logfile + '_qtc_'+ hostname + '_' + get_date_time("%y%m%d-%H%M%S") + '.log'
+        logfile = io.get_unique_filename(logfile)
         logging.basicConfig(format='%(levelname)s%(message)s', filename=logfile, level=loglevel)
     for key in arg_update:
         parameters[key] = arg_update[key]
     logging.info(__logo__)
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
     logging.info("QTC: Last update             = {0}".format(__updated__))
-    logging.info("QTC: Hostname                = {0}".format(gethostname()))
+    logging.info("QTC: Hostname                = {0}".format(hostname))
     logging.info('QTC: Given arguments         =')
     for param in parameters:
         logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
