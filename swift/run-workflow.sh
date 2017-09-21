@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 set -eu
 
 # RUN WORKFLOW
@@ -8,9 +8,13 @@ set -eu
 PATH=/home/wozniak/Public/sfw/blues/compute/swift-t/stc/bin:$PATH
 
 # Set up PYTHONPATH for QTC
+PYTHONPATH+=:
 PYTHONPATH+=/home/keceli/.local/lib/python2.7/site-packages:
 PYTHONPATH+=/home/keceli/openbabel-2.4.1/install/lib/pys:
 PYTHONPATH+=/home/keceli/openbabel-2.4.1/install/lib/python2.7/site-packages
+export PYTHONPATH
+
+soft add +java-1.8
 
 # Run it!
 nice swift-t -l workflow.swift --input=test/syngas.txt |& tee workflow.out

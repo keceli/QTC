@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 set -eu
 
 echo QTC.SH
@@ -9,7 +9,14 @@ soft add @nwchem-6.5
 soft add +molpro-2012.1.27
 soft add +g09-e.01
 
+if [[ ${#} != 2 ]]
+then
+  echo "qtc.sh: Requires 2 arguments!"
+  exit 1
+fi
+
 MOLECULE=$1
+INDEX=$2
 
 #  /home/keceli/backup/QTC/qtc.py
 

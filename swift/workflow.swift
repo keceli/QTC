@@ -17,14 +17,15 @@ list_file = input(list_name);
 string lines[] = file_lines(list_file, comment="!");
 
 // Define the app function for QTC
-app qtc(string molecule)
+app qtc(string molecule, int i)
 {
-  "/home/wozniak/proj/qtc/swift/qtc.sh" molecule ;
+  "/home/wozniak/proj/qtc/swift/qtc.sh" molecule i ;
 }
 
 // Run QTC on each molecule in the input file
-foreach line in lines
+foreach line,i in lines
 {
-  trace(line);
-  qtc(line);
+  trace(line + " " + i);
+  // trace(hash(line));
+  qtc(line, i);
 }
