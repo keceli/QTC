@@ -798,37 +798,38 @@ def E_QTC(bas, opt, en, freq, parameters):
     import qctools as qc
     import iotools as io
     natom = ob.get_natom(bas)
+    slabel = qc.get_slabel(bas)
     parameters['natom'] = natom
     calcindex = parameters['calcindex']
     parameters = qc.parse_qckeyword(parameters, calcindex)
     qckeyword = parameters['qckeyword']
     qclabel = qc.get_qc_label(natom, qckeyword, calcindex)
     en, zpve = 0., 0.
-    if 'energy' in parameters['all results'][bas][qclabel]:
-        en = parameters['all results'][bas][qclabel]['energy']
+    if 'energy' in parameters['all results'][slabel][qclabel]:
+        en = parameters['all results'][slabel][qclabel]['energy']
     if en:
-        logging.debug('Energy for {0} {1} = {2} Hartree'.format(bas, qclabel,en))
+        logging.debug('Energy for {0} {1} = {2} Hartree'.format(slabel, qclabel,en))
     else: 
-        logging.error('Energy not found for {0} {1}'.format(bas, qclabel))
-    if 'azpve' in parameters['all results'][bas][qclabel]:
-        zpve = parameters['all results'][bas][qclabel]['azpve']
+        logging.error('Energy not found for {0} {1}'.format(slabel, qclabel))
+    if 'azpve' in parameters['all results'][slabel][qclabel]:
+        zpve = parameters['all results'][slabel][qclabel]['azpve']
         zpvelabel = 'anharmonic ' + qclabel
-    elif 'zpve' in parameters['all results'][bas][qclabel]:
-        zpve = parameters['all results'][bas][qclabel]['zpve']
+    elif 'zpve' in parameters['all results'][slabel][qclabel]:
+        zpve = parameters['all results'][slabel][qclabel]['zpve']
         zpvelabel = 'harmonic ' + qclabel
     else:
         for i in range(calcindex):
             qclabel = qc.get_qc_label(natom, qckeyword, i)
-            if 'azpve' in parameters['all results'][bas][qclabel]:
-                zpve = parameters['all results'][bas][qclabel]['azpve']
+            if 'azpve' in parameters['all results'][slabel][qclabel]:
+                zpve = parameters['all results'][slabel][qclabel]['azpve']
                 zpvelabel = 'anharmonic ' + qclabel
-            elif 'zpve' in parameters['all results'][bas][qclabel]:
-                zpve = parameters['all results'][bas][qclabel]['zpve']
+            elif 'zpve' in parameters['all results'][slabel][qclabel]:
+                zpve = parameters['all results'][slabel][qclabel]['zpve']
                 zpvelabel = 'harmonic ' + qclabel
     if zpve:
-        logging.debug('ZPVE (harmonic) for {0} {1} = {2} Hartree'.format(bas,zpvelabel,zpve))
+        logging.debug('ZPVE (harmonic) for {0} {1} = {2} Hartree'.format(slabel,zpvelabel,zpve))
     else: 
-        logging.error('ZPVE not found for {0} {1}'.format(bas, qclabel))
+        logging.error('ZPVE not found for {0} {1}'.format(slabel, qclabel))
     return  float(en) + float(zpve)
 
 
