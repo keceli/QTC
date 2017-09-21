@@ -320,6 +320,22 @@ def run(s):
                 logging.error('Failed calculation in "{0}".\n'.format(qcoutput))
                 logging.error('Can not run thermo\n')
                 runthermo = False                
+            if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
+                RPHt, geolines = parameters['results']['RPHt input'].split('geometry')
+                geolines, gradlines = geolines.split('gradient')
+                xyz = parameters['results']['xyz'].splitlines()[2:]
+                RPHt += 'geometry\n'
+                for i, line in enumerate( geolines.splitlines()[1:]):
+                    RPHt += '\t' + '\t'.join(line.split()[0:3]) + '\t' + '\t'.join(xyz[i].split()[1:]) + '\n'
+                RPHt += 'gradient' +  gradlines.split('Hessian')[0] + 'Hessian\n' + parameters['results']['Hessian']
+                parameters['results']['RPHtinput'] = RPHt
+                RPHtexe = '/lcrc/project/PACC/codes/EStokTP/exe/RPHt.exe'
+                RPHtfile = 'RPHt_input_data.dat'
+                io.write_file(RPHt,RPHtfile)
+                io.execute(RPHtexe  + ' ' + RPHtfile)
+                if io.check_file( 'hrproj_freq.dat'):
+                   pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
+                   parameters['results']['projected frequencies'] = pfreqs
         else:
             logging.error('Output file "{0}" not found.\n'.format(qcoutput))
             sys.exit('Output problem')

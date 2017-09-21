@@ -26,8 +26,8 @@ Use xyz as (start-starting geometry, 0-level0 geometry): start
 BLUES options   
 ==============
 Run on node (0 if on login OR on a node, d to debug): 0
-No. of cores high: 24
-No. of cores  low:  16
+No. of cores high: QTC(NPROC)
+No. of cores  low:  QTC(NPROC)
 
 
 ================

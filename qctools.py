@@ -77,18 +77,6 @@ def get_input(x, template, parameters):
     nproc   = parameters['qcnproc']
     inp = template
     if task.startswith('tors'):
-        #inp = inp.replace(  "QTC(TSBASIS)", parameters[  'tsbasis'])
-        #inp = inp.replace("QTC(TSPACKAGE)", parameters['tspackage'])
-        #inp = inp.replace( "QTC(TSMETHOD)", parameters[ 'tsmethod'])
-        #if len(parameters['optlevel'].split('/')) > 1:
-        #    optpackage, optmethod, optbasis = parameters['optlevel'].split('/')
-        #    if optpackage != 'molpro' or optpackage.startswith('g'):
-        #        optpackage = 'g09'
-        #    if optpackage.startswith('gau'):
-        #        optpackage = 'g09'
-        #    inp = inp.replace("QTC(TSPACKAGE)", optpackage)
-        #    inp = inp.replace( "QTC(TSMETHOD)",  optmethod)
-        #    inp = inp.replace(  "QTC(TSBASIS)",   optbasis)
         if parameters['optdir']:
             xyzfile =  io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(x).strip() + '.xyz'])
             if io.check_file('xyzfile'):
@@ -139,7 +127,7 @@ def get_input(x, template, parameters):
             elif task.lower().startswith('energy'):
                 task = ''
             elif task.lower().startswith('freq'):
-                task = 'frequencies'
+                task = '{frequencies;print,hessian}'
     
     if nopen == 0:
         scftype = 'RHF'
@@ -321,19 +309,6 @@ def parse_qckeyword(parameters, calcindex=0):
             task = 'energy'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
-#         elif task.startswith('tors'):
-#             #task = 'torsscan'
-#             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
-#             #parameters['optdir'] = qcdirectory
-#             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-#             parameters['freqdir'] = qcdirectory
-#             parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
-#             if 'qcpackage' in parameters:
-#                 if parameters['qcpackage'].startswith('gau'):
-#                     parameters['qcpackage'] = 'g09'
-#             parameters['tspackage'] = package
-#             parameters[ 'tsmethod'] = method
-#             parameters[  'tsbasis'] = basis
         else:
             logging.info('ERROR! Invalid qckeyword task: {0}'.format(task))
             return      
@@ -496,12 +471,14 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     pfreqs = []
     afreqs = []
     xmat= []
+    hessian= ''
     zpve= 0.0
     azpve = 0.0
     hof0 = 0.
     hof298 = 0.
     parsed = False
     messhindered = None
+    RPHtinput = None
     if package == 'nwchem':
         method = get_nwchem_method(s)
         calculation = get_nwchem_calculation(s)
@@ -523,6 +500,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         calculation    = pa.molpro_calc(s)
         basis          = pa.molpro_basisset(s)
         zmat           = pa.molpro_zmat(s)
+        hessian        = pa.molpro_hessian(s)
         freqs       = pa.molpro_freqs(s)
         parsed = True
     elif package == 'gaussian':
@@ -534,6 +512,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         zmat           = pa.gaussian_zmat(s)
         xyz            = pa.gaussian_xyz(s)
         geo            = pa.gaussian_geo(s)
+        hessian        = pa.gaussian_hessian(s)
         freqs       = pa.gaussian_freqs(s)
         afreqs  = get_gaussian_fundamentals(s)[:,1]
         if sum(afreqs) > 0:
@@ -554,7 +533,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                 freqs = pa.gaussian_freqs(out)
                 parsed = True
         if io.check_dir('me_files', 1):
-            freqs, pfreqs, zpve, messhindered = parse_me_files()
+            freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
 
     if parsed:
         if write:
@@ -584,6 +563,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                'azpve': azpve,
                'xmat': xmat,
                'hindered potential': messhindered,
+               'RPHt input': RPHtinput,
+               'Hessian'   : hessian,
                'deltaH0': hof0,
                'deltaH298': hof298}
 #         if calculation == 'geometry optimization':
@@ -702,7 +683,7 @@ def parse_me_files(path=None):
     pfreqs = []
     zpve = None
     messhindered = None
-    
+    RPHtinput = None
     fname = io.join_path(path,'reac1_unpfr.me')
     if io.check_file(fname):
         out = io.read_file(fname, aslines=False)
@@ -723,10 +704,13 @@ def parse_me_files(path=None):
     fname = io.join_path(path,'reac1_hr.me')
     if io.check_file(fname):
         messhindered = io.read_file(fname, aslines=False)   
+    fname = 'RPHt_input_data.dat'
+    if io.check_file(fname):
+        RPHtinput = io.read_file(fname, aslines=False)
 
     if freqs == pfreqs:
         pfreqs = []
-    return freqs, pfreqs, zpve, messhindered
+    return freqs, pfreqs, zpve, messhindered, RPHtinput
     
 def getcc_enthalpy(out):
     if type(out) is not cclib.parser.data.ccData_optdone_bool:
@@ -1261,6 +1245,7 @@ def get_gaussian_xmatrix(s,nfreq):
             line = lines[iline]
             cols = line.split()
             ncol = len(cols) - 1
+            print cols[1:]
             xmat[irow,icol:icol+ncol] = [float(num.replace('D','E')) for num in cols[1:]]
         iline += 1
         line = lines[iline]

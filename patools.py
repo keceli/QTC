@@ -1,6 +1,7 @@
 #!usr/bin/python
 
 import re
+import iotools as io
 import numpy as np
 """
 Module for parsing logfiles
@@ -159,6 +160,16 @@ def gaussian_freqs(lines):
             if k == nfreq:
                 break
     return freqs
+def gaussian_hessian(lines):
+    startkey = 'Force constants in Cartesian coordinates:'
+    endkey   = 'Force constants in internal coordinates:'
+    lines = lines.splitlines()
+    sline = io.get_line_number(startkey,lines=lines)
+    eline = io.get_line_number(endkey,lines=lines)
+    if sline < 0:
+        return ''
+    hess   = '\n'.join(lines[sline+1:eline])
+    return hess
 
 def gaussian_zpve(lines):
 
@@ -305,6 +316,34 @@ def  molpro_freqs(lines):
         if line.split()[0].strip() != '0.00': 
             freqs.extend(line.split())
     return freqs
+
+def molpro_hessian(lines):
+    startkey = 'Force Constants (Second Derivatives of the Energy)'
+    endkey   = 'Atomic Masses'
+    lines = lines.splitlines()
+    sline = io.get_line_number(startkey,lines=lines)
+    eline = io.get_line_number(endkey,lines=lines)
+    if sline < 0:
+        return ''
+    hess = ''
+    for line in lines[sline+1:eline-2]:
+       hessline = ''
+       for val in line.split():
+           if 'G'  in val:
+               if 'GX' in val:
+                   add = 1
+                   val = val.replace('GX','')
+               elif 'GY' in val:
+                   add = 2
+                   val = val.replace('GY','')
+               else:
+                   add = 3
+                   val = val.replace('GZ','')
+               val =  str( (int(val) - 1 ) * 3 + add)
+           hessline += '\t' +  val
+       hess +=  hessline + '\n'
+    return hess
+
 
 def molpro_zpve(lines):
     zpve = 'Zero point energy:\s*([\d,\-,\.]*)'
