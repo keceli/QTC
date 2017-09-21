@@ -19,7 +19,7 @@ string lines[] = file_lines(list_file, comment="!");
 // Define the app function for QTC
 app qtc(string molecule)
 {
-  "/home/wozniak/proj/qtc/swift/qtc.sh" molecule ;
+  "qtc.sh" molecule ;
 }
 
 // Run QTC on each molecule in the input file

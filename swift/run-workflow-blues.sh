@@ -12,9 +12,9 @@ PYTHONPATH+=/home/keceli/.local/lib/python2.7/site-packages:
 PYTHONPATH+=/home/keceli/openbabel-2.4.1/install/lib/pys:
 PYTHONPATH+=/home/keceli/openbabel-2.4.1/install/lib/python2.7/site-packages
 
-# export PPN=8
+export PPN=8
 
 # Run it!
 swift-t -l -e PYTHONPATH \
         -m pbs \
-        workflow.swift --input=$PWD/test/syngas.txt
+        /home/keceli/qtc/swift/workflow.swift --input=$PWD/sorted.txt
