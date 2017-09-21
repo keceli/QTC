@@ -42,7 +42,7 @@ mkdir -pv /scratch/$USER
                                    -k 'torsopt/hf/sto-3g/gaussian' \
                                     -p 16 \
                                     -t 'templates' \
-                                    -f 'swift_torsopt'
+                                    -f "swift_torsopt-$INDEX"
     # -k energy/mp2/sto-3g/gaussian
     # -k energy/mp2/sto-3g/nwchem -p 2
     # Use +g09-e.01
