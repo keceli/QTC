@@ -24,25 +24,24 @@ def sort_species_list(slist, printinfo=False):
     i = 0
     tmplist= ['']*len(slist)
     for s in slist:
-        smi = ob.get_smiles(s)
-        mol = ob.get_mol(smi,make3D=True)
+        mol = ob.get_mol(s,make3D=True)
         nrotor = ob.get_nrotor(mol)
         nelec = ob.get_nelectron(mol)
         natom = ob.get_natom(mol)
         nheavy = ob.get_natom_heavy(mol)
         formula = ob.get_formula(mol)
         mult = ob.get_multiplicity(mol)
-        tmplist[i] = [smi,formula,mult,nrotor,nelec,natom,nheavy]
+        tmplist[i] = [s,formula,mult,nrotor,nelec,natom,nheavy]
         i += 1
     tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[3],x[4],x[5]))
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
         logging.info('-'*100)
-        logging.info('{:>8s} {:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
+        logging.info('{:>8s}\t{:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
         i = 0
-        for s in tmplist:
+        for tmp in tmplist:
             i += 1
-            logging.info('{:8d} {:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,*s))
+            logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
         logging.info('-'*100)
     return sortedlist
 
@@ -195,10 +194,25 @@ def update_qckeyword(keyword):
     keyword = keyword.replace('torscan/','torsscan/')
     return keyword
 
+def get_slabels_from_json(j):
+    """
+    Builds a list of strings that contains slabels for 
+    all species in json list.
+    Needs to convert from unicode to string.
+    """
+    nitem = len(j)
+    slabels = ['']*nitem
+    i = 0
+    for d in j :
+        mult = d['multiplicity']
+        slabels[i] = d['SMILES'].encode('ascii','ignore') + '_m' + str(mult)
+        i += 1
+    return slabels
 
 def update_smiles_list(slist):
     """
-    Replaces each smiles with open-babel canonical smiles.
+    Replaces each smiles with open-babel canonical smiles
+    and adds multiplicity with '_m' suffix.
     Removes all inert species.
     >>> sl = ['[Ne]','C','O-O','[O]O','O[O]']
     >>> print qc.update_smiles_list(sl)
@@ -209,7 +223,12 @@ def update_smiles_list(slist):
         if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
-            s = ob.get_smiles(s)
+            if '_m' in s:
+                smi, mult = s.split('_m')
+                smi = ob.get_smiles(smi)
+                s = smi + '_m' + str(mult)
+            else:
+                s = ob.get_smiles(s)
             newlist.append(s)
     return newlist
 
@@ -327,6 +346,22 @@ def parse_qckeyword(parameters, calcindex=0):
     parameters['parseqc'] = True
     parameters['writefiles'] = True
     return parameters 
+
+
+def get_slabel(smi,mult=None):
+    """
+    slabel is a unique smiles string for labeling species in QTC.
+    Composed of two parts 'canonical smiles' and 'multiplicity'
+    Canical smiles strings are unique only for a given code.
+    QTC uses open babel.
+    slabel = smi + '_m' + str(mult)
+    """
+    if '_m' in smi:
+        smi, mult = smi.split('_m')
+    smi = ob.get_smiles(smi)
+    if not mult:
+        mult = ob.get_multiplicity(smi)
+    return smi + '_m' + str(mult)
 
 
 def get_qc_label(natom, qckeyword, calcindex):
