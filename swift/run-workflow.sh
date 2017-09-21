@@ -4,18 +4,19 @@ set -eu
 # RUN WORKFLOW
 # Run this to run the Swift/T workflow
 
-if [[ ${#} != 3 ]]
+if [[ ${#} != 4 ]]
 then
-  echo "run-workflow.sh: Requires MODE CFG INPUT!"
+  echo "run-workflow.sh: Requires MODE PROCS CFG INPUT!"
   sleep 5
   exit 0
 fi
 
-export THIS=$( cd $( dirname $0 ) ; /bin/pwd )
-
 MODE=$1
-CFG=$2
-INPUT=$3
+PROCS=$2
+CFG=$3
+INPUT=$4
+
+export THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 
 case $MODE in
   login) 
@@ -41,7 +42,7 @@ soft add +java-1.8
 # Run it!
 # /home/keceli/qtc/swift/
 # -t f:hosts.txt
-swift-t -l -n 2 $MACHINE $THIS/workflow.swift \
+nice swift-t -l -n $PROCS $MACHINE $THIS/workflow.swift \
         --input=$INPUT --cfg=$CFG
 # sorted.txt
 #|& tee workflow.out

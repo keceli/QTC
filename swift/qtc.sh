@@ -37,7 +37,10 @@ mkdir -pv /scratch/$USER
 #    $MOLPRO -d /scratch/wozniak "/home/wozniak/N#N_molpro.inp"
 
 #/home/keceli/anaconda2/bin/python -u /home/keceli/qtc/qtc.py
-eval /home/keceli/anaconda2/bin/python $( cat $CFG )
+/home/keceli/anaconda2/bin/python \
+     -u /home/keceli/pacc/codes/QTC/qtc.py \
+     -i $MOLECULE -f swift_torsopt-$INDEX \
+     $( cat $CFG )
   
     # -k energy/mp2/sto-3g/gaussian
     # -k energy/mp2/sto-3g/nwchem -p 2
