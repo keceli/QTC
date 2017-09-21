@@ -7,7 +7,7 @@ Restart at: 0
 Manual species input
 ============
 Reaction type:  
-Reactant list (SMILES):  QTC(SMILESNAME)
+Reactant list (SMILES):  QTC(SMILES)
 Product  list (SMILES): 
 No. of transition states: 0
 
