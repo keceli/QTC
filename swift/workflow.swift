@@ -5,8 +5,11 @@
 
 import files;
 import io;
-import sys;
 import string;
+import sys;
+
+// Project root directory
+string THIS = getenv("THIS"); 
 
 // Retrieve user argument --input=<input_list_file>
 list_name = argv("input");
@@ -19,7 +22,7 @@ string lines[] = file_lines(list_file, comment="!");
 // Define the app function for QTC
 app qtc(string molecule, int index)
 {
-  "./qtc.sh" molecule index ;
+  (THIS+"/qtc.sh") molecule index ;
 }
 
 // Run QTC on each molecule in the input file
