@@ -5,14 +5,15 @@ set -eu
 
 #echo $PATH
 
-if [[ ${#} != 2 ]]
+if [[ ${#} != 3 ]]
 then
-  echo "qtc.sh: Requires 2 arguments!"
+  echo "qtc.sh: Requires 3 arguments!"
   exit 1
 fi
 
-MOLECULE=$1
-INDEX=$2
+CFG=$1
+MOLECULE=$2
+INDEX=$3
 
 soft add @nwchem-6.5
 soft add +molpro-2012.1.27
@@ -27,7 +28,6 @@ export PYTHONPATH
 
 #  /home/keceli/backup/QTC/qtc.py
 
-set -x
 MOLPRO=$( which molpro )
 mkdir -pv /scratch/$USER
 
@@ -36,13 +36,9 @@ mkdir -pv /scratch/$USER
 #env -u PMI_FD -u PMI_RANK -u PMI_SIZE -u HYDI_CONTROL_FD  \
 #    $MOLPRO -d /scratch/wozniak "/home/wozniak/N#N_molpro.inp"
 
-#/home/keceli/anaconda2/bin/python -u /home/keceli/qtc/qtc.py \
-/home/keceli/anaconda2/bin/python -u /home/keceli/pacc/codes/QTC/qtc.py \
-                                   -i $MOLECULE \
-                                   -k 'torsopt/hf/sto-3g/gaussian' \
-                                    -p 16 \
-                                    -t 'templates' \
-                                    -f "swift_torsopt-$INDEX"
+#/home/keceli/anaconda2/bin/python -u /home/keceli/qtc/qtc.py
+eval /home/keceli/anaconda2/bin/python $( cat $CFG )
+  
     # -k energy/mp2/sto-3g/gaussian
     # -k energy/mp2/sto-3g/nwchem -p 2
     # Use +g09-e.01

@@ -11,6 +11,9 @@ import sys;
 // Project root directory
 string THIS = getenv("THIS"); 
 
+// Retrieve user argument --cfg=<qtc.cfg>
+cfg = argv("cfg");
+printf("cfg: " + cfg);
 // Retrieve user argument --input=<input_list_file>
 list_name = argv("input");
 printf("input: " + list_name);
@@ -20,9 +23,9 @@ list_file = input(list_name);
 string lines[] = file_lines(list_file, comment="!");
 
 // Define the app function for QTC
-app qtc(string molecule, int index)
+app qtc(string cfg, string molecule, int index)
 {
-  (THIS+"/qtc.sh") molecule index ;
+  (THIS+"/qtc.sh") cfg molecule index ;
 }
 
 // Run QTC on each molecule in the input file
@@ -30,5 +33,5 @@ foreach line,i in lines
 {
   trace(line + " " + i);
   // trace(hash(line));
-  qtc(line, i);
+  qtc(cfg, line, i);
 }
