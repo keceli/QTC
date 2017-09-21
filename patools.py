@@ -183,11 +183,11 @@ def gaussian_anzpve(lines):
     """
     Returns anharmonic zpve in au.
     """
-    from unittools import rcm2au,kjpermol2au
+    from unittools import rcm2au,kj2au
     zpve = 'ZPE\(anh\)=\s*([\d,\w,\+,\.,\-]*)'
     zpve = re.findall(zpve, lines)
     if len(zpve) > 0:
-        return float(zpve[-1].replace('D','E')) * kjpermol2au
+        return float(zpve[-1].replace('D','E')) * kj2au
     zpve = 'Total Anharm\s*:\s*cm\-1\s*=\s*([\d,\.,\-]*)'
     zpve = re.findall(zpve, lines)
     if len(zpve) > 0:
@@ -545,6 +545,10 @@ def rotconsts(lines):
 
 def get_298(lines):
     deltaH298 = ' h298 final\s*([\d,\-,\.]*)'
-    return re.findall(deltaH298,lines)[-1] 
+    lines = lines.splitlines()
+    for line in lines:
+        if 'h298 final' in line:
+            tmp = float(line.split()[-1])
+    return tmp
     
  

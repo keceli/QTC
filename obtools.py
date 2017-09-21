@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-06-26"
+__updated__ = "2017-09-23"
 
 def get_format(s):
     """
@@ -74,7 +74,7 @@ def get_mol(s, make3D=False):
     else:
         print 'Incompetible type for ob.get_mol', type(s)
         return None
-    if make3D:
+    if make3D and mol.dim < 3:
         mol.make3D()
     return mol
     
@@ -91,7 +91,7 @@ def get_multiplicity(x):
     >>> [get_multiplicity(mol) for mol in mols]
     [2, 1, 3, 1]
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     return mol.spin
 
 
@@ -165,7 +165,7 @@ def get_natom(x):
     >>> [get_natom(mol) for mol in mols]
     [4, 9, 2, 3]
     """
-    mol = get_mol(x)
+    mol = get_mol(x,make3D=True)
     return len(mol.atoms)
 
 
@@ -179,7 +179,7 @@ def get_natom_heavy(x):
     >>> [get_natom_heavy(mol) for mol in mols]
     [1, 3, 2, 1]
     """
-    mol = get_mol(x)
+    mol = get_mol(x,make3D=True)
     return mol.OBMol.NumHvyAtoms()
 
 
@@ -212,7 +212,7 @@ def get_charge(x):
     Return charge.
     TODO
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     return mol.OBMol.GetTotalCharge()
 
 
@@ -225,7 +225,7 @@ def get_xyz(x):
     >>> print get_xyz(mol).splitlines()[0]
     14
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     return mol.write(format='xyz')
 
 
@@ -251,7 +251,7 @@ def get_geo(x):
     Note: coordinates are not deterministic.
     Each run gives a different set of coordinates.
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     xyz = mol.write(format='xyz').splitlines(True)
     natom = int(xyz[0].strip())
     return ''.join(xyz[2:natom+2])
@@ -279,7 +279,7 @@ def get_zmat(x):
     d5= 120.00
     <BLANKLINE>
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     return '\n'.join(mol.write('gzmat').splitlines()[5:])
 
 
@@ -305,7 +305,7 @@ def get_inchi_key(x, mult=0, extra=''):
     """
     Returns a unique key composed of inchikey and multiplicity
     >>> mol = get_mol('[O][O]')
-    >>> get_unique_key(mol)
+    >>> get_inchi_key(mol)
     'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
     """
     mol = get_mol(x)
@@ -318,10 +318,10 @@ def get_unique_name(x, mult=0, extra=''):
     """
     Returns a unique key composed of inchikey and multiplicity
     >>> mol = get_mol('[O][O]')
-    >>> get_unique_key(mol)
+    >>> get_unique_name(mol)
     'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
     """
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     if mult == 0:
         mult = mol.spin
     return mol.write("inchikey").strip() + str(mult) + extra
@@ -335,7 +335,7 @@ def get_unique_path(x, mult=0, method=''):
     database/C/C/CH4/VNWKTOKETHGBQD-UHFFFAOYSA-N1/pm6
     """
     import iotools as io
-    mol = get_mol(x)
+    mol = get_mol(x, make3D=True)
     if mult == 0:
         mult = mol.spin
     formula = get_formula(mol)
@@ -343,27 +343,6 @@ def get_unique_path(x, mult=0, method=''):
     elements_noH = get_formula(mol, stoichemetry=False, hydrogens=False)
     uniquekey = get_inchi_key(mol, mult)
     dirs = 'database', elements_noH, formula_noH, formula, uniquekey, method
-    return io.join_path(*dirs)
-
-
-def get_smiles_path(x, mult=0, method='',basis=''):
-    """
-    Returns a smiles based path for database directory.
-    Note that smiles strings are not unique. Even the 
-    canonical smiles strings are unique only for the same
-    code that generates the smiles string.
-    """
-    import iotools as io
-    mol = get_mol(x)
-    if mult == 0:
-        mult = mol.spin
-    s = get_smiles_filename(mol)    
-    if mult > 1:
-        s = s + "-m{0}".format(mult)
-    formula = get_formula(mol)
-    formula_noH = get_formula(mol, stoichemetry=True, hydrogens=False)
-    elements_noH = get_formula(mol, stoichemetry=False, hydrogens=False)
-    dirs = 'database', elements_noH, formula_noH, formula, s, method, basis
     return io.join_path(*dirs)
 
 
@@ -381,53 +360,85 @@ def get_formats():
     return pybel.outformats
 
 
+def get_smiles_path(x, mult=0, method='',basis=''):
+    """
+    Returns a smiles based path for database directory.
+    Note that smiles strings are not unique. Even the 
+    canonical smiles strings are unique only for the same
+    code that generates the smiles string.
+    """
+    import iotools as io
+    if type(x) is pybel.Molecule:
+        if mult == 0:
+            mult = x.spin
+        s = x.write(format='can').strip().split()[0]
+    elif type(x) is str:
+        s = x    
+    formula = get_formula(s)
+    formula_noH = get_formula(s, stoichemetry=True, hydrogens=False)
+    elements_noH = get_formula(s, stoichemetry=False, hydrogens=False)
+    s = get_smiles_filename(s)    
+    if mult > 1:
+        multstr = "-m{0}".format(mult)
+    else:
+        multstr = ''
+    dirs = 'database', elements_noH, formula_noH, formula, s+multstr, method, basis
+    return io.join_path(*dirs)
+
+
 def get_smiles(x):
     """
     Returns open-babel canonical smiles.
+    >>> print ob.get_smiles('O')
+    O
+    >>> print ob.get_smiles('[H][O][H]')
+    O
+    >>> print ob.get_smiles('O-O')
+    OO
+    >>> print ob.get_smiles('[O]=[O]')
+    O=O
     """
-    if type(x) is pybel.Molecule:
-        s = x.write(format='can').strip().split()[0]
-    elif type(x) is str:
-        s = x.strip()
-    else:
-        s = 'smiles'
+    mol = get_mol(x)
+    s = mol.write(format='can').strip().split()[0]
     return s
 
 
 def get_smiles_filename(x):
     """
-    Returns a suitable filename for a given pybel.Molecule object or a string.
-    Smiles strings may contain characthers not suitable for file names,
+    Returns a suitable filename for a given smiles.
+    Smiles strings may contain characters not suitable for file names,
     such as \/:*?"<>|(). Not sure if all these characters appear, but here
-    they are replaced by abdeqtrl.
+    they are replaced by an underscore, '_' followed by:
     """
-    if type(x) is pybel.Molecule:
+    if type(x) is pybel.Molecule:    
         s = x.write(format='can').strip().split()[0]
     elif type(x) is str:
-        x = get_mol(x)
-        s = x.write(format='can').strip()
-        #s = x.strip()
+        s = x
     else:
-        return 'filename'           
-    s = s.replace('\\','-db-') #double back slash
-    s = s.replace('/','-sl-')
-    s = s.replace(':','-co-')
-    s = s.replace('*','-st-')
-    s = s.replace('?','-qm-')
-    s = s.replace('<','-la-')
-    s = s.replace('>','-ra-')
-    s = s.replace('|','-bs-')
-    s = s.replace('(','-lp-')
-    s = s.replace(')','-rp-')
+        s = ''
+#   s = s.replace('[','_b')
+#   s = s.replace(']','_d')
+    s = s.replace(':','_i')
+    s = s.replace('|','_j')
+    s = s.replace('\\','_k') 
+    s = s.replace('/','_l')
+    s = s.replace('?','_m')
+    s = s.replace('(','_p')
+    s = s.replace(')','_q')
+    s = s.replace('*','_s')
+    s = s.replace('<','_v')
+    s = s.replace('>','_y')
     return s
 
 
 def smiles2formula(filename):
     import iotools as io
     mols = io.read_list(filename)
+    s = ''
     for mol in mols:
         formula = get_formula(mol)
-        print mol,  formula
+        s += '{0} {1}\n'.format(mol,  formula)
+    return s
 
 def get_coordinates_array(xyz):
     """
@@ -471,7 +482,11 @@ def fetch_smiles(s):
     >>> fetch_smiles('methane')
     'C'
     """
-    import cirpy
+    try:
+        import cirpy
+    except:
+        r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
+        return    
     if cirpy:
         return cirpy.resolve(s,'smiles')
     else:
@@ -489,6 +504,7 @@ def fetch_inchi(s):
         import cirpy
     except:
         r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
+        return
     if cirpy:
         r = cirpy.resolve(s,'inchi')  
     return r
@@ -498,10 +514,14 @@ def fetch_IUPAC_name(s):
     """
     Return IUPAC name for a given smiles or inchi string.
     Requires cirpy module and internet connection
-    >>> print fetch_name('C=O')
+    >>> print fetch_IUPAC_name('C=O')
     FORMALDEHYDE
     """
-    import cirpy
+    try:
+        import cirpy
+    except:
+        r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
+        return    
     frm = get_format(s)
     if frm == 'smi':
         name = cirpy.resolve(s,'iupac_name',resolvers=['smiles'])

@@ -9,7 +9,7 @@ from os.path import isfile
 import iotools as io
 import obtools as ob
 import qctools as qc
-
+import logging
 """
 Thermochemistry tools.
 Requires:
@@ -18,7 +18,7 @@ MESS partition function code
 PAC99
 thermp
 """
-__updated__ = "2017-07-07"
+__updated__ = "2017-09-23"
 
 
 def get_stoichometry(formula,element):
@@ -401,6 +401,7 @@ def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[], hindered=None):
 def get_messpf_input(mol,parameters):
     """
     Write input file for mess partition function program
+    AtomDistanceMin[angstrom] 0.6
     Temperature(step[K],size)        100.   30
     RelativeTemperatureIncrement            0.001
     Species CH4
@@ -428,7 +429,8 @@ def get_messpf_input(mol,parameters):
     natom = len(mol.atoms)
     formula = mol.formula
     multiplicity = mol.spin
-    inp  = 'Temperature(step[K],size)        100.   30\n'
+    inp   = 'AtomDistanceMin[angstrom] 0.6\n'
+    inp += 'Temperature(step[K],size)        100.   30\n'
     inp += 'RelativeTemperatureIncrement            0.001\n'
     inp += 'Species {0}\n'.format(formula)
     inp += 'RRHO\n'
@@ -439,14 +441,14 @@ def get_messpf_input(mol,parameters):
     inp += 'End\n'
     if 'hindered potential' in results:
         inp += results['hindered potential' ]
-    if 'projected frequencies' in results:
-        freqs = results['projected frequencies']
-    elif 'anharmonic frequencies' in results:
-        freqs = results['anharmonic frequencies']
-    if 'harmonic frequencies' in results:
-        freqs = results['harmonic frequencies']    
+    if 'pfreqs' in results:
+        freqs = results['pfreqs']
+    elif 'afreqs' in results:
+        freqs = results['afreqs']
+    if 'freqs' in results:
+        freqs = results['freqs']    
     inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
-    inp += ' '.join(freqs) + '\n'
+    inp += ' '.join([str(x) for x in freqs]) + '\n'
     if 'xmat' in results:
         xmat = results['xmat']
         inp += ' Anharmonicities[1/cm]\n'
@@ -454,8 +456,8 @@ def get_messpf_input(mol,parameters):
             for j in range(i+1):
                 inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
         inp += ' End\n'
-    if 'anharmonic zpve' in results:
-        zpve = results['anharmonic zpve']
+    if 'azpve' in results:
+        zpve = results['azpve']
     else:
         zpve = results['zpve']
     inp += 'ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
@@ -604,7 +606,7 @@ def write_chemkin_polynomial2(mol, parameters):
     messpfoutput = 'pf.log'
     name = mol.formula
     tag = parameters['label']
-    hof = parameters['results']['heat of formation at 0 K']
+    hof = parameters['results']['deltaH0']
     inp = get_messpf_input(mol, parameters)
     io.write_file(inp, messpfinput)
     msg = 'Running {0} to generate partition function.\n'.format(parameters['messpf'])

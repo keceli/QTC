@@ -9,7 +9,7 @@ TODO: Add unit tests. Seperate IO vs OS
 import time
 import os
 from os.path import isfile
-
+import logging
 __updated__ = "2017-07-13"
 
 
@@ -36,7 +36,10 @@ def rm(fname):
     Deletes a file with the given fname.
     """
     import os
-    os.remove(fname)
+    if check_file(fname):
+        os.remove(fname)
+    else:
+        logging.debug('Can not delete file. {} does not exist.'.format(fname))
     return
 
 
@@ -71,7 +74,7 @@ def mv(oldname,newname):
     try:
         os.rename(oldname,newname)
     except:
-        print('Command "mv {0} {1}" failed' .format(oldname, newname))
+        logging.debug('Command "mv {0} {1}" failed' .format(oldname, newname))
     return 
 
 def pwd():
@@ -140,18 +143,23 @@ def read_file(filename, aslines=False):
     return tmp
 
 
-def fix_path(path):
+def fix_path(s):
     """
     Returns a path with problematic characters replaced by safer ones.
     """
-    path = path.replace(':','__')
-    path = path.replace('*','-star-')
-    path = path.replace('?','-qm-')
-    path = path.replace('<','-la-')
-    path = path.replace('>','-ra-')
-    path = path.replace('(','_')
-    path = path.replace(')','_')
-    return path
+#   s = s.replace('[','_b')
+#   s = s.replace(']','_d')
+    s = s.replace(':','_i')
+    s = s.replace('|','_j')
+    s = s.replace('\\','_k') 
+#s = s.replace('/','_l')
+    s = s.replace('?','_m')
+    s = s.replace('(','_p')
+    s = s.replace(')','_q')
+    s = s.replace('*','_s')
+    s = s.replace('<','_v')
+    s = s.replace('>','_y')
+    return s
 
 
 def check_file(filename, timeout=0, verbose=False):
@@ -171,7 +179,7 @@ def check_file(filename, timeout=0, verbose=False):
                 exists = True
                 break
     if not exists and verbose:
-        print('"{0}" file not found.'.format(filename))
+        logging.debug('"{0}" file not found.'.format(filename))
     return exists
 
 
@@ -213,7 +221,7 @@ def cp(source, target):
     return
 
 
-def get_path(f,executable=False):
+def get_path(f, executable=False, directory=False):
     """
     Returns absolute path for a file or folder.
     """
@@ -221,6 +229,8 @@ def get_path(f,executable=False):
     import distutils.spawn as ds
     if executable:
         return ds.find_executable(f)
+    elif directory:
+        return os.path.dirname(os.path.abspath(f))
     else:
         return os.path.abspath(f)
 
@@ -232,7 +242,7 @@ def get_line_number(keyword, lines=None, filename=None,getlastone=False):
     """
     num = -1
     if lines is None and filename is None:
-        print 'List of lines or a filename to be read is required for get_line_number'
+        logging.debug('List of lines or a filename to be read is required for get_line_number')
     elif filename:
         lines = read_file(filename, aslines=True)
 
@@ -251,7 +261,7 @@ def get_line_numbers(keyword, lines=None, filename=None):
     Returns -1 if keyword is not found
     """
     if lines is None and filename is None:
-        print 'List of lines or a filename to be read is required for get_line_numbers'
+        logging.debug('List of lines or a filename to be read is required for get_line_numbers')
     elif filename:
         lines = read_file(filename, aslines=True)
     nums = []
@@ -340,7 +350,7 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False):
     else:
         commandstr = ' '.join(command)
     msg = 'Running Popen with command: {0}\n'.format(commandstr)
-    print(msg)
+    logging.debug(msg)
     msg =''
     process = Popen(command, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
@@ -549,7 +559,7 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     freqs  =  pa.freqs(lines)
     
     if prog == None or method == None or basis == None:
-        print 'Parsing error, check lines'
+        logging.debug('Parsing error, check lines')
         return 
     if optprog == None:
        optprog, optmethod, optbasis = prog, method, basis

@@ -6,14 +6,46 @@ import obtools as ob
 import iotools as io
 import numpy as np
 import patools as pa
-from Cython.Build.Dependencies import package
+import logging
 try:
     import cclib
 except:
     pass
 
-__updated__ = "2017-08-31"
+__updated__ = "2017-09-13"
 _hartree2kcalmol = 627.509 #kcal mol-1
+
+
+def sort_species_list(slist, printinfo=False):
+    """
+    Sorts a species list of smiles by number of rotors, electrons and atoms. 
+    Optionally, prints info on the list
+    """
+    i = 0
+    tmplist= ['']*len(slist)
+    for s in slist:
+        smi = ob.get_smiles(s)
+        mol = ob.get_mol(smi,make3D=True)
+        nrotor = ob.get_nrotor(mol)
+        nelec = ob.get_nelectron(mol)
+        natom = ob.get_natom(mol)
+        nheavy = ob.get_natom_heavy(mol)
+        formula = ob.get_formula(mol)
+        mult = ob.get_multiplicity(mol)
+        tmplist[i] = [smi,formula,mult,nrotor,nelec,natom,nheavy]
+        i += 1
+    tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[3],x[4],x[5]))
+    sortedlist = [x[0] for x in tmplist]
+    if printinfo:
+        logging.info('-'*100)
+        logging.info('{:>8s} {:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
+        i = 0
+        for s in tmplist:
+            i += 1
+            logging.info('{:8d} {:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,*s))
+        logging.info('-'*100)
+    return sortedlist
+
 
 def get_input(x, template, parameters):
     """
@@ -36,8 +68,8 @@ def get_input(x, template, parameters):
     basis   = parameters[  'qcbasis']
     if 'results' in parameters.keys():
         results = parameters['results']
-        if 'HoF at 0 K' in results.keys():
-            heat = results['HoF at 0 K']
+        if 'deltaH0' in results.keys():
+            heat = results['deltaH0']
         else:
             heat = 0.
     else:
@@ -123,9 +155,9 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(NPROC)", str(nproc))   
     inp = inp.replace('QTC(ANHARMLOC)', 'false')
     if "QTC(" in inp:
-        print(66*'#')
-        print("Error in template file: \n" + inp)
-        print(66*'#')
+        logging.info(66*'#')
+        logging.info("Error in template file: \n" + inp)
+        logging.info(66*'#')
     return inp
 
 def update_qckeyword(keyword):
@@ -150,6 +182,25 @@ def update_qckeyword(keyword):
     keyword = keyword.replace('6-31gs','6-31g*')
     keyword = keyword.replace('torscan/','torsscan/')
     return keyword
+
+
+def update_smiles_list(slist):
+    """
+    Replaces each smiles with open-babel canonical smiles.
+    Removes all inert species.
+    >>> sl = ['[Ne]','C','O-O','[O]O','O[O]']
+    >>> print qc.update_smiles_list(sl)
+    ['C', 'OO', 'O[O]', 'O[O]']
+    """
+    newlist = []
+    for s in slist:
+        if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
+            logging.info('Inert species {0} is removed from the smiles list'.format(s))
+        else:
+            s = ob.get_smiles(s)
+            newlist.append(s)
+    return newlist
+
 
 def parse_qckeyword(parameters, calcindex=0):
     """
@@ -185,7 +236,7 @@ def parse_qckeyword(parameters, calcindex=0):
     task = tokens[0]
     if parameters['natom'] == 1:
         if task in ['opt', 'freq', 'torsscan', 'torsopt', 'anharm']:
-            print('Switching to Task: energy, since Task: {0} can not be run for 1 atom'.format(task))
+            logging.info('Setting Task = energy, since {0} can not be run for 1 atom'.format(task))
             task = 'energy'
             parameters['task'] = task
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
@@ -197,7 +248,7 @@ def parse_qckeyword(parameters, calcindex=0):
             method = 'generic'
             parameters['formula'] = tokens[1]
         else:
-            print('ERROR! Invalid qckeyword: {0}'.format(tokens))
+            logging.info('ERROR! Invalid qckeyword: {0}'.format(tokens))
             return
         qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method]))
         package = ''
@@ -212,7 +263,7 @@ def parse_qckeyword(parameters, calcindex=0):
             basis = ''
             package = tokens[2]
         else:
-            print('ERROR! Invalid qckeyword: {0}'.format(tokens))
+            logging.info('ERROR! Invalid qckeyword: {0}'.format(tokens))
             return        
         if task.startswith('opt')  or task.startswith('geo') or task.startswith('min'):
             task = 'opt'
@@ -240,7 +291,7 @@ def parse_qckeyword(parameters, calcindex=0):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
         else:
-            print('ERROR! Invalid qckeyword task: {0}'.format(task))
+            logging.info('ERROR! Invalid qckeyword task: {0}'.format(task))
             return      
     parameters['qcdirectory'] = qcdirectory
     parameters['qcpackage'] = package
@@ -317,14 +368,14 @@ def parse_results(filename, parameters):
     r['xyz'] = ' '
     r['xmat'] = ' '
     r['hindered rotor potential'] = ' ' 
-    r['number of basis functions'] = 0
+    r['nbasis'] = 0
     r['nuclear repulsion energy:' ]= 0.
     r['energy' ]= 0.
     r['zpve'] = 0.
-    r['anharmonic zpve'] = 0.
-    r['harmonic frequencies' ]= []
-    r['anharmonic frequencies'] = []
-    r['projected frequencies' ]= []
+    r['azpve'] = 0.
+    r['freqs']= []
+    r['afreqs'] = []
+    r['pfreqs']= []
     if io.check_file(filename,timeout=1):
         r['file'] = io.get_path(filename)
         out = io.read_file(filename,asline=False)
@@ -332,22 +383,22 @@ def parse_results(filename, parameters):
         if package:
             r['package'] = package
         else:
-            print('"{0}" can not be parsed.'.format(r['file']))
+            logging.info('"{0}" can not be parsed.'.format(r['file']))
             return r
     else:
-        print('"{0}" can not be found at {1}'.format(filename,io.pwd()))
+        logging.info('"{0}" can not be found at {1}'.format(filename,io.pwd()))
         return r
 #     r['xyz'] = get_xyz(out, package)
 #     r['xmat'] = get_xyz(out, package)
 #     r['hindered rotor potential'] = get_xyz(out, package) 
-#     r['number of basis functions'] = get_xyz(out, package)
+#     r['nbasis'] = get_xyz(out, package)
 #     r['nuclear repulsion energy:' ]= get_xyz(out, package)
 #     r['energy' ]= get_xyz(out, package)
 #     r['zpve'] = get_xyz(out, package)
-#     r['anharmonic zpve'] = get_xyz(out, package)
-#     r['harmonic frequencies' ]= get_xyz(out, package)
+#     r[''azpve'] = get_xyz(out, package)
+#     r['freqs']= get_xyz(out, package)
 #     r['anharmonic frequencies'] = get_xyz(out, package)
-#     r['projected frequencies' ]= get_xyz(out, package)
+#     r['pfreqs']= get_xyz(out, package)
     return r
 
 
@@ -375,7 +426,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     elif type(s) is str:
         lines = s.splitlines()
     else:
-        print("First parameter in parse_output should be a string or list of strings")
+        logging.info("First parameter in parse_output should be a string or list of strings")
     d = {}
     [method,calculation,xyz,basis] = ['na']*4
     nbasis = 0
@@ -399,10 +450,11 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         xyz = get_nwchem_xyz(lines)
         basisinfo = get_nwchem_basis(lines)
         basis = basisinfo['basis']
-        nbasis = basisinfo['number of basis functions']
+        nbasis = basisinfo['nbasis']
         energies = get_nwchem_energies(lines)
         energy = energies[method]
         freqs = get_nwchem_frequencies(lines)
+        zpve = get_zpve(freqs)
         parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
@@ -433,33 +485,20 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if type(xmat) == str:
                 xmat = []
         parsed = True
-    elif package == 'torsscan':
+    elif package.startswith('tors'):
         optlevel, method, energy = get_torsscan_info(s)
-        if io.check_file('geom.log'):
+        if io.check_file('geoms/reac1_l1.xyz'):
+            xyz = io.read_file('geoms/reac1_l1.xyz')
+            energy = float(xyz.splitlines()[1].strip())         
+            parsed = True
+        elif io.check_file('geom.log'):
                 out = io.read_file('geom.log', aslines=False)
                 xyz = pa.gaussian_xyz(out)
                 method, energy = pa.gaussian_energy(out)
                 freqs = pa.gaussian_freqs(out)
                 parsed = True
-        if io.check_file('hrproj_freq.dat'):
-            freqlines = io.read_file('hrproj_freq.dat',aslines=True)
-            for line in freqlines:
-                if float(line) > 0.:
-                    pfreqs.append(float(line))
-        if io.check_file('RTproj_freq.dat'):
-            freqlines = io.read_file('RTproj_freq.dat',aslines=True)
-            for line in freqlines:
-                if float(line) > 0.:
-                    freqs.append(line)
-        fname = 'me_files/reac1_zpe.me'
-        if io.check_file(fname):
-            zpve = float(io.read_file(fname, aslines=False))                
-        fname = 'me_files/reac1_hr.me'
-        if io.check_file(fname):
-            messhindered = io.read_file(fname, aslines=False)
-        fname = 'RPHt_input_data.dat'
-        if io.check_file(fname):
-            RPHtinput = io.read_file(fname, aslines=False)
+        if io.check_dir('me_files', 1):
+            freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
 
     if parsed:
         if write:
@@ -479,25 +518,25 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if sum(afreqs) > 0:
                 fname = smilesname + '.anhrm'
                 io.write_file('\n'.join(str(x) for x in afreqs), fname)
-        d = {'number of basis functions':nbasis,
+        d = {'nbasis':nbasis,
                'energy':energy,
                'xyz':xyz,
-               'harmonic frequencies' : freqs,
-               'anharmonic frequencies' : afreqs,
+               'freqs': [float(x) for x in freqs],
+               'afreqs': afreqs,
                'projected frequencies': pfreqs,
                'zpve': zpve,
-               'anharmonic zpve': azpve,
+               'azpve': azpve,
                'xmat': xmat,
                'hindered potential': messhindered,
                'RPHt input': RPHtinput,
                'Hessian'   : hessian,
-               'HoF at 0 K': hof0,
-               'HoF at 298 K': hof298}
+               'deltaH0': hof0,
+               'deltaH298': hof298}
 #         if calculation == 'geometry optimization':
 #             for key,value in energies.iteritems():
 #                 if key is not method:
 #                     d[optlevel][package][calculation][method][basis]['geometry'].update({
-#                         'single point':{key:{basis:{'number of basis functions':nbasis,'energy':value}}}})
+#                         'single point':{key:{basis:{'nbasis':nbasis,'energy':value}}}})
 #                     if write:
 #                         fname = '{0}_{1}.ene'.format(method,smilesname)
 #                         io.write_file(str(energy), fname)
@@ -507,21 +546,19 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
                 if zpve:
                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
-                if len(hrmfreqs) > 0:
-                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
+                if len(freqs) > 0:
+                    io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
             else:
                 opt1, opt2, opt3 = optlevel.split('/')
                 if energy:
                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
                 if zpve:
                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
-                if zpve:
-                    io.db_store_sp_prop(str(anzpve), smilesname,'anzpve', None, package, method, basis, opt1, opt2, opt3)
-                if len(hrmfreqs) > 0:
-                    io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
+                if len(freqs) > 0:
+                    io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
                 if len(xmat) > 0:
                     io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
-                io.db_store_sp_prop(', '.join(freq for freq in hrmfreqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
+                io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
             if xyz:
                 io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
             if geo:
@@ -529,6 +566,17 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             if zmat:
                 io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
     return d
+
+
+def get_zpve(freqs):
+    """
+    Return zpve in au for given freq in 1/cm.
+    """
+    zpve = 0.0
+    for freq in freqs:
+        freq = float(freq)
+        zpve += freq
+    return zpve * 0.5 / 219474.63
 
 
 def get_listofstrings(array):
@@ -587,7 +635,48 @@ def parse_cclib(out):
     import cclib
     return cclib.io.ccread(out)
 
+def parse_me_files(path=None):
+    """
+    Parses files in me_files directory that TorsScan (EStoKTP) generates.
+    """
+    if path:
+        pass
+    else:
+        path = 'me_files'
+    
+    freqs = []
+    pfreqs = []
+    zpve = None
+    messhindered = None
+    RPHtinput = None
+    fname = io.join_path(path,'reac1_unpfr.me')
+    if io.check_file(fname):
+        out = io.read_file(fname, aslines=False)
+        freqs = get_mess_frequencies(out)
+        
+    fname = io.join_path(path,'reac1_fr.me')
+    if io.check_file(fname):
+        out = io.read_file(fname, aslines=False)
+        pfreqs = get_mess_frequencies(out)
+        
+    fname = io.join_path(path,'reac1_zpe.me')
+    if io.check_file(fname):
+        out = io.read_file(fname, aslines=False)
+        try:
+            zpve = float(out)  
+        except:
+            logging.error('Can not parse zpve for file {0}'.format(fname))             
+    fname = io.join_path(path,'reac1_hr.me')
+    if io.check_file(fname):
+        messhindered = io.read_file(fname, aslines=False)   
+    fname = 'RPHt_input_data.dat'
+    if io.check_file(fname):
+        RPHtinput = io.read_file(fname, aslines=False)
 
+    if freqs == pfreqs:
+        pfreqs = []
+    return freqs, pfreqs, zpve, messhindered, RPHtinput
+    
 def getcc_enthalpy(out):
     if type(out) is not cclib.parser.data.ccData_optdone_bool:
         if io.check_file(out, 1):
@@ -646,7 +735,7 @@ def get_symbol(atomno):
     """
     Returns the element symbol for a given atomic number.
     Returns 'X' for atomno=0
-    >>>print get_symbol(1)
+    >>>logging.info get_symbol(1)
     >>>H
     """
     syms = ['X',
@@ -672,22 +761,28 @@ def run(mol, parameters, mult=None):
     inptext = get_input(mol, tmp, parameters)
     if task.startswith('tors'):
         package = task
-    prefix = ob.get_smiles_filename(mol) + '_' + package
-    inpfile = prefix + '.inp'
-    outfile = prefix + '.out'
+    outfile = parameters['qcoutput']
+    inpfile = outfile.replace('out','inp')
+    prefix = outfile.replace('.out','')
+    run = True
     if io.check_file(outfile, timeout=1):
         if overwrite:
             msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
             run = True
         else:
             out = io.read_file(outfile)
-            if check_output(out):
+            if task.startswith('tors'):
+                if io.check_file('geom.xyz'):
+                    msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path('geom.xyz'))
+                    run = False                
+            elif check_output(out):
                 msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
                 run = False
             else: 
                 msg = 'Failed output found "{0}", renaming and running a new calculation\n'.format(io.get_path(outfile))
                 io.mv(outfile, 'failed_'+outfile)
                 run = True
+
     else:
         run = True
     if run:
@@ -715,7 +810,7 @@ def run(mol, parameters, mult=None):
 
 def run_extrapolation(mol,parameters):
     if parameters['qckeyword']:
-        msg = run_extrapolation_keyword(mol,parameters)
+        msg = run_extrapolation_keyword(parameters)
     elif parameters['qctemplate']:
         msg = run_extrapolation_template(mol, parameters)
     else:
@@ -723,7 +818,7 @@ def run_extrapolation(mol,parameters):
     return msg
 
 
-def run_extrapolation_keyword(mol, parameters):
+def run_extrapolation_keyword(parameters):
     """
     Parses qckeyword for composite method. 
     'opt/mp2/cc-pvdz/gaussian,freq/mp2/cc-pvtz/molpro,sp/mp2/cc-pvqz,composite/cbs-dtq/energy=0.1 * E[0] + 0.4 * E[1] + 0.5 * E[2]'
@@ -732,9 +827,9 @@ def run_extrapolation_keyword(mol, parameters):
     formula = parameters['formula'][0]
     method = parameters['qcmethod']
     msg = ''
-    smilesname = ob.get_smiles_filename(mol)
+    smilesname = parameters['smilesname']
     calcs = keyword.split(',')
-    print('Composite energy formula: {0}\n'.format(formula))
+    logging.info('Composite energy formula: {0}\n'.format(formula))
     ncalc = len(calcs) 
     calcindex = parameters['calcindex']
     e = [0.] * ncalc
@@ -751,14 +846,14 @@ def run_extrapolation_keyword(mol, parameters):
             msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
         else:
             msg += ('E({0}) can not be found at "{1}" \n'.format(i,enepath))
-    print(msg)
+    logging.info(msg)
     msg = ''
     exec(formula)
     if energy:
         io.write_file(str(energy),enefile )
         io.write_file(msg,inpfile )
-        print('Composite energy: {}\n'.format(energy))
-        print('Energy file: "{}"\n'.format(io.get_path(enefile)))
+        logging.info('Composite energy: {}\n'.format(energy))
+        logging.info('Energy file: "{}"\n'.format(io.get_path(enefile)))
     parse_qckeyword(parameters, calcindex)
     return msg
 
@@ -778,17 +873,17 @@ def run_extrapolation_template(s, parameters):
                 efile = io.join_path(*[edir,smilesname+'.ene'])
                 if io.check_file(efile,verbose=True):        
                     energies[i] = float(io.read_file(efile, aslines=False))
-                    print('Reading energy from {0} = {1}'.format(edir,energies[i]))
+                    logging.info('Reading energy from {0} = {1}'.format(edir,energies[i]))
     for line in lines:
         if 'energy=' in line:
             energy = 0
             exec(line)
-            print('Extrapolation based on formula: {0}'.format(line))        
-            print('Extrapolated energy = {0}'.format(energy))
+            logging.info('Extrapolation based on formula: {0}'.format(line))        
+            logging.info('Extrapolated energy = {0}'.format(energy))
         if 'filename=' in line:
             exec(line)
     if len(directories) < 1:
-        print('You have to specifies directories as a list in the template file')         
+        logging.info('You have to specifies directories as a list in the template file')         
     if energy:
         msg += 'Extrapolation successful'
         if parameters['writefiles']:
@@ -922,7 +1017,7 @@ def get_gaussian_input(x, template, mult=0):
     inp = inp.replace("QTC(GEO)", geo)
     inp = inp.replace("QTC(XYZ)", xyz)
     if "QTC(" in inp:
-        print("Error in template file:\n" + inp)
+        logging.info("Error in template file:\n" + inp)
         return
     return inp
 
@@ -1181,7 +1276,7 @@ def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1,
     Note2: Doctest is also sensitive to whitespace at the end of lines.
     Hence, I used .strip() to awoid unnecessary whitespace.
     >>> xyz = "2\\n \\n H 0. 0. 0.\\n H 0. 0. 0.9\\n  \\n"
-    >>> print get_mopac_input(xyz,method='pm7',dothermo=True)
+    >>> logging.info get_mopac_input(xyz,method='pm7',dothermo=True)
     pm7 precise nosym threads=1 opt
     <BLANKLINE>
     <BLANKLINE>
@@ -1241,7 +1336,7 @@ def get_mopac_natom(lines):
     """
     Return the number of atoms from mopac output
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_natom(s)
+    >>> logging.info get_mopac_natom(s)
     5
     """
     import iotools as io
@@ -1257,7 +1352,7 @@ def get_mopac_xyz(lines):
     """
     Returns xyz string from mopac output lines.
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_xyz(s)
+    >>> logging.info get_mopac_xyz(s)
     5
     <BLANKLINE>
     C 0.0000 -0.0000 0.0000
@@ -1285,7 +1380,7 @@ def get_mopac_freq(lines):
     """
     Returns a float list of vibrational frequencies in cm-1.
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_freq(s)
+    >>> logging.info get_mopac_freq(s)
     [ 1362.21  1362.44  1362.56  1451.04  1451.06  3207.4   3207.46  3207.59
       3310.99]
     """
@@ -1307,7 +1402,7 @@ def get_mopac_zpe(lines):
     """
     Return zero point energy in kcal/mol from mopac output.
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_zpe(s)
+    >>> logging.info get_mopac_zpe(s)
     28.481
     """
     if type(lines) == str:
@@ -1321,7 +1416,7 @@ def get_mopac_deltaH(lines):
     """
     Return delta H in kcal/mol from mopac output.
     >>> s = io.read_file('test/input.out')
-    >>> print get_mopac_deltaH(s)
+    >>> logging.info get_mopac_deltaH(s)
     -13.02534
     """
     if type(lines) == str:
@@ -1397,7 +1492,7 @@ def get_nwchem_energies(inp, filename=False):
             try:
                 energies[key] = float(lines[i].split()[-1])
             except:
-                print('Cannot parse {0}'.format(value))
+                logging.info('Cannot parse {0}'.format(value))
     return energies
 
 
@@ -1469,7 +1564,7 @@ def get_nwchem_basis(inp, filename=False):
         basis = '_'.join(basis)
     else:
         basis = basis[0]
-    return {'basis': basis,'number of basis functions': nbasis}
+    return {'basis': basis,'nbasis': nbasis}
 
 
 def get_nwchem_frequencies(inp, filename=False, minfreq=10):
@@ -1524,10 +1619,11 @@ def get_nwchem_frequencies(inp, filename=False, minfreq=10):
         for num in nums:
             line = lines[num]
             for item in line.split()[1:]:
-                freq = float(item)
-                if freq > minfreq:
+                freq = item.strip()
+                if float(freq) > minfreq:
                     freqs.append(freq)
     return freqs
+
 
 def get_torsscan_info(s):
     """
@@ -1559,6 +1655,53 @@ Rotational Constants:120.49000, 23.49807, 22.51838 GHz
         elif line.startswith('Energy'):
             energy = float(line.replace('A.U.','').split()[-1])
     return optlevel,  '{}/{}/{}'.format('torsscan',method,basis), energy
+
+
+def get_mess_frequencies(out):
+    """
+    Return frequencies as a list of floats by parsing mess input file.
+    Input follows Frequencies line
+    Sample input file:
+    AtomDistanceMin[angstrom] 0.6
+    Temperature(step[K],size)        100.   30
+    RelativeTemperatureIncrement            0.001
+    Species H2O
+    RRHO
+    Geometry[angstrom] 3 !torsscan/b3lyp/sto-3g/gaussian
+     O  0.000000  0.000000  0.000000
+     H  0.000000  0.000000  1.027000
+     H  1.018909  0.000000  -0.128659
+    
+    Core RigidRotor
+    SymmetryFactor 1
+    End
+    Frequencies[1/cm] 3 !torsscan/b3lyp/sto-3g/gaussian
+    2016.9034 3614.5724 3839.1980
+    ZeroEnergy[kcal/mol] 0.0215757824512 ! torsscan/b3lyp/sto-3g/gaussian
+    ElectronicLevels[1/cm]  1
+    0 1
+    End
+    >>> out = io.read_file('sample_logfiles/CH4O_pf.inp')
+    >>> print qc.get_mess_frequencies(out)
+    [3690.23, 3425.92, 3353.85, 3218.7, 1684.07, 1662.1, 1604.55, 1582.52, 1178.31, 1152.3, 1081.44, 398.92]
+    """
+    out = out.lower()
+    lines = out.splitlines()
+    n = io.get_line_number('frequencies', lines)
+    freqs = []
+    for line in lines[n+1:]:
+        if line.islower(): #Returns false if line has no letters
+            break
+        elif line.strip():
+            items = line.split()
+            for item in items:
+                try:
+                    freqs.append(item)
+                except:
+                    logging.error('Non-numeric string in frequency lines of mess input: {0}'.format(item))
+        else:
+            pass
+    return freqs
 
 
 def print_list(s):

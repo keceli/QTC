@@ -12,6 +12,7 @@ try:
 except:
     pass
 import json
+import logging
 def start_mongo(dbpath,logpath,mongoexe='mongod'):
     """
     Starts a mongo session.
@@ -78,14 +79,14 @@ def visualise_dict(d,lvl=0):
         form = '{:<45} {:<15} {:<10}'
         # print the table header if we're at the beginning
         if lvl == 0 and k == sorted(d)[0]:
-            print(form.format('KEY','LEVEL','TYPE'))
-            print('-'*79)
+            logging.info(form.format('KEY','LEVEL','TYPE'))
+            logging.info('-'*79)
 
         indent = '  '*lvl # indent the table to visualise hierarchy
         t = str(type(d[k]))
 
         # print details of each entry
-        print(form.format(indent+str(k),lvl,t))
+        logging.info(form.format(indent+str(k),lvl,t))
 
         # if the entry is a dictionary
         if type(d[k])==dict:
