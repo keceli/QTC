@@ -458,8 +458,10 @@ def get_messpf_input(mol,parameters):
         inp += ' End\n'
     if 'azpve' in results:
         zpve = results['azpve']
-    else:
+    elif 'zpve' in results:
         zpve = results['zpve']
+    else:
+        zpve = 0.
     inp += 'ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
     inp += 'ElectronicLevels[1/cm]  1\n'
     inp += '0 {0}\n'.format(multiplicity)
