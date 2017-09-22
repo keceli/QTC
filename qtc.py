@@ -284,7 +284,7 @@ def run(s):
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
     runfile = 'RUNNING.tmp'
     if io.check_file(runfile):
-        rungqc = False
+        runqc = False
         logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     if runqc:
         io.touch(runfile)
