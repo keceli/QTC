@@ -114,8 +114,8 @@ def get_args():
                         help='Write .xyz, .ene files')
     parser.add_argument('-w', '--storefiles', action='store_true',
                         help='Store .xyz, .ene files')
-    parser.add_argument('-I', '--runinteractive', action='store_true',
-                        help='Interactive mode for QTC')
+    parser.add_argument('-I', '--ignorerunningjobs', action='store_true',
+                        help='Ignores RUNNING.tmp files and run the calculations')
     parser.add_argument('-O', '--overwrite', action='store_true',
                         help='Overwrite existing calculations. Be careful, data will be lost.')
     parser.add_argument('-A', '--anharmonic', action='store_true',
@@ -175,6 +175,7 @@ def run(s):
     qckeyword = parameters['qckeyword']
     calcindex = parameters['calcindex']
     optdir = parameters['optdir']
+    ignore = parameters['ignorerunningjobs']
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
@@ -283,7 +284,7 @@ def run(s):
         return -1
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
     runfile = 'RUNNING.tmp'
-    if io.check_file(runfile):
+    if io.check_file(runfile) and not ignore:
         runqc = False
         logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     if runqc:
