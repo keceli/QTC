@@ -489,7 +489,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         energy = energies[method]
         freqs = get_nwchem_frequencies(lines)
         zpve = get_zpve(freqs)
-        parsed = True
+        if energy:
+            parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
         method = method.replace('\(','(').replace('\)',')')  #will figureout source of this later
@@ -501,11 +502,12 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         zmat           = pa.molpro_zmat(s)
         hessian        = pa.molpro_hessian(s)
         freqs       = pa.molpro_freqs(s)
-        parsed = True
+        if energy:
+            parsed = True
     elif package == 'gaussian':
         method, energy = pa.gaussian_energy(s)
         zpve           = pa.gaussian_zpve(s)
-        azpve       = pa.gaussian_anzpve(s)
+        azpve          = pa.gaussian_anzpve(s)
         calculation    = pa.gaussian_calc(s)
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
@@ -518,7 +520,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
             if type(xmat) == str:
                 xmat = []
-        parsed = True
+        if energy:
+            parsed = True
     elif package.startswith('tors'):
         optlevel, method, energy = get_torsscan_info(s)
         if io.check_file('geoms/reac1_l1.xyz'):
@@ -526,20 +529,25 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             energy = float(xyz.splitlines()[1].strip())         
             parsed = True
         elif io.check_file('geom.log'):
-                out = io.read_file('geom.log', aslines=False)
-                xyz = pa.gaussian_xyz(out)
-                method, energy = pa.gaussian_energy(out)
-                freqs = pa.gaussian_freqs(out)
-                parsed = True
+                try:
+                    out = io.read_file('geom.log', aslines=False)
+                    xyz = pa.gaussian_xyz(out)
+                    method, energy = pa.gaussian_energy(out)
+                    freqs = pa.gaussian_freqs(out)
+                    parsed = True
+                except:
+                    logging.error('Can not parse geom.log')
+                    parsed = False
         if io.check_dir('me_files', 1):
             freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
 
     if parsed:
         if write:
-            fname = smilesname + '.xyz'
-            io.write_file(xyz, fname)
             fname = smilesname + '.ene'
             io.write_file(str(energy), fname)
+            if xyz:
+                fname = smilesname + '.xyz'
+                io.write_file(xyz, fname)
             if zpve:
                 fname = smilesname + '.zpve'
                 io.write_file(str(zpve), fname)
@@ -557,7 +565,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                'xyz':xyz,
                'freqs': [float(x) for x in freqs],
                'afreqs': afreqs,
-               'projected frequencies': pfreqs,
+               'pfreqs': pfreqs,
                'zpve': zpve,
                'azpve': azpve,
                'xmat': xmat,
@@ -786,6 +794,7 @@ def run(mol, parameters, mult=None):
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
     task = parameters['qctask']
+    ignore = parameters['ignorerunningjobs']
     msg = ''
     if mult is None:
         mult = ob.get_multiplicity(mol)
@@ -813,12 +822,20 @@ def run(mol, parameters, mult=None):
                 msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
                 run = False
             else: 
-                msg = 'Failed output found "{0}", renaming and running a new calculation\n'.format(io.get_path(outfile))
-                io.mv(outfile, 'failed_'+outfile)
-                run = True
+                if ignore:
+                    run = False
+                    logging.info('Ignoring failed output {}'.format(io.get_path(outfile)))
+                else:
+                    msg = 'Failed output found "{0}", renaming and running a new calculation\n'.format(io.get_path(outfile))
+                    io.mv(outfile, 'failed_'+outfile)
+                    run = True
 
     else:
-        run = True
+        if ignore:
+            run = False
+            logging.info('No output found, ignoring...')
+        else:
+            run = True
     if run:
         io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
