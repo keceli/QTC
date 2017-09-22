@@ -214,9 +214,10 @@ def update_smiles_list(slist):
             if '_m' in s:
                 smi, mult = s.split('_m')
                 smi = ob.get_smiles(smi)
-                s = smi + '_m' + str(mult)
             else:
-                s = ob.get_smiles(s)
+                smi = ob.get_smiles(s)
+                mult = ob.get_mult(s)
+            s = smi + '_m' + str(mult)
             newlist.append(s)
     return newlist
 
