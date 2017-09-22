@@ -352,7 +352,7 @@ def run(s):
                    parameters['results']['projected frequencies'] = pfreqs
         else:
             logging.error('Output file "{0}" not found.\n'.format(qcoutput))
-            sys.exit('Output problem')
+            logging.error('Can not run thermo')
             runthermo = False
     logging.info(pprint.pformat((parameters['results'])))
     for key in results.keys():

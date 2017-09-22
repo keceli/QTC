@@ -238,7 +238,6 @@ def parse_qckeyword(parameters, calcindex=0):
     qcmethod
     qcbasis
     qctask
-    runqc
     parseqc
     writefiles
     anharmonic
@@ -318,7 +317,6 @@ def parse_qckeyword(parameters, calcindex=0):
     parameters['qcmethod'] = method
     parameters['qcbasis'] = basis
     parameters['qctask'] = task
-    parameters['runqc'] = True
     parameters['parseqc'] = True
     parameters['writefiles'] = True
     return parameters 
