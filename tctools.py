@@ -400,6 +400,7 @@ def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[], hindered=None):
 
 def get_messpf_input(mol,parameters):
     """
+    TODO: Anharmonic frequencies 
     Write input file for mess partition function program
     AtomDistanceMin[angstrom] 0.6
     Temperature(step[K],size)        100.   30
@@ -443,10 +444,11 @@ def get_messpf_input(mol,parameters):
         inp += results['hindered potential' ]
     if 'pfreqs' in results:
         freqs = results['pfreqs']
-    elif 'afreqs' in results:
-        freqs = results['afreqs']
-    if 'freqs' in results:
+    elif 'freqs' in results:
         freqs = results['freqs']    
+    if 'xmat' in results:
+        if 'afreqs' in results:
+            freqs = results['afreqs']
     inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
     inp += ' '.join([str(x) for x in freqs]) + '\n'
     if 'xmat' in results:
