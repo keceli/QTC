@@ -46,7 +46,7 @@ db= [{'_id'     : '[O][O]',
 'stoich'  : 'CH4', 
 'charge'  : 0,
 'mult'    : 1,
-'delHf': {0:-66.50, 298:-74.520, 'sigma':0.057},
+'delHf': {0:-66.55, 298:-74.520, 'sigma':0.057},
 'g09'     : { 
     'b3lyp'   : {'6-31+g(d,p)':{'energy': -40.52613767, 'sigma':0,
                                   'zmat': '\n 0   1\n c1\n h2                   c1   R1\n h3                   c1   R2       h2   A2\n h4                   c1   R3       h2   A3       h3   D3       0\n h5                   c1   R4       h2   A4       h3   D4       0\nVariables:\n R1\t1.0922\n R2\t1.0922\n A2\t109.4712\n R3\t1.0922\n A3\t109.4712\n D3\t240.0\n R4\t1.0922\n A4\t109.4712\n D4\t120.001\n'}},
