@@ -284,9 +284,17 @@ def run(s):
         return -1
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
     runfile = 'RUNNING.tmp'
-    if io.check_file(runfile) and not ignore:
+    if io.check_file(runfile):
+        if ignore and task is 'composite':
+            runqc = True
+            logging.info('Running composite calculation...')
+        else:
+            runqc = False
+            logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+    elif ignore and task is not 'composite':
         runqc = False
-        logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+
+
     if runqc:
         io.touch(runfile)
         if qcpackage in available_packages:
@@ -349,7 +357,7 @@ def run(s):
                 io.execute(RPHtexe  + ' ' + RPHtfile)
                 if io.check_file( 'hrproj_freq.dat'):
                    pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
-                   parameters['results']['projected frequencies'] = pfreqs
+                   parameters['results']['pfreqs'] = pfreqs
         else:
             logging.error('Output file "{0}" not found.\n'.format(qcoutput))
             logging.error('Can not run thermo')
