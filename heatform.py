@@ -10,6 +10,7 @@ import iotools as io
 import patools as pa
 import obtools as ob
 import logging
+import unittools as ut
 """
 Heatform determines the heat of formation for a molecule by using a basis of 
 molecules with well-determined heats of formation
@@ -673,9 +674,8 @@ def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
     E        - 0K heat of formation of molecule
    
     """
-    kj2au = 0.000380879803
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * kj2au
+        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * ut.kj2au
         e    =  E_QTC(bas, opt, en, freq, parameters)
         E   -=  coefflist[i] * e
     return E
@@ -733,7 +733,7 @@ def AU_to_kcal(E, printout=True):
         lines += '\n kcal/mol \t'
         lines += str(E *  627.503) + '\t'
         logging.debug( lines)
-    hf0k = E * 627.503
+    hf0k = E * ut.au2kcal #627.503
     return hf0k 
 
 def comp_coefficients(molform, basis='auto'):
