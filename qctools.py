@@ -85,7 +85,7 @@ def get_input(x, template, parameters):
                 inp = inp.replace("QTC(OPTDIR)", 'false') 
         else:
             inp = inp.replace("QTC(OPTDIR)", 'false') 
-        inp = inp.replace(      "QTC(NMC)", str(3**parameters['nrotor']+2) )
+        inp = inp.replace(      "QTC(NMC)", str(min(100,3**parameters['nrotor']+3)) )
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
@@ -254,7 +254,9 @@ def parse_qckeyword(parameters, calcindex=0):
     tokens = currentcalc.split('/')
     task = tokens[0]
     if parameters['natom'] == 1:
-        if task in ['opt', 'freq', 'torsscan', 'torsopt', 'anharm']:
+        if task.startswith('comp') or task.startswith('ene'):
+            pass
+        else: 
             logging.info('Setting Task = energy, since {0} can not be run for 1 atom'.format(task))
             task = 'energy'
             parameters['task'] = task

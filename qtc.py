@@ -263,17 +263,17 @@ def run(s):
             logging.error('Not a valid xyz file {0}. Skipping following calculations.'.format(xyzfile))
             runqc = False
             parseqc = False
-            thermo = False
+            runthermo = False
     else:
         if natom == 1:
-            pass
+            logging.info("XYZ not required, single atom calculation")
         elif task.startswith('tors') or task.startswith('opt'):
             logging.info("XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath))
         else:
             logging.error('No optimized geometry found, skipping subsequent calculations')
             runqc = False
             parseqc = False
-            thermo = False
+            runthermo = False
     cwd = io.pwd()
     io.mkdir(workdirectory)
     if io.check_dir(workdirectory, 1):
@@ -356,8 +356,8 @@ def run(s):
                 io.write_file(RPHt,RPHtfile)
                 io.execute(RPHtexe  + ' ' + RPHtfile)
                 if io.check_file( 'hrproj_freq.dat'):
-                   pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
-                   parameters['results']['pfreqs'] = pfreqs
+                    pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
+                    parameters['results']['pfreqs'] = pfreqs
         else:
             logging.error('Output file "{0}" not found.\n'.format(qcoutput))
             logging.error('Can not run thermo')
@@ -390,7 +390,7 @@ def run(s):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')
         hof298 = 0.
-        if 'freqs' in parameters['results']:
+        if 'freqs' in parameters['results'] or natom == 1:
             msg += tc.write_chemkin_polynomial2(mol, parameters)
             if io.check_file('thermp.out'):
                 import patools as pa
@@ -554,7 +554,6 @@ def main(arg_update={}):
                 for i in range(ncalc):
                     parameters['calcindex'] = i
                     logging.info('\n' + 100*'*' + '\n')
-                    logging.info('Running QTC')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)            
     else:
