@@ -305,7 +305,6 @@ def nest_2_dic(bas,key1,key2):
     Returns a dictionary value that requires two key values (is in singly nested loop )
     """
     from testdb import db
-
     for dic in db:
         if dic['_id'] == bas:
             break
@@ -845,26 +844,26 @@ def get_total_energy(mol, parameters):
         zpvetype = 'anzpve'    
     
     
-def main_keyword(mol,parameters):
+def main_keyword(s,parameters):
     
- #   mol    = ob.get_mol(s)
-    smi = ob.get_smiles(mol)
+   # mol    = ob.get_mol(s)
+   # smi = ob.get_smiles(s)
     basis  = parameters['hfbasis'].split(',')
     qckeys = parameters['qckeyword'].split(',')
     anharm = parameters['anharmonic']
     dbdir  = parameters['database']
     index  = parameters['calcindex']
     xyz    = parameters['xyzpath']
-    natom = ob.get_natom(mol)
+    natom = ob.get_natom(s)
     optlevel  = 'sp'
     extrap    = False
     enlevel   = None
     freqlevel = None
-    molform = ob.get_formula(mol)
+    molform = ob.get_formula(s)
     clist, basis, basprint = comp_coefficients(molform, basis)
 
 #     lines =  ('\n___________________________________________________\n\n' +
-#               'HEAT OF FORMATION FOR: ' + smi + ' (' + molform + ')' +
+#               'HEAT OF FORMATION FOR: ' + s + ' (' + molform + ')' +
 #               '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
 #               '\n\n___________________________________________________\n\n' +
 #               '\nYou have chosen to ' + 
@@ -877,13 +876,13 @@ def main_keyword(mol,parameters):
     parameters['xyzpath']=''
     parameters['suppress_printing']=True
     parameters['qckeyword'] = ','.join(qckeys[:index+1])
-    E =  E_QTC(smi, optlevel, enlevel, freqlevel, parameters)
+    E =  E_QTC(s, optlevel, enlevel, freqlevel, parameters)
     E =  E_hfbasis_QTC(molform, basis, clist, E, optlevel, enlevel, freqlevel, parameters)
     hf0k = AU_to_kcal(E)
     parameters['runthermo']=True
     parameters['suppress_printing']=False
     parameters['xyzpath']=xyz
-    parameters['input']=smi
+    parameters['input']=s
     parameters['qckeyword'] = ','.join(qckeys)
     return hf0k, basis
 
