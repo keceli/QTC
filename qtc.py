@@ -10,6 +10,7 @@ import dbtools as db
 import heatform as hf
 import pprint
 import sys
+import os
 import logging
 from patools import energy
 __updated__ = "2017-09-21"
@@ -179,6 +180,7 @@ def run(s):
     calcindex = parameters['calcindex']
     optdir = parameters['optdir']
     ignore = parameters['ignorerunningjobs']
+    overwrite=parameters['overwrite']
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
@@ -288,7 +290,7 @@ def run(s):
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
     runfile = 'RUNNING.tmp'
     if io.check_file(runfile):
-        if ignore and task is 'composite':
+        if overwrite or task is 'composite' :
             runqc = True
             logging.info('Running composite calculation...')
         else:
@@ -299,27 +301,38 @@ def run(s):
 
     if runqc:
         io.touch(runfile)
-        if natom > 1:
-            test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
-            nrotor = qc.get_test_chem_nrotor(test_out)
-            #parameters['nrotor'] = nrotor
-            logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
-        if qcpackage in available_packages:
-            msg = qc.run(mol, parameters, mult)
-        elif task == 'composite':
-            msg = qc.run_extrapolation(mol, parameters)
-        elif qcpackage == 'qcscript':
-            msg = "Running qcscript...\n"
-            geofile = smilesname + '.geo'
-            geo = ob.get_geo(mol)
-            io.write_file(geo, geofile)
-            if io.check_file(geofile, 1):
-                msg += qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
-        else:
-            msg = '{0} package not implemented\n'.format(qcpackage)
-            msg += 'Available packages are {0}'.format(available_packages)
-        logging.info(msg)
-        io.rm(runfile)
+        try:
+            logging.info('Running quantum chemistry calculations')
+            if natom > 1:
+                test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
+                nrotor = qc.get_test_chem_nrotor(test_out)
+                #parameters['nrotor'] = nrotor # We may want to uncomment in the future
+                logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
+            if qcpackage in available_packages:
+                msg = qc.run(mol, parameters, mult)
+            elif task == 'composite':
+                msg = qc.run_extrapolation(mol, parameters)
+            elif qcpackage == 'qcscript':
+                geofile = smilesname + '.geo'
+                geo = ob.get_geo(mol)
+                io.write_file(geo, geofile)
+                if io.check_file(geofile, 1):
+                    msg = qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
+            else:
+                msg = '{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage,available_packages)
+            logging.info(msg)
+            io.rm(runfile)
+        except KeyboardInterrupt:
+            logging.error('CTRL+C command...')
+            logging.info('Deleting lock file {}'.format(io.get_path(runfile)))
+            io.rm(runfile)
+            sys.exit()
+        except Exception as e:
+            logging.error('Error in running quantum chemistry calculations')
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error('Exception: '.format( exc_type, fname, exc_tb.tb_lineno))         
+            io.rm(runfile)
     if parseqc:
         logging.info('Parsing output...')
         if io.check_file('geom1.xyz'):
