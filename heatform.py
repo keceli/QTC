@@ -10,6 +10,7 @@ import iotools as io
 import patools as pa
 import obtools as ob
 import logging
+import unittools as ut
 """
 Heatform determines the heat of formation for a molecule by using a basis of 
 molecules with well-determined heats of formation
@@ -304,7 +305,6 @@ def nest_2_dic(bas,key1,key2):
     Returns a dictionary value that requires two key values (is in singly nested loop )
     """
     from testdb import db
-
     for dic in db:
         if dic['_id'] == bas:
             break
@@ -673,9 +673,8 @@ def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
     E        - 0K heat of formation of molecule
    
     """
-    kj2au = 0.000380879803
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * kj2au
+        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * ut.kj2au
         e    =  E_QTC(bas, opt, en, freq, parameters)
         E   -=  coefflist[i] * e
     return E
@@ -733,7 +732,7 @@ def AU_to_kcal(E, printout=True):
         lines += '\n kcal/mol \t'
         lines += str(E *  627.503) + '\t'
         logging.debug( lines)
-    hf0k = E * 627.503
+    hf0k = E * ut.au2kcal #627.503
     return hf0k 
 
 def comp_coefficients(molform, basis='auto'):
@@ -798,37 +797,38 @@ def E_QTC(bas, opt, en, freq, parameters):
     import qctools as qc
     import iotools as io
     natom = ob.get_natom(bas)
+    slabel = qc.get_slabel(bas)
     parameters['natom'] = natom
     calcindex = parameters['calcindex']
     parameters = qc.parse_qckeyword(parameters, calcindex)
     qckeyword = parameters['qckeyword']
     qclabel = qc.get_qc_label(natom, qckeyword, calcindex)
     en, zpve = 0., 0.
-    if 'energy' in parameters['all results'][bas][qclabel]:
-        en = parameters['all results'][bas][qclabel]['energy']
+    if 'energy' in parameters['all results'][slabel][qclabel]:
+        en = parameters['all results'][slabel][qclabel]['energy']
     if en:
-        logging.debug('Energy for {0} {1} = {2} Hartree'.format(bas, qclabel,en))
+        logging.debug('Energy for {0} {1} = {2} Hartree'.format(slabel, qclabel,en))
     else: 
-        logging.error('Energy not found for {0} {1}'.format(bas, qclabel))
-    if 'azpve' in parameters['all results'][bas][qclabel]:
-        zpve = parameters['all results'][bas][qclabel]['azpve']
+        logging.error('Energy not found for {0} {1}'.format(slabel, qclabel))
+    if 'azpve' in parameters['all results'][slabel][qclabel]:
+        zpve = parameters['all results'][slabel][qclabel]['azpve']
         zpvelabel = 'anharmonic ' + qclabel
-    elif 'zpve' in parameters['all results'][bas][qclabel]:
-        zpve = parameters['all results'][bas][qclabel]['zpve']
+    elif 'zpve' in parameters['all results'][slabel][qclabel]:
+        zpve = parameters['all results'][slabel][qclabel]['zpve']
         zpvelabel = 'harmonic ' + qclabel
     else:
         for i in range(calcindex):
             qclabel = qc.get_qc_label(natom, qckeyword, i)
-            if 'azpve' in parameters['all results'][bas][qclabel]:
-                zpve = parameters['all results'][bas][qclabel]['azpve']
+            if 'azpve' in parameters['all results'][slabel][qclabel]:
+                zpve = parameters['all results'][slabel][qclabel]['azpve']
                 zpvelabel = 'anharmonic ' + qclabel
-            elif 'zpve' in parameters['all results'][bas][qclabel]:
-                zpve = parameters['all results'][bas][qclabel]['zpve']
+            elif 'zpve' in parameters['all results'][slabel][qclabel]:
+                zpve = parameters['all results'][slabel][qclabel]['zpve']
                 zpvelabel = 'harmonic ' + qclabel
     if zpve:
-        logging.debug('ZPVE (harmonic) for {0} {1} = {2} Hartree'.format(bas,zpvelabel,zpve))
+        logging.debug('ZPVE (harmonic) for {0} {1} = {2} Hartree'.format(slabel,zpvelabel,zpve))
     else: 
-        logging.error('ZPVE not found for {0} {1}'.format(bas, qclabel))
+        logging.error('ZPVE not found for {0} {1}'.format(slabel, qclabel))
     return  float(en) + float(zpve)
 
 
@@ -844,26 +844,26 @@ def get_total_energy(mol, parameters):
         zpvetype = 'anzpve'    
     
     
-def main_keyword(mol,parameters):
+def main_keyword(s,parameters):
     
- #   mol    = ob.get_mol(s)
-    smi = ob.get_smiles(mol)
+   # mol    = ob.get_mol(s)
+   # smi = ob.get_smiles(s)
     basis  = parameters['hfbasis'].split(',')
     qckeys = parameters['qckeyword'].split(',')
     anharm = parameters['anharmonic']
     dbdir  = parameters['database']
     index  = parameters['calcindex']
     xyz    = parameters['xyzpath']
-    natom = ob.get_natom(mol)
+    natom = ob.get_natom(s)
     optlevel  = 'sp'
     extrap    = False
     enlevel   = None
     freqlevel = None
-    molform = ob.get_formula(mol)
+    molform = ob.get_formula(s)
     clist, basis, basprint = comp_coefficients(molform, basis)
 
 #     lines =  ('\n___________________________________________________\n\n' +
-#               'HEAT OF FORMATION FOR: ' + smi + ' (' + molform + ')' +
+#               'HEAT OF FORMATION FOR: ' + s + ' (' + molform + ')' +
 #               '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
 #               '\n\n___________________________________________________\n\n' +
 #               '\nYou have chosen to ' + 
@@ -876,13 +876,13 @@ def main_keyword(mol,parameters):
     parameters['xyzpath']=''
     parameters['suppress_printing']=True
     parameters['qckeyword'] = ','.join(qckeys[:index+1])
-    E =  E_QTC(smi, optlevel, enlevel, freqlevel, parameters)
+    E =  E_QTC(s, optlevel, enlevel, freqlevel, parameters)
     E =  E_hfbasis_QTC(molform, basis, clist, E, optlevel, enlevel, freqlevel, parameters)
     hf0k = AU_to_kcal(E)
     parameters['runthermo']=True
     parameters['suppress_printing']=False
     parameters['xyzpath']=xyz
-    parameters['input']=smi
+    parameters['input']=s
     parameters['qckeyword'] = ','.join(qckeys)
     return hf0k, basis
 

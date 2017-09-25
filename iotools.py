@@ -143,22 +143,37 @@ def read_file(filename, aslines=False):
     return tmp
 
 
+def get_unique_filename(fname):
+    """
+    Try to return a unique filename.
+    Not safe for race conditions.
+    """
+    counter = 1
+    uname = fname
+    while check_file(fname,timeout=0.01): 
+        uname = fname + '_' + str(counter)
+        counter += 1
+    return uname
+
+
 def fix_path(s):
     """
     Returns a path with problematic characters replaced by safer ones.
     """
-#   s = s.replace('[','_b')
-#   s = s.replace(']','_d')
-    s = s.replace(':','_i')
-    s = s.replace('|','_j')
-    s = s.replace('\\','_k') 
-#s = s.replace('/','_l')
-    s = s.replace('?','_m')
-    s = s.replace('(','_p')
-    s = s.replace(')','_q')
-    s = s.replace('*','_s')
-    s = s.replace('<','_v')
-    s = s.replace('>','_y')
+    s = s.replace('[','_b_')
+    s = s.replace(']','_d_')
+    #s = s.replace('=','_e_')
+    s = s.replace(':','_i_')
+    s = s.replace('|','_j_')
+    s = s.replace('\\','_k_') 
+    #s = s.replace('/','_l_')
+    s = s.replace('(','_p_')
+    s = s.replace(')','_q_')
+    s = s.replace('*','_s_')
+    #s = s.replace('#','_x_')
+    s = s.replace('<','_v_')
+    s = s.replace('>','_y_')
+    s = s.replace('?','_z_')
     return s
 
 

@@ -3,6 +3,7 @@
 import re
 import iotools as io
 import numpy as np
+import logging
 """
 Module for parsing logfiles
 
@@ -227,26 +228,30 @@ def gaussian_xyz_foresk(lines):
 def gaussian_geo(lines):
     atomnum = {'1':'H','6':'C','7':'N','8':'O'}
     xyz = ''
-    if 'Eckart' in lines:
-        lines = lines.split('Gaussian Orientation')[-1].split('Eckart')[0]
-        lines = lines.split('\n')[5:-2]
-        for i,line in enumerate(lines):
-            line = line.split()
-            xyz += atomnum[line[1]]+ '  ' + line[2] + '  ' + line[3] + '  ' + line[4] + '\n'
-        return xyz
-    else:
-        lines = lines.split('Coordinates (Angstroms)')[-1].split(' Distance matrix')[0].split(' Rotation')[0].split('Symm')[0]
-        lines = lines.split('\n')[3:-2]
-        for i,line in enumerate(lines):
-            line = line.split()
-            xyz += ' ' + atomnum[line[1]] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
-        return xyz 
-    return None
+    try:
+        if 'Eckart' in lines:
+            lines = lines.split('Gaussian Orientation')[-1].split('Eckart')[0]
+            lines = lines.split('\n')[5:-2]
+            for i,line in enumerate(lines):
+                line = line.split()
+                xyz += atomnum[line[1]]+ '  ' + line[2] + '  ' + line[3] + '  ' + line[4] + '\n'
+        else:
+            lines = lines.split('Coordinates (Angstroms)')[-1].split(' Distance matrix')[0].split(' Rotation')[0].split('Symm')[0]
+            lines = lines.split('\n')[3:-2]
+            for i,line in enumerate(lines):
+                line = line.split()
+                xyz += ' ' + atomnum[line[1]] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
+    except:
+        logging.error('Can not parse xyz')
+    return xyz
    
 def gaussian_xyz(lines):
     geo = gaussian_geo(lines) 
-    n   = str(len(geo.splitlines()))
-    xyz = n + '\n\n' +  geo
+    if geo:
+        n   = str(len(geo.splitlines()))
+        xyz = n + '\n\n' +  geo
+    else:
+        xyz = ''
     return xyz
 
 def gaussian_rotconsts(lines):

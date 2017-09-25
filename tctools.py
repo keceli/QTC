@@ -400,6 +400,7 @@ def get_pf_input(mol,method,xyz,freqs,zpe=0., xmat=[], hindered=None):
 
 def get_messpf_input(mol,parameters):
     """
+    TODO: Anharmonic frequencies 
     Write input file for mess partition function program
     AtomDistanceMin[angstrom] 0.6
     Temperature(step[K],size)        100.   30
@@ -421,7 +422,22 @@ def get_messpf_input(mol,parameters):
     ElectronicLevels[1/cm]  1
     0 1
     End
+    
+    For a single atom:    
+
+    AtomDistanceMin[angstrom] 0.6
+    Temperature(step[K],size)        100.   30
+    RelativeTemperatureIncrement            0.001
+    Species H
+      Atom
+         Mass[amu]     1
+
+         ElectronicLevels[1/cm]     1
+            0    2
+       End
     """
+    import unittools as ut
+    natom = parameters['natom']
     label = parameters['label']
     results = parameters['results']
     xyz = results['xyz']
@@ -429,38 +445,47 @@ def get_messpf_input(mol,parameters):
     natom = len(mol.atoms)
     formula = mol.formula
     multiplicity = mol.spin
-    inp   = 'AtomDistanceMin[angstrom] 0.6\n'
+    freqs = []
+    inp  = 'AtomDistanceMin[angstrom] 0.6\n'
     inp += 'Temperature(step[K],size)        100.   30\n'
     inp += 'RelativeTemperatureIncrement            0.001\n'
     inp += 'Species {0}\n'.format(formula)
-    inp += 'RRHO\n'
-    inp += 'Geometry[angstrom] {0} !{1}\n'.format(natom,label)
-    inp += ''.join(xyz.splitlines(True)[2:])
-    inp += '\nCore RigidRotor\n'
-    inp += 'SymmetryFactor {0}\n'.format(sym)
-    inp += 'End\n'
-    if 'hindered potential' in results:
-        inp += results['hindered potential' ]
-    if 'pfreqs' in results:
-        freqs = results['pfreqs']
-    elif 'afreqs' in results:
-        freqs = results['afreqs']
-    if 'freqs' in results:
-        freqs = results['freqs']    
-    inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
-    inp += ' '.join([str(x) for x in freqs]) + '\n'
-    if 'xmat' in results:
-        xmat = results['xmat']
-        inp += ' Anharmonicities[1/cm]\n'
-        for i in range( len(xmat)):
-            for j in range(i+1):
-                inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
-        inp += ' End\n'
-    if 'azpve' in results:
-        zpve = results['azpve']
+    if natom == 1:
+        inp += 'Atom\n'
+        inp += 'Mass[amu] {}\n'.format(ut.atommasses[formula])
     else:
-        zpve = results['zpve']
-    inp += 'ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
+        inp += 'RRHO\n'
+        inp += 'Geometry[angstrom] {0} !{1}\n'.format(natom,label)
+        inp += ''.join(xyz.splitlines(True)[2:])
+        inp += '\nCore RigidRotor\n'
+        inp += 'SymmetryFactor {0}\n'.format(sym)
+        inp += 'End\n'
+        if 'hindered potential' in results:
+            inp += results['hindered potential' ]
+        if 'pfreqs' in results:
+            freqs = results['pfreqs']
+        elif 'freqs' in results:
+            freqs = results['freqs']    
+        if 'xmat' in results:
+            if 'afreqs' in results:
+                freqs = results['afreqs']
+        if len(freqs) > 0:
+            inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
+            inp += ' '.join([str(x) for x in freqs]) + '\n'
+        if 'xmat' in results:
+            xmat = results['xmat']
+            inp += ' Anharmonicities[1/cm]\n'
+            for i in range( len(xmat)):
+                for j in range(i+1):
+                    inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
+            inp += ' End\n'
+        if 'azpve' in results:
+            zpve = results['azpve']
+        elif 'zpve' in results:
+            zpve = results['zpve']
+        else:
+            zpve = 0.
+        inp += 'ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
     inp += 'ElectronicLevels[1/cm]  1\n'
     inp += '0 {0}\n'.format(multiplicity)
     inp += 'End\n'

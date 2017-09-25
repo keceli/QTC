@@ -48,9 +48,9 @@ def get_format(s):
     return frm
 
 
-def get_mol(s, make3D=False):
+def get_mol(s, make3D=False, mult=None):
     """
-    Returns open-babel mol object from a given inchi or smiles string
+    Returns open-babel mol object from a given slabel, smiles string 
     >>> mol = get_mol('[O][O]')
     >>> print mol.formula
     O2
@@ -68,6 +68,9 @@ def get_mol(s, make3D=False):
     elif type(s) is str:
         if '.xyz' in s:
             mol = pybel.readfile('xyz', s).next()
+        elif '_m' in s:
+            s, mult = s.split('_m')
+            mol = set_mult(s,int(mult))
         else:   
             frm = get_format(s)
             mol = pybel.readstring(frm, s)
@@ -76,6 +79,8 @@ def get_mol(s, make3D=False):
         return None
     if make3D and mol.dim < 3:
         mol.make3D()
+    if mult:
+        mol.OBMol.SetTotalSpinMultiplicity(int(mult))       
     return mol
     
     
@@ -99,13 +104,8 @@ def get_mult(s):
     """
     Returns spin multiplicity for a given smiles or inchi string
     """
-    if '-m' in s:
-        s, m = s.split('-m')
-        mult = int(m.strip())
-    else:
-        mol = get_mol(s,make3D=False)
-        mult = mol.spin 
-    return mult
+    mol = get_mol(s,make3D=False)
+    return mol.spin 
 
 def get_formula(x, hydrogens=True, stoichemetry=True):
     """
@@ -360,7 +360,21 @@ def get_formats():
     return pybel.outformats
 
 
-def get_smiles_path(x, mult=0, method='',basis=''):
+def get_smiles_mult(slabel):
+    """
+    Splits slabel into smiles and multiplicity and returns them as 
+    a string and an integer, respectively.
+    """
+    smi = slabel
+    mult = 0
+    if '_m' in smi:
+        smi, mult = slabel.split('_m')
+    if not mult:
+        mult = get_multiplicity(smi)
+    return smi, int(mult)
+
+
+def get_smiles_path(x, mult=0, db= 'database'):
     """
     Returns a smiles based path for database directory.
     Note that smiles strings are not unique. Even the 
@@ -372,17 +386,19 @@ def get_smiles_path(x, mult=0, method='',basis=''):
         if mult == 0:
             mult = x.spin
         s = x.write(format='can').strip().split()[0]
+        s = s + '_m' + str(mult)
     elif type(x) is str:
-        s = x    
+        if '_m' in x:
+            s = x
+        else:
+            s = get_smiles(x)
+            mult = get_mult(s)
+            s = s + '_m' + str(mult)
     formula = get_formula(s)
     formula_noH = get_formula(s, stoichemetry=True, hydrogens=False)
     elements_noH = get_formula(s, stoichemetry=False, hydrogens=False)
     s = get_smiles_filename(s)    
-    if mult > 1:
-        multstr = "-m{0}".format(mult)
-    else:
-        multstr = ''
-    dirs = 'database', elements_noH, formula_noH, formula, s+multstr, method, basis
+    dirs = db, elements_noH, formula_noH, formula, s
     return io.join_path(*dirs)
 
 
@@ -416,18 +432,21 @@ def get_smiles_filename(x):
         s = x
     else:
         s = ''
-#   s = s.replace('[','_b')
-#   s = s.replace(']','_d')
-    s = s.replace(':','_i')
-    s = s.replace('|','_j')
-    s = s.replace('\\','_k') 
-    s = s.replace('/','_l')
-    s = s.replace('?','_m')
-    s = s.replace('(','_p')
-    s = s.replace(')','_q')
-    s = s.replace('*','_s')
-    s = s.replace('<','_v')
-    s = s.replace('>','_y')
+    s = s.replace('[','_b_')
+    s = s.replace(']','_d_')
+    #s = s.replace('=','_e_')
+    s = s.replace(':','_i_')
+    s = s.replace('|','_j_')
+    s = s.replace('\\','_k_') 
+    s = s.replace('/','_l_')
+    s = s.replace('(','_p_')
+    s = s.replace(')','_q_')
+    s = s.replace('*','_s_')
+    #s = s.replace('#','_x_')
+    s = s.replace('<','_v_')
+    s = s.replace('>','_y_')
+    s = s.replace('?','_z_')
+
     return s
 
 
@@ -460,6 +479,8 @@ def set_mult(x,mult):
     Sets the total spin multiplicity.
     """
     mol = get_mol(x)
+    mult = int(mult)
+    assert mult > 0, 'Multiplicity should be a positve integer'
     mol.OBMol.SetTotalSpinMultiplicity(mult)
     return mol
 

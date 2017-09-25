@@ -12,7 +12,7 @@ import pprint
 import sys
 import logging
 from patools import energy
-__updated__ = "2017-09-13"
+__updated__ = "2017-09-21"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -33,9 +33,10 @@ By ECP-PACC team
 """
 TODO: 
 When optimization fails, restart from the last geometry
-hof=0 at 0 K should also be at room T
 Delete NWChem scratch files
-Convert all smiles to canonical smiles at start
+Add torsX task/template
+Add auto stamp for logfile
+Check for negative energies in hindered potential
 """
 def get_args():
     """
@@ -75,7 +76,10 @@ def get_args():
                         help='Verbosity level of logging, 0 for only errors, 3 for debugging')
     parser.add_argument('-f', '--logfile', type=str,
                         default= 'none',
-                        help='Log file prefix, use none for logging to STDOUT')
+                        help='Log file prefix, use none for logging to STDOUT, include DATE if you want a date stamp')
+    parser.add_argument('-g', '--logindex', type=str,
+                        default= '',
+                        help='Log file index')
     parser.add_argument('-d', '--qcdirectory', type=str,
                         default='',
                         help='Path for the directory for running qc jobs')
@@ -95,7 +99,7 @@ def get_args():
                         help='List of SMILES (seperated by commas) for reference thermo species')
     parser.add_argument('-D', '--database', type=str,
                         default= io.pwd(),
-                        help='Heat of formation basis molecules')
+                        help='Path for database directory')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
     parser.add_argument('-Q', '--runqc', action='store_true',
@@ -110,12 +114,15 @@ def get_args():
                         help='Write .xyz, .ene files')
     parser.add_argument('-w', '--storefiles', action='store_true',
                         help='Store .xyz, .ene files')
-    parser.add_argument('-I', '--runinteractive', action='store_true',
-                        help='Interactive mode for QTC')
+    parser.add_argument('-I', '--ignorerunningjobs', action='store_true',
+                        help='Ignores RUNNING.tmp files and run the calculations')
     parser.add_argument('-O', '--overwrite', action='store_true',
                         help='Overwrite existing calculations. Be careful, data will be lost.')
     parser.add_argument('-A', '--anharmonic', action='store_true',
                         help='Anharmonic corrections')
+    parser.add_argument('--fix', type=int,
+                        default=0,
+                        help='If FIX > 0, interpolate negative energies in hindered potential input for mess')
     parser.add_argument('--mopac', type=str,
                         default='mopac',
                         help='Path for mopac executable')
@@ -168,6 +175,7 @@ def run(s):
     qckeyword = parameters['qckeyword']
     calcindex = parameters['calcindex']
     optdir = parameters['optdir']
+    ignore = parameters['ignorerunningjobs']
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
@@ -226,7 +234,7 @@ def run(s):
     logging.info(msg)
     smilesname = io.fix_path(s)
     parameters['smilesname' ] = smilesname
-    smilesdir =  ob.get_smiles_path(mol, mult, method='', basis='')
+    smilesdir =  ob.get_smiles_path(s, mult)
     smilesdir = io.join_path(parameters['database'], smilesdir)
     parameters['smilesdir'] = smilesdir
     workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
@@ -249,17 +257,23 @@ def run(s):
             xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
     if xyzfile:
         logging.info("XYZ file = '{0}'\n".format(xyzfile))
-        mol = ob.get_mol(xyzfile)
+        try:
+            mol = ob.get_mol(xyzfile)
+        except:
+            logging.error('Not a valid xyz file {0}. Skipping following calculations.'.format(xyzfile))
+            runqc = False
+            parseqc = False
+            runthermo = False
     else:
         if natom == 1:
-            pass
+            logging.info("XYZ not required, single atom calculation")
         elif task.startswith('tors') or task.startswith('opt'):
             logging.info("XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath))
         else:
             logging.error('No optimized geometry found, skipping subsequent calculations')
             runqc = False
             parseqc = False
-            thermo = False
+            runthermo = False
     cwd = io.pwd()
     io.mkdir(workdirectory)
     if io.check_dir(workdirectory, 1):
@@ -271,8 +285,16 @@ def run(s):
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
     runfile = 'RUNNING.tmp'
     if io.check_file(runfile):
-        rungqc = False
-        logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+        if ignore and task is 'composite':
+            runqc = True
+            logging.info('Running composite calculation...')
+        else:
+            runqc = False
+            logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+    elif ignore and task is not 'composite':
+        runqc = False
+
+
     if runqc:
         io.touch(runfile)
         if qcpackage in available_packages:
@@ -334,11 +356,11 @@ def run(s):
                 io.write_file(RPHt,RPHtfile)
                 io.execute(RPHtexe  + ' ' + RPHtfile)
                 if io.check_file( 'hrproj_freq.dat'):
-                   pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
-                   parameters['results']['projected frequencies'] = pfreqs
+                    pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
+                    parameters['results']['pfreqs'] = pfreqs
         else:
             logging.error('Output file "{0}" not found.\n'.format(qcoutput))
-            sys.exit('Output problem')
+            logging.error('Can not run thermo')
             runthermo = False
     logging.info(pprint.pformat((parameters['results'])))
     for key in results.keys():
@@ -368,7 +390,7 @@ def run(s):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')
         hof298 = 0.
-        if 'freqs' in parameters['results']:
+        if 'freqs' in parameters['results'] or natom == 1:
             msg += tc.write_chemkin_polynomial2(mol, parameters)
             if io.check_file('thermp.out'):
                 import patools as pa
@@ -398,6 +420,8 @@ def main(arg_update={}):
     parameters = vars(args)
     parameters['all results'] = {}
     logfile = parameters['logfile']
+    logindex = parameters['logindex']
+    hostname = gethostname()
     if parameters['loglevel'] == 0:
         loglevel = logging.ERROR
     elif parameters['loglevel'] == 1:
@@ -411,16 +435,21 @@ def main(arg_update={}):
     logging.addLevelName(logging.ERROR, 'ERROR:')
     logging.addLevelName(logging.WARNING, 'WARNING:')
     if logfile is 'none':
-        logging.basicConfig(format='%(levelname)s%(message)s', level=loglevel)
+        if logindex:
+            logfile = 'qtc_' + logindex + '_' + hostname + '.log'
+        else:
+            logging.basicConfig(format='%(levelname)s%(message)s', level=loglevel)
     else:
-        logfile = logfile + '_qtc_' + get_date_time("%Y%m%d-%H%M%S") + '.log'
+        logfile = logfile + logindex + '_' + hostname + '.log'
+        logfile.replace('DATE', get_date_time("%y%m%d-%H%M%S"))
+        logfile = io.get_unique_filename(logfile)
         logging.basicConfig(format='%(levelname)s%(message)s', filename=logfile, level=loglevel)
     for key in arg_update:
         parameters[key] = arg_update[key]
     logging.info(__logo__)
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
     logging.info("QTC: Last update             = {0}".format(__updated__))
-    logging.info("QTC: Hostname                = {0}".format(gethostname()))
+    logging.info("QTC: Hostname                = {0}".format(hostname))
     logging.info('QTC: Given arguments         =')
     for param in parameters:
         logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
@@ -439,11 +468,13 @@ def main(arg_update={}):
     nproc = args.nproc
     if io.check_file(inp):
         if inp.split('.')[-1] == 'json':
-            mylist = db.get_smiles_from_json(inp)
+            jlist = db.load_json_file(inp)
+            mylist = qc.get_slabels_from_json(jlist)
         else:
             mylist = io.read_list(inp)
     elif io.check_file(jsonfile):
-        mylist = db.get_smiles_from_json(jsonfile)  
+        jlist = db.load_json_file(jsonfile)
+        mylist = qc.get_slabels_from_json(jlist)
     else:
         mylist = inp.split(',')
     if endindex:
@@ -461,9 +492,10 @@ def main(arg_update={}):
             formula = ob.get_formula(s)
             _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['hfbasis'].split(','))
             for basismol in basismolecules:
-                if basismol not in mylist:
+                smi = qc.get_slabel(basismol)
+                if smi not in mylist:
                     msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
-                    mylist = [basismol] + mylist
+                    mylist = [smi] + mylist
                     logging.info(msg)
         logging.info("QTC: Number of species required for thermo= {0}".format(len(mylist)))
     if parameters['generate']:
@@ -473,7 +505,7 @@ def main(arg_update={}):
         io.write_file(myliststr, sortedfile)
         if io.check_file(sortedfile,1):
             logging.info('Sorted SMILES file = {}'.format(sortedfile))
-            logging.info('You can use qtc -b 1 -l 5, to compute species with indices 1,2,3,4,5.')
+            logging.info('You can use qtc -b 1 -e 5, to compute species with indices 1,2,3,4,5.')
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     elif parameters['qckeyword']:
@@ -522,7 +554,6 @@ def main(arg_update={}):
                 for i in range(ncalc):
                     parameters['calcindex'] = i
                     logging.info('\n' + 100*'*' + '\n')
-                    logging.info('Running QTC')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)            
     else:

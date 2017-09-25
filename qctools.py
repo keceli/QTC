@@ -24,25 +24,24 @@ def sort_species_list(slist, printinfo=False):
     i = 0
     tmplist= ['']*len(slist)
     for s in slist:
-        smi = ob.get_smiles(s)
-        mol = ob.get_mol(smi,make3D=True)
+        mol = ob.get_mol(s,make3D=True)
         nrotor = ob.get_nrotor(mol)
         nelec = ob.get_nelectron(mol)
         natom = ob.get_natom(mol)
         nheavy = ob.get_natom_heavy(mol)
         formula = ob.get_formula(mol)
         mult = ob.get_multiplicity(mol)
-        tmplist[i] = [smi,formula,mult,nrotor,nelec,natom,nheavy]
+        tmplist[i] = [s,formula,mult,nrotor,nelec,natom,nheavy]
         i += 1
     tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[3],x[4],x[5]))
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
         logging.info('-'*100)
-        logging.info('{:>8s} {:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
+        logging.info('{:>8s}\t{:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
         i = 0
-        for s in tmplist:
+        for tmp in tmplist:
             i += 1
-            logging.info('{:8d} {:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,*s))
+            logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
         logging.info('-'*100)
     return sortedlist
 
@@ -86,7 +85,7 @@ def get_input(x, template, parameters):
                 inp = inp.replace("QTC(OPTDIR)", 'false') 
         else:
             inp = inp.replace("QTC(OPTDIR)", 'false') 
-        inp = inp.replace(      "QTC(NMC)", str(3**parameters['nrotor']+2) )
+        inp = inp.replace(      "QTC(NMC)", str(min(100,3**parameters['nrotor']+3)) )
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
@@ -183,10 +182,25 @@ def update_qckeyword(keyword):
     keyword = keyword.replace('torscan/','torsscan/')
     return keyword
 
+def get_slabels_from_json(j):
+    """
+    Builds a list of strings that contains slabels for 
+    all species in json list.
+    Needs to convert from unicode to string.
+    """
+    nitem = len(j)
+    slabels = ['']*nitem
+    i = 0
+    for d in j :
+        mult = d['multiplicity']
+        slabels[i] = d['SMILES'].encode('ascii','ignore') + '_m' + str(mult)
+        i += 1
+    return slabels
 
 def update_smiles_list(slist):
     """
-    Replaces each smiles with open-babel canonical smiles.
+    Replaces each smiles with open-babel canonical smiles
+    and adds multiplicity with '_m' suffix.
     Removes all inert species.
     >>> sl = ['[Ne]','C','O-O','[O]O','O[O]']
     >>> print qc.update_smiles_list(sl)
@@ -197,7 +211,13 @@ def update_smiles_list(slist):
         if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
-            s = ob.get_smiles(s)
+            if '_m' in s:
+                smi, mult = s.split('_m')
+                smi = ob.get_smiles(smi)
+            else:
+                smi = ob.get_smiles(s)
+                mult = ob.get_mult(s)
+            s = smi + '_m' + str(mult)
             newlist.append(s)
     return newlist
 
@@ -218,7 +238,6 @@ def parse_qckeyword(parameters, calcindex=0):
     qcmethod
     qcbasis
     qctask
-    runqc
     parseqc
     writefiles
     anharmonic
@@ -235,7 +254,9 @@ def parse_qckeyword(parameters, calcindex=0):
     tokens = currentcalc.split('/')
     task = tokens[0]
     if parameters['natom'] == 1:
-        if task in ['opt', 'freq', 'torsscan', 'torsopt', 'anharm']:
+        if task.startswith('comp') or task.startswith('ene'):
+            pass
+        else: 
             logging.info('Setting Task = energy, since {0} can not be run for 1 atom'.format(task))
             task = 'energy'
             parameters['task'] = task
@@ -298,10 +319,25 @@ def parse_qckeyword(parameters, calcindex=0):
     parameters['qcmethod'] = method
     parameters['qcbasis'] = basis
     parameters['qctask'] = task
-    parameters['runqc'] = True
     parameters['parseqc'] = True
     parameters['writefiles'] = True
     return parameters 
+
+
+def get_slabel(smi,mult=None):
+    """
+    slabel is a unique smiles string for labeling species in QTC.
+    Composed of two parts 'canonical smiles' and 'multiplicity'
+    Canical smiles strings are unique only for a given code.
+    QTC uses open babel.
+    slabel = smi + '_m' + str(mult)
+    """
+    if '_m' in smi:
+        smi, mult = smi.split('_m')
+    smi = ob.get_smiles(smi)
+    if not mult:
+        mult = ob.get_multiplicity(smi)
+    return smi + '_m' + str(mult)
 
 
 def get_qc_label(natom, qckeyword, calcindex):
@@ -455,7 +491,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         energy = energies[method]
         freqs = get_nwchem_frequencies(lines)
         zpve = get_zpve(freqs)
-        parsed = True
+        if energy:
+            parsed = True
     elif package == 'molpro':
         method, energy = pa.molpro_energy(s)
         method = method.replace('\(','(').replace('\)',')')  #will figureout source of this later
@@ -467,11 +504,12 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         zmat           = pa.molpro_zmat(s)
         hessian        = pa.molpro_hessian(s)
         freqs       = pa.molpro_freqs(s)
-        parsed = True
+        if energy:
+            parsed = True
     elif package == 'gaussian':
         method, energy = pa.gaussian_energy(s)
         zpve           = pa.gaussian_zpve(s)
-        azpve       = pa.gaussian_anzpve(s)
+        azpve          = pa.gaussian_anzpve(s)
         calculation    = pa.gaussian_calc(s)
         basis          = pa.gaussian_basisset(s)
         zmat           = pa.gaussian_zmat(s)
@@ -484,7 +522,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
             if type(xmat) == str:
                 xmat = []
-        parsed = True
+        if energy:
+            parsed = True
     elif package.startswith('tors'):
         optlevel, method, energy = get_torsscan_info(s)
         if io.check_file('geoms/reac1_l1.xyz'):
@@ -492,20 +531,25 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             energy = float(xyz.splitlines()[1].strip())         
             parsed = True
         elif io.check_file('geom.log'):
-                out = io.read_file('geom.log', aslines=False)
-                xyz = pa.gaussian_xyz(out)
-                method, energy = pa.gaussian_energy(out)
-                freqs = pa.gaussian_freqs(out)
-                parsed = True
+                try:
+                    out = io.read_file('geom.log', aslines=False)
+                    xyz = pa.gaussian_xyz(out)
+                    method, energy = pa.gaussian_energy(out)
+                    freqs = pa.gaussian_freqs(out)
+                    parsed = True
+                except:
+                    logging.error('Can not parse geom.log')
+                    parsed = False
         if io.check_dir('me_files', 1):
             freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
 
     if parsed:
         if write:
-            fname = smilesname + '.xyz'
-            io.write_file(xyz, fname)
             fname = smilesname + '.ene'
             io.write_file(str(energy), fname)
+            if xyz:
+                fname = smilesname + '.xyz'
+                io.write_file(xyz, fname)
             if zpve:
                 fname = smilesname + '.zpve'
                 io.write_file(str(zpve), fname)
@@ -523,7 +567,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                'xyz':xyz,
                'freqs': [float(x) for x in freqs],
                'afreqs': afreqs,
-               'projected frequencies': pfreqs,
+               'pfreqs': pfreqs,
                'zpve': zpve,
                'azpve': azpve,
                'xmat': xmat,
@@ -752,6 +796,7 @@ def run(mol, parameters, mult=None):
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
     task = parameters['qctask']
+    ignore = parameters['ignorerunningjobs']
     msg = ''
     if mult is None:
         mult = ob.get_multiplicity(mol)
@@ -779,12 +824,20 @@ def run(mol, parameters, mult=None):
                 msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
                 run = False
             else: 
-                msg = 'Failed output found "{0}", renaming and running a new calculation\n'.format(io.get_path(outfile))
-                io.mv(outfile, 'failed_'+outfile)
-                run = True
+                if ignore:
+                    run = False
+                    logging.info('Ignoring failed output {}'.format(io.get_path(outfile)))
+                else:
+                    msg = 'Failed output found "{0}", renaming and running a new calculation\n'.format(io.get_path(outfile))
+                    io.mv(outfile, 'failed_'+outfile)
+                    run = True
 
     else:
-        run = True
+        if ignore:
+            run = False
+            logging.info('No output found, ignoring...')
+        else:
+            run = True
     if run:
         io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):

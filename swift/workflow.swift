@@ -5,9 +5,15 @@
 
 import files;
 import io;
-import sys;
 import string;
+import sys;
 
+// Project root directory
+string THIS = getenv("THIS"); 
+
+// Retrieve user argument --cfg=<qtc.cfg>
+cfg = argv("cfg");
+printf("cfg: " + cfg);
 // Retrieve user argument --input=<input_list_file>
 list_name = argv("input");
 printf("input: " + list_name);
@@ -17,14 +23,15 @@ list_file = input(list_name);
 string lines[] = file_lines(list_file, comment="!");
 
 // Define the app function for QTC
-app qtc(string molecule)
+app qtc(string cfg, string molecule, int index)
 {
-  "/home/wozniak/proj/qtc/swift/qtc.sh" molecule ;
+  (THIS+"/qtc.sh") cfg molecule index ;
 }
 
 // Run QTC on each molecule in the input file
-foreach line in lines
+foreach line,i in lines
 {
-  trace(line);
-  qtc(line);
+  trace(line + " " + i);
+  // trace(hash(line));
+  qtc(cfg, line, i);
 }
