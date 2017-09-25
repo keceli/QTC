@@ -147,6 +147,9 @@ def get_args():
     parser.add_argument('--pac99', type=str,
                         default='pac99',
                         help='Path for pac99 executable')
+    parser.add_argument('--test_chem', type=str,
+                        default='test_chem',
+                        help='Path for test_chem executable')
     parser.add_argument('--suppress_printing', action='store_true')
     parser.add_argument('--qcscript', type=str,
 #                        default='/lcrc/project/PACC/test-awj/builddb/bin/qcscript.pl',
@@ -224,7 +227,7 @@ def run(s):
     msg += "SMILES = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "Number of atoms = {0}\n".format(natom)
-    msg += "Number of rotors = {0}\n".format(nrotor)
+    msg += "Number of rotors (open babel) = {0}\n".format(nrotor)
     msg += 'Task = {0}\n'.format(parameters['qctask'])
     msg += 'Method = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis = {0}\n'.format(parameters['qcbasis'])
@@ -294,9 +297,13 @@ def run(s):
     elif ignore and task is not 'composite':
         runqc = False
 
-
     if runqc:
         io.touch(runfile)
+        if natom > 1:
+            test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
+            nrotor = qc.get_test_chem_nrotor(test_out)
+            parameters['nrotor'] = nrotor
+            logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
         if qcpackage in available_packages:
             msg = qc.run(mol, parameters, mult)
         elif task == 'composite':
@@ -378,6 +385,18 @@ def run(s):
     parameters['results']['deltaH298'] = 0
     parameters['all results'][s][label]['deltaH298'] = 0                                    
     if runthermo:
+        if natom == 1:
+            sym =1
+        else:        
+            if io.check_file(smilesname + '.xyz') :
+                test_inp = (smilesname + '.xyz')
+            elif 'xyz' in parameters['results'] and natom > 1:
+                test_inp = parameters['results']['xyz']
+            logging.info('Running test_chem for symmetry number')
+            out_test_chem = qc.run_test_chem(test_inp, parameters['test_chem'])
+            sym = qc.get_test_chem_sym(out_test_chem) 
+        logging.info('Symmetry number = {}'.format(sym))
+        parameters['results']['sym'] = sym
         hof, hfset = hf.main_keyword(s,parameters)
         hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
         hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 

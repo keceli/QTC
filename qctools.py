@@ -965,6 +965,113 @@ def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
     return msg
 
 
+def run_test_chem(xyz,exe='test_chem'):
+    """
+    Runs Yury's test_chem code to get symmetry number and number of rotors
+    """
+    if io.check_file(xyz):
+        inp = xyz
+    else:
+        io.write_file(xyz, 'test_chem.xyz')
+        inp = 'test_chem.xyz'
+    out = 'test_chem.out'
+    logging.debug('Running test_chem for {}'.format(inp))
+    io.execute([exe,xyz],stdoutfile=out)
+    if io.check_file(out,1):
+        pass
+    else:
+        logging.error('Failed in running test_chem for {}'.format(inp))
+        out = '' 
+    return out
+
+
+def get_test_chem_nrotor(out):
+    if io.check_file(out):
+        out = io.read_file(out)
+    lines = out.splitlines()
+    nrotor = 0
+    key = 'Rotational bond dihedral angles:'
+    for line in lines:
+        if line.startswith(key):
+            line = line.replace(key,'').strip()
+            if line:
+                if ',' in line:
+                    nrotor = len(line.split(',')) + 1
+                else:
+                    nrotor = 1
+            else:
+                nrotor = 0
+    return nrotor
+
+
+def get_test_chem_sym(out):
+    """
+    molecule is nonlinear
+has enantiomer? yes
+
+rotational symmetry number = 1
+
+Molecular structure: resonantly stabilized (2 resonances)
+
+   A\A    O1   O2   H3   C4   O5   O6 
+
+   O1     X
+
+   O2     1    X
+
+   H3     1    0    X
+
+   C4     0    1    0    X
+
+   O5     0    0    0  1.5    X
+
+   O6     0    0    0  1.5    0    X
+
+
+Free radical: Radical sites are O4 O5 
+
+Z-matrix atom order:
+ 0 -->  0
+ 1 -->  1
+ 2 -->  2
+ 3 -->  3
+ 4 -->  4
+ 5 -->  5
+
+Z-Matrix:
+O
+O, 1 , R1 
+H, 1 , R2 , 2 , A2 
+C, 2 , R3 , 1 , A3 , 3 , D3 
+O, 4 , R4 , 2 , A4 , 1 , D4 
+O, 4 , R5 , 2 , A5 , 5 , D5 
+
+ R1   =         2.77828
+ R2   =         1.82926 A2   =         95.1267
+ R3   =         2.58174 A3   =          110.52 D3   =         74.8222
+ R4   =          2.3984 A4   =         119.574 D4   =         64.0599
+ R5   =         2.39823 A5   =         114.245 D5   =             180
+
+Rotational bond dihedral angles: d3, d4
+
+Beta-scission bonds: r3
+
+Linear bonds: 
+    """
+    if io.check_file(out):
+        out = io.read_file(out)
+    lines = out.splitlines()
+    sym = 1
+    key = 'rotational symmetry number ='
+    for line in lines:
+        if line.startswith(key):
+            try:
+                sym = int(line.split()[-1])
+            except:
+                logging.error('Failed in parsing sym. number in test_chem output {}'.format(out))
+    return sym   
+
+             
 def check_output(s):
     """
     Returns true/false if quantum chemistry calculation completed/failed.
