@@ -976,7 +976,7 @@ def run_test_chem(xyz,exe='test_chem'):
         inp = 'test_chem.xyz'
     out = 'test_chem.out'
     logging.debug('Running test_chem for {}'.format(inp))
-    io.execute([exe,xyz],stdoutfile=out)
+    io.execute([exe,inp],stdoutfile=out)
     if io.check_file(out,1):
         pass
     else:
