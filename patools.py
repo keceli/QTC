@@ -169,7 +169,7 @@ def gaussian_hessian(lines):
     eline = io.get_line_number(endkey,lines=lines)
     if sline < 0:
         return ''
-    hess   = '\n'.join(lines[sline+1:eline])
+    hess   = '\n'.join(lines[sline+1:eline]).replace('D','E')
     return hess
 
 def gaussian_zpve(lines):
