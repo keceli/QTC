@@ -302,7 +302,7 @@ def run(s):
         if natom > 1:
             test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
             nrotor = qc.get_test_chem_nrotor(test_out)
-            parameters['nrotor'] = nrotor
+            #parameters['nrotor'] = nrotor
             logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
         if qcpackage in available_packages:
             msg = qc.run(mol, parameters, mult)
