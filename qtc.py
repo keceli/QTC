@@ -13,7 +13,7 @@ import sys
 import os
 import logging
 from patools import energy
-__updated__ = "2017-09-21"
+__updated__ = "2017-09-25"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -119,6 +119,8 @@ def get_args():
                         help='Ignores RUNNING.tmp files and run the calculations')
     parser.add_argument('-O', '--overwrite', action='store_true',
                         help='Overwrite existing calculations. Be careful, data will be lost.')
+    parser.add_argument('-X', '--excel', action='store_true',
+                        help='Generate excel file')
     parser.add_argument('-A', '--anharmonic', action='store_true',
                         help='Anharmonic corrections')
     parser.add_argument('--fix', type=int,
@@ -190,6 +192,7 @@ def run(s):
     parameters['all results'][s].update({label:{}})
     parameters['nrotor'] = nrotor
     parameters['label'] = label
+    parameters['slabel'] = s
     results = parameters['results']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
         if package.startswith('nwc'):
@@ -349,7 +352,13 @@ def run(s):
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput, aslines=False)
             if qc.check_output(out):
-                results = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
+                try:
+                    results = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
+                except Exception as e:
+                    logging.error('Error in parsing {}'.format(io.get_path(qcoutput)))
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    logging.error('Exception: '.format( exc_type, fname, exc_tb.tb_lineno))         
                 for key in results.keys():
                     val = results[key]
                     if hasattr(val, "any"):
@@ -392,11 +401,11 @@ def run(s):
             if val:
                 parameters['all results'][s][label].update({key: results[key]})
  #   parameters['all results'][s].update({label:parameters['results']})
-    msg = '\n'
     parameters['results']['deltaH0'] = 0
     parameters['all results'][s][label]['deltaH0'] = 0   
     parameters['results']['deltaH298'] = 0
     parameters['all results'][s][label]['deltaH298'] = 0                                    
+    parameters['all results'][s][label]['chemkin'] = ''                                   
     if runthermo:
         if natom == 1:
             sym =1
@@ -422,21 +431,15 @@ def run(s):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')
         hof298 = 0.
-        if 'freqs' in parameters['results'] or natom == 1:
-            msg += tc.write_chemkin_polynomial2(mol, parameters)
-            if io.check_file('thermp.out'):
-                import patools as pa
-                lines = io.read_file('thermp.out')
-                hof298 = pa.get_298(lines)
-                msg += 'delHf(298) = {0} kcal/mol'.format(hof298)
-            else:
-                msg += 'thermp.out not found'
-        else:
-            msg += 'No harmonic frequency results found'
+        chemkintext = ''
+        try:
+            hof298, chemkintext = tc.write_chemkin_polynomial(mol, parameters)
+        except:
+            logging.error('Failed in chemkin polynomial generation')
         parameters['results']['deltaH298'] = hof298
         parameters['all results'][s][label]['deltaH298'] = hof298   
+        parameters['all results'][s][label]['chemkin'] = chemkintext
     io.cd(cwd)
-    logging.info(msg)
     return
 
 
@@ -596,13 +599,20 @@ def main(arg_update={}):
         logging.info(pprint.pformat((parameters['all results'])))
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
+            ckin = ''
             out   = '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('SMILES', 'deltaH(0)', 'deltaH(298)', 'Key')
             out += '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('      ', ' [kj/mol]', '[kj/mol]', ' ')
             for resultkey,resultval in parameters['all results'].iteritems():
                 for qcresultkey, qcresultval in sorted(resultval.iteritems(),key= lambda x: x[0]):
                     out += '{0:30s} {1:15.5f} {2:15.5f}\t   {3:50s}\n'.format(
                         resultkey, qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
-            logging.info(out)   
+                    ckin += qcresultval['chemkin']
+            logging.info(out)
+            ckinfile = 'chemkin_' + get_date_time("%y%m%d-%H%M%S") + '.txt'
+            ckinfile = io.get_unique_filename(ckinfile)
+            io.write_file(ckin,ckinfile)
+            logging.info('Written all chemkin polynomials in {}'.format(io.get_path(ckinfile)))
+        
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))

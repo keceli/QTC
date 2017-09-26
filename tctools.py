@@ -238,7 +238,7 @@ def get_chemkin_str(deltaH,tag,formula,filename):
     return lines1to3 + line4 +lines5to7
 
 
-def write_chemkin_file(qlabel, slabel, hof, hof298,formula,filename):
+def write_chemkin_file(slabel, qlabel, hof, hof298,formula,filename):
     """
     Given formula string, tag string, deltaH float and a filename string,
     writes a file containing NASA polynomials in chemkin format:
