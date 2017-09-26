@@ -9,6 +9,7 @@ from os.path import isfile
 import iotools as io
 import obtools as ob
 import qctools as qc
+import patools as pa
 import logging
 """
 Thermochemistry tools.
@@ -237,7 +238,7 @@ def get_chemkin_str(deltaH,tag,formula,filename):
     return lines1to3 + line4 +lines5to7
 
 
-def write_chemkin_file(deltaH,tag,formula,filename):
+def write_chemkin_file(qlabel, slabel, hof, hof298,formula,filename):
     """
     Given formula string, tag string, deltaH float and a filename string,
     writes a file containing NASA polynomials in chemkin format:
@@ -249,16 +250,18 @@ def write_chemkin_file(deltaH,tag,formula,filename):
      3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
-    lines1to3 = get_comment_lines(tag, deltaH)
+    comments   = '! {} \t {}\n'.format(slabel, qlabel)
+    comments += '! deltaH(0) {} kcal/mol\n'.format(hof)
+    comments += '! deltaH(298) {} kcal/mol\n'.format(hof298)
     nH = get_stoichometry(formula, 'H')
     nC = get_stoichometry(formula, 'C')
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
     line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
     lines5to7 = get_coefficients(formula+'.c97')
-    with open(filename,'w') as f:
-        f.write(lines1to3 + line4 +lines5to7)
-    return 0
+    s = comments + line4 +lines5to7
+    io.write_file(s, filename)
+    return s
 
 
 def get_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.):
@@ -622,7 +625,7 @@ def run_pac99(formula,pac99='pac99'):
 #     return msg
 
 
-def write_chemkin_polynomial2(mol, parameters):
+def write_chemkin_polynomial(mol, parameters):
     """
     A driver to perform all operations to write NASA polynomial in
     chemkin format. Assumes quantum chemistry calculation is performed.
@@ -630,25 +633,35 @@ def write_chemkin_polynomial2(mol, parameters):
     messpfinput = 'pf.inp'
     messpfoutput = 'pf.log'
     name = mol.formula
-    tag = parameters['label']
+    qlabel = parameters['label']
+    slabel = parameters['slabel']
     hof = parameters['results']['deltaH0']
     inp = get_messpf_input(mol, parameters)
     io.write_file(inp, messpfinput)
-    msg = 'Running {0} to generate partition function.\n'.format(parameters['messpf'])
-    msg += io.execute([parameters['messpf'],messpfinput])
-    msg += 'Running thermp .\n'
+    logging.debug('Running {0} to generate partition function...'.format(parameters['messpf']))
+    msg = io.execute([parameters['messpf'],messpfinput])
+    logging.debug(msg)
+    logging.debug('Running thermp...')
     inp = get_thermp_input(mol.formula, hof)
     msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp']) 
-    msg += 'Running pac99.\n'
-    msg += run_pac99(name)
-    msg += 'Converting to chemkin format.\n'
+    logging.debug(msg)
+    logging.debug('Running pac99...')
+    msg = run_pac99(name)
+    logging.debug(msg)
+    if io.check_file('thermp.out'):
+        lines = io.read_file('thermp.out')
+        hof298 = pa.get_298(lines)
+        logging.info('delHf(298) = {0} kcal/mol'.format(hof298))
+    else:
+        logging.error('Failed to crete thermp.out')
+    logging.debug('Converting to chemkin format.')
     chemkinfile = name + '.ckin'
-    msg += 'Writing chemkin file {0}.\n'.format(chemkinfile)
+    logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))
     try:
-        msg += write_chemkin_file(hof, tag, name, chemkinfile)
+        chemkininput = write_chemkin_file(slabel,qlabel, hof, hof298, name, chemkinfile)
     except:
-        "Failed to write polynomials"
-    return msg
+        "Failed to write chemkin polynomials"
+    return hof298, chemkininput
 
 def get_new_groups():
     s = """
