@@ -39,7 +39,7 @@ def rm(fname):
     if check_file(fname):
         os.remove(fname)
     else:
-        logging.debug('Can not delete file. {} does not exist.'.format(fname))
+        logging.debug('Cannot delete file. {} does not exist.'.format(fname))
     return
 
 

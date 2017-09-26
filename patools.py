@@ -242,7 +242,7 @@ def gaussian_geo(lines):
                 line = line.split()
                 xyz += ' ' + atomnum[line[1]] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
     except:
-        logging.error('Can not parse xyz')
+        logging.error('Cannot parse xyz')
     return xyz
    
 def gaussian_xyz(lines):

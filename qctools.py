@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-09-13"
+__updated__ = "2017-09-25"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -257,7 +257,7 @@ def parse_qckeyword(parameters, calcindex=0):
         if task.startswith('comp') or task.startswith('ene'):
             pass
         else: 
-            logging.info('Setting Task = energy, since {0} can not be run for 1 atom'.format(task))
+            logging.info('Setting Task = energy, since {0} cannot be run for 1 atom'.format(task))
             task = 'energy'
             parameters['task'] = task
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
@@ -419,10 +419,10 @@ def parse_results(filename, parameters):
         if package:
             r['package'] = package
         else:
-            logging.info('"{0}" can not be parsed.'.format(r['file']))
+            logging.info('"{0}" cannot be parsed.'.format(r['file']))
             return r
     else:
-        logging.info('"{0}" can not be found at {1}'.format(filename,io.pwd()))
+        logging.info('"{0}" cannot be found at {1}'.format(filename,io.pwd()))
         return r
 #     r['xyz'] = get_xyz(out, package)
 #     r['xmat'] = get_xyz(out, package)
@@ -538,7 +538,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                     freqs = pa.gaussian_freqs(out)
                     parsed = True
                 except:
-                    logging.error('Can not parse geom.log')
+                    logging.error('Cannot parse geom.log')
                     parsed = False
         if io.check_dir('me_files', 1):
             freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
@@ -709,7 +709,7 @@ def parse_me_files(path=None):
         try:
             zpve = float(out)  
         except:
-            logging.error('Can not parse zpve for file {0}'.format(fname))             
+            logging.error('cannot parse zpve for file {0}'.format(fname))             
     fname = io.join_path(path,'reac1_hr.me')
     if io.check_file(fname):
         messhindered = io.read_file(fname, aslines=False)   
@@ -867,7 +867,7 @@ def run_extrapolation(mol,parameters):
     elif parameters['qctemplate']:
         msg = run_extrapolation_template(mol, parameters)
     else:
-        msg = 'Can not run extrapolation, you need to specify qckeyword with -k or qctemplate with -t. \n'
+        msg = 'Cannot run extrapolation, you need to specify qckeyword with -k or qctemplate with -t. \n'
     return msg
 
 
@@ -898,7 +898,7 @@ def run_extrapolation_keyword(parameters):
             e[i] = float(io.read_file(enepath))
             msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
         else:
-            msg += ('E({0}) can not be found at "{1}" \n'.format(i,enepath))
+            msg += ('E({0}) cannot be found at "{1}" \n'.format(i,enepath))
     logging.info(msg)
     msg = ''
     exec(formula)
