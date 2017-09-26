@@ -150,7 +150,7 @@ def get_unique_filename(fname):
     """
     counter = 1
     uname = fname
-    while check_file(fname,timeout=0.01): 
+    while check_file(uname,timeout=0.01): 
         uname = fname + '_' + str(counter)
         counter += 1
     return uname
