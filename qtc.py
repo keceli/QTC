@@ -346,8 +346,8 @@ def run(s):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
             else:
-                logging.error('Can not find "{0}".\n'.format(enefile))
-                logging.error('Can not run thermo\n')
+                logging.error('Cannot find "{0}".\n'.format(enefile))
+                logging.error('Cannot run thermo\n')
                 runthermo = False
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput, aslines=False)
@@ -369,7 +369,7 @@ def run(s):
                             parameters['results'].update({key: results[key]})
             else:
                 logging.error('Failed calculation in "{0}".\n'.format(qcoutput))
-                logging.error('Can not run thermo\n')
+                logging.error('Cannot run thermo\n')
                 runthermo = False                
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
                 RPHt, geolines = parameters['results']['RPHt input'].split('geometry')
@@ -389,7 +389,7 @@ def run(s):
                     parameters['results']['pfreqs'] = pfreqs
         else:
             logging.error('Output file "{0}" not found.\n'.format(qcoutput))
-            logging.error('Can not run thermo')
+            logging.error('Cannot run thermo')
             runthermo = False
     logging.info(pprint.pformat((parameters['results'])))
     for key in results.keys():
@@ -407,17 +407,26 @@ def run(s):
     parameters['all results'][s][label]['deltaH298'] = 0                                    
     parameters['all results'][s][label]['chemkin'] = ''                                   
     if runthermo:
+        sym = 1
         if natom == 1:
-            sym =1
-        else:        
+            logging.info('Single atom, sym set to 1.')
+            pass
+        else:
+            test_inp = ''
             if io.check_file(smilesname + '.xyz') :
                 test_inp = (smilesname + '.xyz')
             elif 'xyz' in parameters['results'] and natom > 1:
                 test_inp = parameters['results']['xyz']
             logging.info('Running test_chem for symmetry number')
-            out_test_chem = qc.run_test_chem(test_inp, parameters['test_chem'])
-            sym = qc.get_test_chem_sym(out_test_chem) 
-        logging.info('Symmetry number = {}'.format(sym))
+            if test_inp:
+                try:
+                    out_test_chem = qc.run_test_chem(test_inp, parameters['test_chem'])
+                    sym = qc.get_test_chem_sym(out_test_chem) 
+                    logging.info('Symmetry number = {}'.format(sym))
+                except:
+                    logging.error('test_chem run failed, sym. number is set to 1. Probably a failed xyz')
+            else:
+                logging.error('xyz file cannot be found')
         parameters['results']['sym'] = sym
         hof, hfset = hf.main_keyword(s,parameters)
         hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
