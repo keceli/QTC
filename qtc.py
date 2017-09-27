@@ -121,6 +121,8 @@ def get_args():
                         help='Overwrite existing calculations. Be careful, data will be lost.')
     parser.add_argument('-X', '--excel', action='store_true',
                         help='Generate excel file')
+    parser.add_argument('-J', '--dumpjsonfile', action='store_true',
+                        help='Writes a json file containing all the results')
     parser.add_argument('-A', '--anharmonic', action='store_true',
                         help='Anharmonic corrections')
     parser.add_argument('--fix', type=int,
@@ -334,7 +336,7 @@ def run(s):
             logging.error('Error in running quantum chemistry calculations')
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            logging.error('Exception: '.format( exc_type, fname, exc_tb.tb_lineno))         
+            logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
             io.rm(runfile)
     if parseqc:
         logging.info('Parsing output...')
@@ -358,7 +360,7 @@ def run(s):
                     logging.error('Error in parsing {}'.format(io.get_path(qcoutput)))
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    logging.error('Exception: '.format( exc_type, fname, exc_tb.tb_lineno))         
+                    logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
                 for key in results.keys():
                     val = results[key]
                     if hasattr(val, "any"):
@@ -441,13 +443,18 @@ def run(s):
             io.write_file(groupstext, 'new.groups')
         hof298 = 0.
         chemkintext = ''
-        try:
-            hof298, chemkintext = tc.write_chemkin_polynomial(mol, parameters)
-        except:
-            logging.error('Failed in chemkin polynomial generation')
+        rmgpoly = {}
+     #   try:
+        hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
+     #   except Exception as e:
+     #           exc_type, exc_obj, exc_tb = sys.exc_info()
+     #           fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+     #           logging.error('Failed in chemkin polynomial generation')
+     #           logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
         parameters['results']['deltaH298'] = hof298
         parameters['all results'][s][label]['deltaH298'] = hof298   
         parameters['all results'][s][label]['chemkin'] = chemkintext
+        parameters['all results'][s][label]['NASAPolynomial'] = rmgpoly
     io.cd(cwd)
     return
 
@@ -485,7 +492,7 @@ def main(arg_update={}):
             logging.basicConfig(format='%(levelname)s%(message)s', level=loglevel)
     else:
         logfile = logfile + logindex + '_' + hostname + '.log'
-        logfile.replace('DATE', get_date_time("%y%m%d-%H%M%S"))
+        logfile = logfile.replace('DATE', get_date_time("%y%m%d_%H%M%S"))
         logfile = io.get_unique_filename(logfile)
         logging.basicConfig(format='%(levelname)s%(message)s', filename=logfile, level=loglevel)
     for key in arg_update:
@@ -512,13 +519,13 @@ def main(arg_update={}):
     nproc = args.nproc
     if io.check_file(inp):
         if inp.split('.')[-1] == 'json':
-            jlist = db.load_json_file(inp)
+            jlist = db.load_json(inp)
             mylist = qc.get_slabels_from_json(jlist)
         else:
             mylist = io.read_list(inp)
-    elif io.check_file(jsonfile):
-        jlist = db.load_json_file(jsonfile)
-        mylist = qc.get_slabels_from_json(jlist)
+   # elif io.check_file(jsonfile):
+   #     jlist = db.load_json(jsonfile)
+   #     mylist = qc.get_slabels_from_json(jlist)
     else:
         mylist = inp.split(',')
     if endindex:
@@ -617,11 +624,15 @@ def main(arg_update={}):
                         resultkey, qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
                     ckin += qcresultval['chemkin']
             logging.info(out)
-            ckinfile = 'chemkin_' + get_date_time("%y%m%d-%H%M%S") + '.txt'
+            ckinfile = 'chemkin_' + get_date_time("%y%m%d_%H%M%S") + '.txt'
             ckinfile = io.get_unique_filename(ckinfile)
             io.write_file(ckin,ckinfile)
             logging.info('Written all chemkin polynomials in {}'.format(io.get_path(ckinfile)))
-        
+        if parameters['dumpjsonfile']:
+            jsonfile = 'parameters_' +  get_date_time("%y%m%d_%H%M%S") + '.json'
+            jsonfile = io.get_unique_filename(jsonfile)
+            logging.info('Writing json file {}'.format(jsonfile))
+            db.dump_json(parameters, jsonfile)
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
