@@ -13,6 +13,9 @@ except:
     pass
 import json
 import logging
+import sys
+import os
+
 def start_mongo(dbpath,logpath,mongoexe='mongod'):
     """
     Starts a mongo session.
@@ -37,14 +40,30 @@ def insert_entry(entry,db,efilter={}):
     return db.replace_one(efilter,entry,upsert=True)
 
 
-def load_json_file(jsonfile):
+def load_json(jsonfile):
     """
     Opens and loads a .json file. 
     """
-    import json
     with open(jsonfile) as f:
         j = json.load(f)
     return j
+
+
+def dump_json(d, filename):
+    """
+    Given a dictionary d and a string specifying a filename,
+    writes the dictionary as a json file
+    """
+    try:
+        with open(filename, 'w') as f:
+            json.dump(d, f, ensure_ascii=False)
+    except Exception as e:
+        logging.error('Error in running quantum chemistry calculations')
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        logging.error('Exception: '.format( exc_type, fname, exc_tb.tb_lineno))       
+    return
+
 
 def gen_dict_extract(key, var):
     """
@@ -85,7 +104,20 @@ def visualise_dict(d,lvl=0):
         if type(d[k])==dict:
             # visualise THAT dictionary with +1 indent
             visualise_dict(d[k],lvl+1)
-    
+
+def merge_dicts(*dict_args):
+    """
+    https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
+    Given any number of dicts, shallow copy and merge into a new dict,
+    precedence goes to key value pairs in latter dicts.
+    """
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+  
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod(verbose=True)
