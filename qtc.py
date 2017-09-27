@@ -642,16 +642,20 @@ def main(arg_update={}):
                     csvtext = '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format('Slabel', 'RMGlabel', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
                     for d in jlist:
                         name = str(d['name'])
-                        smi = str(d['SMILES'])
+                        smi  = str(d['SMILES'])
+                        mult = int(d['multiplicity'])
+                        s    = qc.get_slabel(smi,mult)
                         try:
                             poly = parameters['all results'][s][qlabel]['NASAPolynomial']
                             Cplist = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]
-                            S298 = tc.get_entropy(poly,T)
-                            H298 = tc.get_enthalpy(poly,T)
-                            csvtext += '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format(s, name, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
+                            S298 = tc.get_entropy(poly,298.15)
+                            H298 = tc.get_enthalpy(poly,298.15)
+                            csvtext += '{},{},{},{},{},{},{},{}\n'.format(s, name, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
                         except:
-                            csvtext += '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format(s, 'NA', 'NA', 'NA', 'NA', 'NA','NA', 'NA')
-                    io.write_file(csvtext,csvfile)
+                            csvtext += '{},{},{},{},{},{},{},{}\n'.format(s, name, 'NA', 'NA', 'NA', 'NA','NA', 'NA')
+                    if csvtext:
+                        logging.info('Writing csv file {}'.format(csvfile))
+                        io.write_file(csvtext,csvfile)
                 
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
