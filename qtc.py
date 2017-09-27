@@ -518,6 +518,7 @@ def main(arg_update={}):
     jsonfile = args.jsoninput
     nproc = args.nproc
     if io.check_file(inp):
+        jlist = []
         if inp.split('.')[-1] == 'json':
             jlist = db.load_json(inp)
             mylist = qc.get_slabels_from_json(jlist)
@@ -633,6 +634,25 @@ def main(arg_update={}):
             jsonfile = io.get_unique_filename(jsonfile)
             logging.info('Writing thermo json file {}'.format(jsonfile))
             db.dump_json(parameters['all results'], jsonfile)
+            if jlist:
+                for i in range(ncalc):
+                    csvfile = 'qtc_method_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
+                    csvfile = io.get_unique_filename(csvfile)
+                    qlabel = qc.get_qc_label(parameters['natom'], parameters['qckeyword'], i)
+                    csvtext = '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format('Slabel', 'RMGlabel', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
+                    for d in jlist:
+                        name = str(d['name'])
+                        smi = str(d['SMILES'])
+                        try:
+                            poly = parameters['all results'][s][qlabel]['NASAPolynomial']
+                            Cplist = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]
+                            S298 = tc.get_entropy(poly,T)
+                            H298 = tc.get_enthalpy(poly,T)
+                            csvtext += '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format(s, name, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
+                        except:
+                            csvtext += '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format(s, 'NA', 'NA', 'NA', 'NA', 'NA','NA', 'NA')
+                    io.write_file(csvtext,csvfile)
+                
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
