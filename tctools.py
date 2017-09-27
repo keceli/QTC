@@ -146,7 +146,7 @@ def get_comment_lines(tag,deltaH):
     return line1 + line2 + line3
 
 
-def get_coefficients(c97filename):
+def get_coefficients(c97text):
     """
     Returns a string of 3 lines containing NASA polynomial
     coefficients in chemkin format
@@ -168,8 +168,7 @@ def get_coefficients(c97filename):
      3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
-    with open(c97filename,'r') as f:
-        lines = f.readlines()
+    lines = c97text.splitlines()
     las  = np.zeros(7)
     has  = np.zeros(7)
     las[0:5] = parse_line16(lines[6][0:80])
@@ -177,10 +176,52 @@ def get_coefficients(c97filename):
     has[0:5] = parse_line16(lines[9][0:80])
     has[5:7] = parse_line16(lines[10][48:80])
 
+    return las, has
+
+
+def get_coefficients_str(las,has):
+    """
+    Returns a string of 3 lines containing NASA polynomial
+    coefficients in chemkin format
+    *.c97 file:
+    C2H3
+    3 201704 C   2.00H   3.00    0.00    0.00    0.00 0   27.0452200     296391.000
+    100.000   200.000 2  0.0  1.0  0.0  0.0  0.0  0.0  0.0  0.0        10698.000
+    3.587567650D+00 3.894470300D-03 0.000000000D+00 0.000000000D+00 0.000000000D+00
+    0.000000000D+00 0.000000000D+00 0.000000000D+00 3.437879620D+04 6.439970150D+00
+    200.000  1000.000 5  0.0  1.0  2.0  3.0  4.0  0.0  0.0  0.0        10698.000
+    2.881119522D+00 4.825191250D-03 1.818030931D-05-2.828286454D-08 1.209654946D-11
+    0.000000000D+00 0.000000000D+00 0.000000000D+00 3.446352960D+04 9.703788500D+00
+    1000.000  3000.000 5  0.0  1.0  2.0  3.0  4.0  0.0  0.0  0.0        10698.000
+    2.984627599D+00 1.078391826D-02-5.158601830D-06 1.200731137D-09-1.103701620D-13
+    0.000000000D+00 0.000000000D+00 0.000000000D+00 3.423078010D+04 7.923373280D+00
+
+        coefficients in chemkin format:
+     2.98462760E+00 1.07839183E-02-5.15860183E-06 1.20073114E-09-1.10370162E-13    2
+     3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
+    -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
+    """
     line2 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    2\n"%(has[0], has[1], has[2], has[3], has[4])
     line3 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    3\n"%(has[5], has[6], las[0], las[1], las[2])
     line4 = "% 15.8E% 15.8E% 15.8E% 15.8E                   4\n"%(las[3], las[4], las[5], las[6])
     return line2+line3+line4
+
+
+def get_rmg_polynomial(las, has,temps=[200.,1000.,1000.,3000.]):
+    """
+    Return NASA polynomial as a dictionary in RMG format:
+    
+    NASA Polynomial, seven or nine coefficients, Tmax and Tmin = valid temperature range
+    polynomials = [{'coeffs':[2.3443,0.00798042,-1.94779e-05,2.0157e-08,-7.37603e-12,-917.924,0.683002], 'Tmin':(200,'K'), 'Tmax':(1000,'K')},
+                      {'coeffs':[2.93283,0.000826598,-1.46401e-07,1.54099e-11,-6.88796e-16,-813.056,-1.02432], 'Tmin':(1000,'K'), 'Tmax':(6000,'K')}]
+                      Tmin = (200,'K')
+                      Tmax = (6000,'K')
+                      NASAPolynomial = {'polynomials':polynomials,'Tmin':Tmin,'Tmax':Tmax}
+    """
+    p = [{'coeffs': las, 'Tmin':(temps[0],'K'), 'Tmax':(temps[1],'K')},
+         {'coeffs': has, 'Tmin':(temps[2],'K'), 'Tmax':(temps[3],'K')}]
+    
+    return {'polynomials': p, 'Tmin' : (min(temps), 'K'), 'Tmax' : (max(temps),'K')}
 
 
 def get_name_from_messpf(inputfile='pf.inp'):
@@ -233,12 +274,12 @@ def get_chemkin_str(deltaH,tag,formula,filename):
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
     line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
-    lines5to7 = get_coefficients(formula+'.c97')
+    lines5to7 = get_coefficients_str(formula+'.c97')
 
     return lines1to3 + line4 +lines5to7
 
 
-def write_chemkin_file(slabel, qlabel, hof, hof298,formula,filename):
+def write_chemkin_file(slabel, qlabel, hof, hof298,formula,las, has, filename):
     """
     Given formula string, tag string, deltaH float and a filename string,
     writes a file containing NASA polynomials in chemkin format:
@@ -258,7 +299,7 @@ def write_chemkin_file(slabel, qlabel, hof, hof298,formula,filename):
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
     line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
-    lines5to7 = get_coefficients(formula+'.c97')
+    lines5to7 = get_coefficients_str(las,has)
     s = comments + line4 +lines5to7
     io.write_file(s, filename)
     return s
@@ -632,7 +673,7 @@ def write_chemkin_polynomial(mol, parameters):
     """
     messpfinput = 'pf.inp'
     messpfoutput = 'pf.log'
-    name = mol.formula
+    formula = mol.formula
     qlabel = parameters['label']
     slabel = parameters['slabel']
     hof = parameters['results']['deltaH0']
@@ -646,7 +687,10 @@ def write_chemkin_polynomial(mol, parameters):
     msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp']) 
     logging.debug(msg)
     logging.debug('Running pac99...')
-    msg = run_pac99(name)
+    msg = run_pac99(formula)
+    hof298 = 0
+    chemkininput = ''
+    rmgpoly = {}
     logging.debug(msg)
     if io.check_file('thermp.out'):
         lines = io.read_file('thermp.out')
@@ -654,14 +698,21 @@ def write_chemkin_polynomial(mol, parameters):
         logging.info('delHf(298) = {0} kcal/mol'.format(hof298))
     else:
         logging.error('Failed to crete thermp.out')
-    logging.debug('Converting to chemkin format.')
-    chemkinfile = name + '.ckin'
-    logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))
-    try:
-        chemkininput = write_chemkin_file(slabel,qlabel, hof, hof298, name, chemkinfile)
-    except:
-        "Failed to write chemkin polynomials"
-    return hof298, chemkininput
+    c97file = formula + '.c97'
+    if io.check_file(c97file):
+        c97text  = io.read_file(c97file)
+        las, has = get_coefficients(c97text)
+        logging.debug('Converting to chemkin format.')
+        chemkinfile = formula + '.ckin'
+        logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))    
+        try:
+            chemkininput = write_chemkin_file(slabel,qlabel, hof, hof298, formula, las, has, chemkinfile)
+            rmgpoly = get_rmg_polynomial(las,has)
+        except:
+            logging.error("Failed to write chemkin polynomials")
+    else:
+        logging.error('Cannot find {}.'.format(c97file))
+    return hof298, chemkininput, rmgpoly
 
 def get_new_groups():
     s = """
