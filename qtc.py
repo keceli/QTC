@@ -265,7 +265,7 @@ def run(s):
         logging.info('Optdir = {0}\n'.format(optdir))
         if io.check_file(io.join_path(*[smilesdir,optdir,xyzfilename])):
             xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
-    if xyzfile:
+    if xyzfile and natom > 1:
         logging.info("XYZ file = '{0}'\n".format(xyzfile))
         try:
             mol = ob.get_mol(xyzfile)
