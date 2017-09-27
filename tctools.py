@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import numpy as np
 import datetime
 import time
 import subprocess
@@ -19,7 +18,7 @@ MESS partition function code
 PAC99
 thermp
 """
-__updated__ = "2017-09-23"
+__updated__ = "2017-09-27"
 
 
 def get_stoichometry(formula,element):
@@ -61,7 +60,7 @@ def parse_line16(s):
     n = len(s) / 16
     #replace fortran exponent D to E
     tmp = s.replace('D','E')
-    nums = np.zeros(n)
+    nums = [0.] * n
     for i in range(n):
         nums[i] = float(tmp[i*16:(i+1)*16])
     return nums
@@ -169,8 +168,8 @@ def get_coefficients(c97text):
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
     lines = c97text.splitlines()
-    las  = np.zeros(7)
-    has  = np.zeros(7)
+    las  = [0.] * 7
+    has  = [0.] * 7
     las[0:5] = parse_line16(lines[6][0:80])
     las[5:7] = parse_line16(lines[7][48:80])
     has[0:5] = parse_line16(lines[9][0:80])
