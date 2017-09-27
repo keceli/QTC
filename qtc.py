@@ -205,6 +205,8 @@ def run(s):
             parameters['qcexe'] = parameters[package]
     if task.startswith('tors'):
         parameters['qcexe'] = parameters['torsscan']
+    if parameters['qctemplate']:
+        parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     if io.check_dir(parameters['qctemplate']):
         tempdir = parameters['qctemplate']
     else:
@@ -227,8 +229,6 @@ def run(s):
         parameters['qctemplate'] = templatename
     if parameters['writefiles']:
         parameters['parseqc'] = True
-    if parameters['qctemplate']:
-        parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
 
     msg  = "Formula = {0}\n".format(formula)
     msg += "SMILES = {0}\n".format(s)
@@ -370,9 +370,14 @@ def run(s):
                         if val:
                             parameters['results'].update({key: results[key]})
             else:
-                logging.error('Failed calculation in "{0}".\n'.format(qcoutput))
-                logging.error('Cannot run thermo\n')
-                runthermo = False                
+                logging.error('Failed calculation in "{0}"'.format(qcoutput))
+                logging.error('Cannot run thermo')
+                runthermo = False
+            if 'xyz' in results:
+                pass
+            else:
+                logging.error('Cannot run thermo')
+                runthermo = False              
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
                 RPHt, geolines = parameters['results']['RPHt input'].split('geometry')
                 geolines, gradlines = geolines.split('gradient')
@@ -512,6 +517,7 @@ def main(arg_update={}):
     parameters['qtcdirectory'] = os.path.dirname(os.path.realpath(__file__))
     parameters['number_of_calculations'] = ncalc
     parameters['optlevel'] = 'sp' #TODO
+    templatedir = parameters['qctemplate']
     beginindex = args.first
     endindex = args.last
     inp = args.input
@@ -575,6 +581,7 @@ def main(arg_update={}):
                 parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
                     parameters['calcindex'] = i
+                    parameters['qctemplate'] = templatedir
                     logging.info('\n' + 100*'*' + '\n')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)
@@ -601,6 +608,7 @@ def main(arg_update={}):
                 parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
                     parameters['calcindex'] = i
+                    parameters['qctemplate'] = templatedir
                     logging.info('\n' + 100*'*' + '\n')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)            
@@ -639,20 +647,23 @@ def main(arg_update={}):
                     csvfile = 'qtc_method_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
                     csvfile = io.get_unique_filename(csvfile)
                     qlabel = qc.get_qc_label(parameters['natom'], parameters['qckeyword'], i)
-                    csvtext = '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format('Slabel', 'RMGlabel', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
+                    csvtext = '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format('Slabel', 'RMGlabel', 'deltaH(0)', 'deltaH(298)', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
                     for d in jlist:
                         name = str(d['name'])
                         smi  = str(d['SMILES'])
                         mult = int(d['multiplicity'])
                         s    = qc.get_slabel(smi,mult)
+                        thermoresults = parameters['all results'][s][qlabel]
                         try:
-                            poly = parameters['all results'][s][qlabel]['NASAPolynomial']
-                            Cplist = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]
-                            S298 = tc.get_entropy(poly,298.15)
-                            H298 = tc.get_enthalpy(poly,298.15)
-                            csvtext += '{},{},{},{},{},{},{},{}\n'.format(s, name, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
+                            deltaH0   = thermoresults['deltaH0']
+                            deltaH298 = thermoresults['deltaH298']
+                            poly      = thermoresults['NASAPolynomial']
+                            Cplist    = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]
+                            S298      = tc.get_entropy(poly,298.15)
+                            H298      = tc.get_enthalpy(poly,298.15)
+                            csvtext += '{},{},{},{},{},{},{},{}\n'.format(s, name, deltaH0, deltaH298, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
                         except:
-                            csvtext += '{},{},{},{},{},{},{},{}\n'.format(s, name, 'NA', 'NA', 'NA', 'NA','NA', 'NA')
+                            csvtext += '{},{},{},{},{},{},{},{}\n'.format(s, name,'NA', 'NA', 'NA', 'NA', 'NA', 'NA','NA', 'NA')
                     if csvtext:
                         logging.info('Writing csv file {}'.format(csvfile))
                         io.write_file(csvtext,csvfile)
