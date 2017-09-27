@@ -254,6 +254,8 @@ def parse_qckeyword(parameters, calcindex=0):
     tokens = currentcalc.split('/')
     task = tokens[0]
     if parameters['natom'] == 1:
+        logging.info('Number of atoms =1')
+        logging.info('Task = {}'.format(task))
         if task.startswith('comp') or task.startswith('ene'):
             pass
         else: 
@@ -284,8 +286,7 @@ def parse_qckeyword(parameters, calcindex=0):
             basis = ''
             package = tokens[2]
         else:
-            logging.info('ERROR! Invalid qckeyword: {0}'.format(tokens))
-            return        
+            logging.error('ERROR! Invalid qckeyword: {0}'.format(tokens))
         if task.startswith('opt')  or task.startswith('geo') or task.startswith('min'):
             task = 'opt'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
