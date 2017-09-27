@@ -13,7 +13,7 @@ import sys
 import os
 import logging
 from patools import energy
-__updated__ = "2017-09-25"
+__updated__ = "2017-09-27"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -523,9 +523,6 @@ def main(arg_update={}):
             mylist = qc.get_slabels_from_json(jlist)
         else:
             mylist = io.read_list(inp)
-   # elif io.check_file(jsonfile):
-   #     jlist = db.load_json(jsonfile)
-   #     mylist = qc.get_slabels_from_json(jlist)
     else:
         mylist = inp.split(',')
     if endindex:
@@ -579,7 +576,6 @@ def main(arg_update={}):
                     parameters['calcindex'] = i
                     logging.info('\n' + 100*'*' + '\n')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
-                    runtime_i = timer()
                     run(s)
         else:
             for i in range(ncalc):
@@ -629,10 +625,14 @@ def main(arg_update={}):
             io.write_file(ckin,ckinfile)
             logging.info('Written all chemkin polynomials in {}'.format(io.get_path(ckinfile)))
         if parameters['dumpjsonfile']:
-            jsonfile = 'parameters_' +  get_date_time("%y%m%d_%H%M%S") + '.json'
+            jsonfile = 'qtc_parameters_' +  get_date_time("%y%m%d_%H%M%S") + '.json'
             jsonfile = io.get_unique_filename(jsonfile)
-            logging.info('Writing json file {}'.format(jsonfile))
+            logging.info('Writing parameters json file {}'.format(jsonfile))
             db.dump_json(parameters, jsonfile)
+            jsonfile = 'qtc_thermo_' +  get_date_time("%y%m%d_%H%M%S") + '.json'
+            jsonfile = io.get_unique_filename(jsonfile)
+            logging.info('Writing thermo json file {}'.format(jsonfile))
+            db.dump_json(parameters['all results'], jsonfile)
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
