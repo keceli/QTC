@@ -10,6 +10,8 @@ import obtools as ob
 import qctools as qc
 import patools as pa
 import logging
+import unittools as ut
+import math
 """
 Thermochemistry tools.
 Requires:
@@ -712,6 +714,172 @@ def write_chemkin_polynomial(mol, parameters):
     else:
         logging.error('Cannot find {}.'.format(c97file))
     return hof298, chemkininput, rmgpoly
+
+
+def get_heat_capacity(rmgpoly,T):
+    """
+    rmgpoly is a dictionary in the following format
+    {u'Tmax': [3000.0, u'K'],
+     u'Tmin': [200.0, u'K'],
+     u'polynomials': [{u'Tmax': [1000.0, u'K'],
+                       u'Tmin': [200.0, u'K'],
+                       u'coeffs': [3.47200416,
+                               0.0002877246707,
+                               -1.014581759e-06,
+                               1.344086535e-09,
+                               -4.50222436e-13,
+                               2548.182033,
+                               1.600701434]},
+                  {u'Tmax': [3000.0, u'K'],
+                   u'Tmin': [1000.0, u'K'],
+                   u'coeffs': [3.25257139,
+                               0.000111709217,
+                               4.54124982e-07,
+                               -2.061316072e-10,
+                               2.673718745e-14,
+                               2658.216226,
+                               2.95565086]}]}
+                               
+    Formulas for calculation:
+    Cp/R = a1 + a2 T + a3 T^2 + a4 T^3 + a5 T^4
+    H/RT = a1 + a2 T /2 + a3 T^2 /3 + a4 T^3 /4 + a5 T^4 /5 + a6/T
+    S/R  = a1 lnT + a2 T + a3 T^2 /2 + a4 T^3 /3 + a5 T^4 /4 + a7
+    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients 
+    supplied in NASA thermodynamic files. 
+    The first 7 numbers starting on the second line of each species entry 
+    (five of the second line and the first two of the third line) are the 
+    seven coefficients (a1 through a7, respectively) for the high-temperature 
+    range (above 1000 K, the upper boundary is specified on the first line of 
+    the species entry). The following seven numbers are the coefficients 
+    (a1 through a7, respectively) for the low-temperature range 
+    (below 1000 K, the lower boundary is specified on the first line of the species entry).
+    H in the above equation is defined as
+    H(T) = Delta Hf(298) + [ H(T) - H(298) ]
+    so that, in general, H(T) is not equal to 
+    Delta Hf(T) and one needs to have the data for the reference elements to calculate Delta Hf(T).
+    """
+    alist = []
+    cp = 0.
+    for poly in rmgpoly['polynomials']:
+        Tmax = poly['Tmax'][0]
+        Tmin = poly['Tmin'][0]
+        if T >= Tmin and T <= Tmax:
+            alist = poly['coeffs']
+    if len(alist) > 4:
+        cp = alist[0] + alist[1]*T + alist[2]*T**2 + alist[3]*T**3 + alist[4]*T**4
+        cp = cp * ut.Rinkcal
+    else:
+        logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
+                      (T,rmgpoly['Tmin'][0],rmgpoly['Tmax'][0])]
+    return cp
+
+
+def get_entropy(rmgpoly,T):
+    """
+    rmgpoly is a dictionary in the following format
+    {u'Tmax': [3000.0, u'K'],
+     u'Tmin': [200.0, u'K'],
+     u'polynomials': [{u'Tmax': [1000.0, u'K'],
+                       u'Tmin': [200.0, u'K'],
+                       u'coeffs': [3.47200416,
+                               0.0002877246707,
+                               -1.014581759e-06,
+                               1.344086535e-09,
+                               -4.50222436e-13,
+                               2548.182033,
+                               1.600701434]},
+                  {u'Tmax': [3000.0, u'K'],
+                   u'Tmin': [1000.0, u'K'],
+                   u'coeffs': [3.25257139,
+                               0.000111709217,
+                               4.54124982e-07,
+                               -2.061316072e-10,
+                               2.673718745e-14,
+                               2658.216226,
+                               2.95565086]}]}
+                               
+    Formulas for calculation:
+    Cp/R = a1 + a2 T + a3 T^2 + a4 T^3 + a5 T^4
+    H/RT = a1 + a2 T /2 + a3 T^2 /3 + a4 T^3 /4 + a5 T^4 /5 + a6/T
+    S/R  = a1 lnT + a2 T + a3 T^2 /2 + a4 T^3 /3 + a5 T^4 /4 + a7
+    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients 
+    supplied in NASA thermodynamic files. 
+    The first 7 numbers starting on the second line of each species entry 
+    (five of the second line and the first two of the third line) are the 
+    seven coefficients (a1 through a7, respectively) for the high-temperature 
+    range (above 1000 K, the upper boundary is specified on the first line of 
+    the species entry). The following seven numbers are the coefficients 
+    (a1 through a7, respectively) for the low-temperature range 
+    (below 1000 K, the lower boundary is specified on the first line of the species entry).
+    H in the above equation is defined as
+    H(T) = Delta Hf(298) + [ H(T) - H(298) ]
+    so that, in general, H(T) is not equal to 
+    Delta Hf(T) and one needs to have the data for the reference elements to calculate Delta Hf(T).
+    """
+    alist = []
+    S = 0.
+    for poly in rmgpoly['polynomials']:
+        Tmax = poly['Tmax'][0]
+        Tmin = poly['Tmin'][0]
+        if T >= Tmin and T <= Tmax:
+            alist = poly['coeffs']
+    if len(alist) > 6:
+        S = alist[0] * math.log(T) + alist[1]*T + alist[2]*T**2/2. + alist[3]*T**3/3. + alist[4]*T**4/4 + alist[6]
+        S = S * ut.Rinkcal
+    else:
+        logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
+                      (T,rmgpoly['Tmin'][0],rmgpoly['Tmax'][0])]
+    return S
+
+
+def get_enthalpy(rmgpoly,T):
+    """
+    rmgpoly is a dictionary in the following format
+    {u'Tmax': [3000.0, u'K'],
+     u'Tmin': [200.0, u'K'],
+     u'polynomials': [{u'Tmax': [1000.0, u'K'],
+                       u'Tmin': [200.0, u'K'],
+                       u'coeffs': [3.47200416,
+                               0.0002877246707,
+                               -1.014581759e-06,
+                               1.344086535e-09,
+                               -4.50222436e-13,
+                               2548.182033,
+                               1.600701434]},
+                  {u'Tmax': [3000.0, u'K'],
+                   u'Tmin': [1000.0, u'K'],
+                   u'coeffs': [3.25257139,
+                               0.000111709217,
+                               4.54124982e-07,
+                               -2.061316072e-10,
+                               2.673718745e-14,
+                               2658.216226,
+                               2.95565086]}]}
+                               
+    Formulas for calculation:
+    H/RT = a1 + a2 T /2 + a3 T^2 /3 + a4 T^3 /4 + a5 T^4 /5 + a6/T
+    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients 
+    supplied in NASA thermodynamic files. 
+    H in the above equation is defined as
+    H(T) = Delta Hf(298) + [ H(T) - H(298) ]
+    so that, in general, H(T) is not equal to 
+    Delta Hf(T) and one needs to have the data for the reference elements to calculate Delta Hf(T).
+    """
+    alist = []
+    H = 0.
+    for poly in rmgpoly['polynomials']:
+        Tmax = poly['Tmax'][0]
+        Tmin = poly['Tmin'][0]
+        if T >= Tmin and T <= Tmax:
+            alist = poly['coeffs']
+    if len(alist) > 6:
+        H = alist[0] + alist[1]*T/2 + alist[2]*T**2/3. + alist[3]*T**3/4. + alist[4]*T**4/5 + alist[5]/T
+        H = H * ut.Rinkcal * T / 1000.
+    else:
+        logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
+                      (T,rmgpoly['Tmin'][0],rmgpoly['Tmax'][0])]
+    return H
+
 
 def get_new_groups():
     s = """
