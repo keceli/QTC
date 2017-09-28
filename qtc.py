@@ -310,10 +310,13 @@ def run(s):
         try:
             logging.info('Running quantum chemistry calculations')
             if natom > 1:
-                test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
-                nrotor = qc.get_test_chem_nrotor(test_out)
-                #parameters['nrotor'] = nrotor # We may want to uncomment in the future
-                logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
+                if io.check_exe(parameters('test_chem')):
+                    test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
+                    nrotor = qc.get_test_chem_nrotor(test_out)
+                    #parameters['nrotor'] = nrotor # We may want to uncomment in the future
+                    logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
+                else:
+                    logging.warning("test_chem not found")
             if qcpackage in available_packages:
                 qc.run(mol, parameters, mult)
             elif task == 'composite':
@@ -377,7 +380,8 @@ def run(s):
                 pass
             else:
                 logging.error('Cannot run thermo')
-                runthermo = False              
+                runthermo = False
+############################ BLUES specific
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
                 RPHt, geolines = parameters['results']['RPHt input'].split('geometry')
                 geolines, gradlines = geolines.split('gradient')
@@ -389,11 +393,17 @@ def run(s):
                 parameters['results']['RPHtinput'] = RPHt
                 RPHtexe = '/lcrc/project/PACC/codes/EStokTP/exe/RPHt.exe'
                 RPHtfile = 'RPHt_input_data.dat'
-                io.write_file(RPHt,RPHtfile)
-                io.execute(RPHtexe  + ' ' + RPHtfile)
-                if io.check_file( 'hrproj_freq.dat'):
-                    pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
-                    parameters['results']['pfreqs'] = pfreqs
+                if io.check_file('RPHtexe'):
+                    io.write_file(RPHt,RPHtfile)
+                    io.execute(RPHtexe  + ' ' + RPHtfile)
+                    if io.check_file( 'hrproj_freq.dat'):
+                        pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
+                        parameters['results']['pfreqs'] = pfreqs
+                    else:
+                        logging.warning('hrproj_freq.dat file not found')
+                else:
+                    logging.warning('{} not found.'.format(RPHtexe))
+#########################
         else:
             logging.error('Output file "{0}" not found.\n'.format(qcoutput))
             logging.error('Cannot run thermo')
@@ -450,12 +460,12 @@ def run(s):
         chemkintext = ''
         rmgpoly = {}
         try:
-           hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
+            hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
         except Exception as e:
-           exc_type, exc_obj, exc_tb = sys.exc_info()
-           fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-           logging.error('Failed in chemkin polynomial generation')
-           logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error('Failed in chemkin polynomial generation')
+            logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
         parameters['results']['deltaH298'] = hof298
         parameters['all results'][s][label]['deltaH298'] = hof298   
         parameters['all results'][s][label]['chemkin'] = chemkintext
