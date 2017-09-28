@@ -13,7 +13,7 @@ import sys
 import os
 import logging
 from patools import energy
-__updated__ = "2017-09-27"
+__updated__ = "2017-09-28"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -647,7 +647,8 @@ def main(arg_update={}):
                     csvfile = 'qtc_method_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
                     csvfile = io.get_unique_filename(csvfile)
                     qlabel = qc.get_qc_label(parameters['natom'], parameters['qckeyword'], i)
-                    csvtext = '{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{},\t{}\n'.format('Slabel', 'RMGlabel', 'deltaH(0)', 'deltaH(298)', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
+                    csvtext = '{},{},{},{},{},{},{},{},{},{}\n'.format(
+                        'Slabel', 'RMGlabel', 'deltaH(0)', 'deltaH(298)', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
                     for d in jlist:
                         name = str(d['name'])
                         smi  = str(d['SMILES'])
@@ -661,13 +662,35 @@ def main(arg_update={}):
                             Cplist    = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]
                             S298      = tc.get_entropy(poly,298.15)
                             H298      = tc.get_enthalpy(poly,298.15)
-                            csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(s, name, deltaH0, deltaH298, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
+                            csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(
+                                s, name, deltaH0, deltaH298, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
                         except:
-                            csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(s, name,'NA',     'NA',      'NA', 'NA', 'NA',        'NA',    'NA', '   NA')
+                            csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(
+                                s, name,'NA',     'NA',      'NA', 'NA', 'NA',        'NA',    'NA', '   NA')
                     if csvtext:
                         logging.info('Writing csv file {}'.format(csvfile))
                         io.write_file(csvtext,csvfile)
-                
+                csvfile = 'rmg_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
+                csvfile = io.get_unique_filename(csvfile)
+                csvtext = '{},{},{},{},{},{},{},{},{},{},{}\n'.format(
+                    'Slabel', 'RMGlabel', 'Sensitivity', 'Uncertainty', 'Value', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
+                csvtext = ''
+                for d in jlist:
+                    try:
+                        s    = qc.get_slabel(smi,mult)
+                        name = str(d['name'])
+                        smi  = str(d['SMILES'])
+                        mult = int(d['multiplicity'])
+                        sensitivity = float(d['Sensitivity'])
+                        uncertainty = float(d['Uncertainty'])
+                        value       = float(d['Value'])
+                        Cplist    = [float(cp) for cp in [d['Cp300'],d['Cp500'],d['Cp1000'],d['Cp1500']]]
+                        csvtext += '{},{},{},{},{},{},{},{},{},{},{}\n'.format(s, name, sensitivity, uncertainty, value, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
+                    except:
+                        csvtext += '{},{},{},{},{},{},{},{},{},{},{}\n'.format(s, name,        'NA',        'NA',  'NA', 'NA', 'NA',      'NA',      'NA',     'NA',      'NA')
+                if csvtext:
+                    logging.info('Writing csv file {}'.format(csvfile))
+                    io.write_file(csvtext,csvfile)
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
