@@ -303,7 +303,8 @@ def run(s):
             logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     elif ignore and task is not 'composite':
         runqc = False
-
+    if task is 'composite':
+        runqc = True
     if runqc:
         io.touch(runfile)
         try:
@@ -314,18 +315,17 @@ def run(s):
                 #parameters['nrotor'] = nrotor # We may want to uncomment in the future
                 logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
             if qcpackage in available_packages:
-                msg = qc.run(mol, parameters, mult)
+                qc.run(mol, parameters, mult)
             elif task == 'composite':
-                msg = qc.run_extrapolation(mol, parameters)
+                qc.run_extrapolation_keyword(parameters)
             elif qcpackage == 'qcscript':
                 geofile = smilesname + '.geo'
                 geo = ob.get_geo(mol)
                 io.write_file(geo, geofile)
                 if io.check_file(geofile, 1):
-                    msg = qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
+                    qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
             else:
-                msg = '{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage,available_packages)
-            logging.info(msg)
+                logging.error('{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage,available_packages))
             io.rm(runfile)
         except KeyboardInterrupt:
             logging.error('CTRL+C command...')
