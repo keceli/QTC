@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-09-23"
+__updated__ = "2017-09-28"
 
 def get_format(s):
     """
@@ -405,13 +405,13 @@ def get_smiles_path(x, mult=0, db= 'database'):
 def get_smiles(x):
     """
     Returns open-babel canonical smiles.
-    >>> print ob.get_smiles('O')
+    >>> print get_smiles('O')
     O
-    >>> print ob.get_smiles('[H][O][H]')
+    >>> print get_smiles('[H][O][H]')
     O
-    >>> print ob.get_smiles('O-O')
+    >>> print get_smiles('O-O')
     OO
-    >>> print ob.get_smiles('[O]=[O]')
+    >>> print get_smiles('[O]=[O]')
     O=O
     """
     mol = get_mol(x)
