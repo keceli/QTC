@@ -659,9 +659,9 @@ def main(arg_update={}):
                             deltaH0   = thermoresults['deltaH0']
                             deltaH298 = thermoresults['deltaH298']
                             poly      = thermoresults['NASAPolynomial']
-                            Cplist    = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]
-                            S298      = tc.get_entropy(poly,298.15)
-                            H298      = tc.get_enthalpy(poly,298.15)
+                            Cplist    = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]#cal/mol*K
+                            S298      = tc.get_entropy(poly,298.15) #cal/mol*K
+                            H298      = tc.get_enthalpy(poly,298.15) #kcal/mol
                             csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(
                                 s, name, deltaH0, deltaH298, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
                         except:
@@ -674,17 +674,18 @@ def main(arg_update={}):
                 csvfile = io.get_unique_filename(csvfile)
                 csvtext = '{},{},{},{},{},{},{},{},{},{},{}\n'.format(
                     'Slabel', 'RMGlabel', 'Sensitivity', 'Uncertainty', 'Value', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
-                csvtext = ''
                 for d in jlist:
+                    name = str(d['name'])
+                    smi  = str(d['SMILES'])
+                    mult = int(d['multiplicity'])
+                    s    = qc.get_slabel(smi,mult)
                     try:
-                        s    = qc.get_slabel(smi,mult)
-                        name = str(d['name'])
-                        smi  = str(d['SMILES'])
-                        mult = int(d['multiplicity'])
                         sensitivity = float(d['Sensitivity'])
                         uncertainty = float(d['Uncertainty'])
                         value       = float(d['Value'])
-                        Cplist    = [float(cp) for cp in [d['Cp300'],d['Cp500'],d['Cp1000'],d['Cp1500']]]
+                        Cplist      = [float(cp) / ut.kcal2kj for cp in [d['Cp300'],d['Cp500'],d['Cp1000'],d['Cp1500']]]
+                        S298        = float(d['S298']) / ut.kcal2kj
+                        H298        = float(d['H298']) / ut.kcal2kj / 1000.
                         csvtext += '{},{},{},{},{},{},{},{},{},{},{}\n'.format(s, name, sensitivity, uncertainty, value, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
                     except:
                         csvtext += '{},{},{},{},{},{},{},{},{},{},{}\n'.format(s, name,        'NA',        'NA',  'NA', 'NA', 'NA',      'NA',      'NA',     'NA',      'NA')

@@ -10,7 +10,7 @@ kj2au    = 3.8088E-4          # kj/mol to Hartree / atom
 kcal2kj  = 4.184                 # kcal/mol to kJ / mol
 au2kcal  = 627.509608031
 
-Rinkcal = 1.9872036#E-3 # gas constant in kcal/mol
+Rinkcal = 1.9872036#E-3 # gas constant in cal/mol
 #Atomic masses in a.u
 atommasses= {'H' : 1.00782503223,
              'C' :12.00000000000,
