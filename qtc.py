@@ -602,7 +602,7 @@ def main(arg_update={}):
                     qc.parse_qckeyword(parameters, calcindex=i)
                 pool = multiprocessing.Pool(nproc)
         if runthermo:
-            logging.info('\n' + 100*'#' + '\n')
+            logging.info('\n' + 120*'#' + '\n')
             logging.info("Starting thermo calculations")
             for s in mylist:
                 parameters['runthermo'] = runthermo
@@ -614,12 +614,12 @@ def main(arg_update={}):
                 parameters['freqlevel'] = ''
                 parameters['results'] = {}
                 parameters['heat'] = None
-                mol = ob.get_mol(s,make3D=True)
-                parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
+                    mol = ob.get_mol(s,make3D=True)
+                    parameters['natom'] = ob.get_natom(mol)
                     parameters['calcindex'] = i
                     parameters['qctemplate'] = templatedir
-                    logging.info('\n' + 100*'*' + '\n')
+                    logging.info('\n' + 50*'-' + '\n')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)            
     else:
