@@ -373,7 +373,7 @@ def run(s):
                 logging.error('Failed calculation in "{0}"'.format(qcoutput))
                 logging.error('Cannot run thermo')
                 runthermo = False
-            if 'xyz' in results:
+            if 'xyz' in results or natom == 1:
                 pass
             else:
                 logging.error('Cannot run thermo')
@@ -449,13 +449,13 @@ def run(s):
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
-     #   try:
-        hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
-     #   except Exception as e:
-     #           exc_type, exc_obj, exc_tb = sys.exc_info()
-     #           fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-     #           logging.error('Failed in chemkin polynomial generation')
-     #           logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
+        try:
+           hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
+        except Exception as e:
+           exc_type, exc_obj, exc_tb = sys.exc_info()
+           fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+           logging.error('Failed in chemkin polynomial generation')
+           logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
         parameters['results']['deltaH298'] = hof298
         parameters['all results'][s][label]['deltaH298'] = hof298   
         parameters['all results'][s][label]['chemkin'] = chemkintext
@@ -653,17 +653,17 @@ def main(arg_update={}):
                         smi  = str(d['SMILES'])
                         mult = int(d['multiplicity'])
                         s    = qc.get_slabel(smi,mult)
-                        thermoresults = parameters['all results'][s][qlabel]
                         try:
+                            thermoresults = parameters['all results'][s][qlabel]
                             deltaH0   = thermoresults['deltaH0']
                             deltaH298 = thermoresults['deltaH298']
                             poly      = thermoresults['NASAPolynomial']
                             Cplist    = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]
                             S298      = tc.get_entropy(poly,298.15)
                             H298      = tc.get_enthalpy(poly,298.15)
-                            csvtext += '{},{},{},{},{},{},{},{}\n'.format(s, name, deltaH0, deltaH298, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
+                            csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(s, name, deltaH0, deltaH298, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
                         except:
-                            csvtext += '{},{},{},{},{},{},{},{}\n'.format(s, name,'NA', 'NA', 'NA', 'NA', 'NA', 'NA','NA', 'NA')
+                            csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(s, name,'NA',     'NA',      'NA', 'NA', 'NA',        'NA',    'NA', '   NA')
                     if csvtext:
                         logging.info('Writing csv file {}'.format(csvfile))
                         io.write_file(csvtext,csvfile)
