@@ -256,6 +256,8 @@ def parse_qckeyword(parameters, calcindex=0):
     if parameters['natom'] == 1:
         logging.info('Number of atoms =1')
         logging.info('Task = {}'.format(task))
+        optdir = ''
+        parameters['optdir'] = ''
         if task.startswith('comp') or task.startswith('ene'):
             pass
         else: 
