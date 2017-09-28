@@ -880,7 +880,6 @@ def run_extrapolation_keyword(parameters):
     keyword = parameters['qckeyword']
     formula = parameters['formula'][0]
     method = parameters['qcmethod']
-    msg = ''
     smilesname = parameters['smilesname']
     calcs = keyword.split(',')
     logging.info('Composite energy formula: {0}\n'.format(formula))
@@ -897,19 +896,17 @@ def run_extrapolation_keyword(parameters):
         enepath = io.join_path(*[enedir, enefile])
         if io.check_file(enepath):
             e[i] = float(io.read_file(enepath))
-            msg += ('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
+            logging.info('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
         else:
-            msg += ('E({0}) cannot be found at "{1}" \n'.format(i,enepath))
-    logging.info(msg)
-    msg = ''
+            logging.error('E({0}) cannot be found at "{1}" \n'.format(i,enepath))
     exec(formula)
     if energy:
         io.write_file(str(energy),enefile )
-        io.write_file(msg,inpfile )
+        io.write_file(formula,inpfile )
         logging.info('Composite energy: {}\n'.format(energy))
         logging.info('Energy file: "{}"\n'.format(io.get_path(enefile)))
     parse_qckeyword(parameters, calcindex)
-    return msg
+    return
 
 def run_extrapolation_template(s, parameters):
     lines = io.read_file(parameters['qctemplate'],aslines=True)
