@@ -309,14 +309,14 @@ def run(s):
         io.touch(runfile)
         try:
             logging.info('Running quantum chemistry calculations')
-            if natom > 1:
-                if io.check_exe(parameters('test_chem')):
-                    test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
-                    nrotor = qc.get_test_chem_nrotor(test_out)
-                    #parameters['nrotor'] = nrotor # We may want to uncomment in the future
-                    logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
-                else:
-                    logging.warning("test_chem not found")
+           # if natom > 1: #uncomment when test_chem can exlude methyl rotors and can be installed on all plaforms
+           #     if io.check_exe(parameters('test_chem')):
+           #         test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
+           #         nrotor = qc.get_test_chem_nrotor(test_out)
+           #         #parameters['nrotor'] = nrotor # We may want to uncomment in the future
+           #         logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
+           #     else:
+           #         logging.warning("test_chem not found")
             if qcpackage in available_packages:
                 qc.run(mol, parameters, mult)
             elif task == 'composite':
@@ -657,13 +657,13 @@ def main(arg_update={}):
                 for i in range(ncalc):
                     csvfile = prefix + '_method_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
                     csvfile = io.get_unique_filename(csvfile)
-                    qlabel = qc.get_qc_label(parameters['natom'], parameters['qckeyword'], i)
                     csvtext = '{},{},{},{},{},{},{},{},{},{}\n'.format(
                         'Slabel', 'RMGlabel', 'deltaH(0)', 'deltaH(298)', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
                     for d in jlist:
                         name = str(d['name'])
                         smi  = str(d['SMILES'])
                         mult = int(d['multiplicity'])
+                        qlabel = qc.get_qc_label(ob.get_natom(smi), parameters['qckeyword'], i)
                         s    = qc.get_slabel(smi,mult)
                         try:
                             thermoresults = parameters['all results'][s][qlabel]
