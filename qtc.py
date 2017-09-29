@@ -653,8 +653,9 @@ def main(arg_update={}):
             logging.info('Writing thermo json file {}'.format(jsonfile))
             db.dump_json(parameters['all results'], jsonfile)
             if jlist:
+                prefix = inp.split('.')[0]
                 for i in range(ncalc):
-                    csvfile = 'qtc_method_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
+                    csvfile = prefix + '_method_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
                     csvfile = io.get_unique_filename(csvfile)
                     qlabel = qc.get_qc_label(parameters['natom'], parameters['qckeyword'], i)
                     csvtext = '{},{},{},{},{},{},{},{},{},{}\n'.format(
@@ -680,7 +681,7 @@ def main(arg_update={}):
                     if csvtext:
                         logging.info('Writing csv file {}'.format(csvfile))
                         io.write_file(csvtext,csvfile)
-                csvfile = 'rmg_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
+                csvfile = prefix + '_rmg_' +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
                 csvfile = io.get_unique_filename(csvfile)
                 csvtext = '{},{},{},{},{},{},{},{},{},{},{}\n'.format(
                     'Slabel', 'RMGlabel', 'Sensitivity', 'Uncertainty', 'Value', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
