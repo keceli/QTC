@@ -487,9 +487,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         method = get_nwchem_method(s)
         calculation = get_nwchem_calculation(s)
         xyz = get_nwchem_xyz(lines)
-        basisinfo = get_nwchem_basis(lines)
-        basis = basisinfo['basis']
-        nbasis = basisinfo['nbasis']
+        nbasis = get_nwchem_nbasis(s)
         energies = get_nwchem_energies(lines)
         energy = energies[method]
         freqs = get_nwchem_frequencies(lines)
@@ -1590,6 +1588,8 @@ def get_nwchem_xyz(inp,filename=False):
     """
     Returns geometry in xyz format by parsing NWChem output file.
     
+    
+    
     Sample NWChem output:
  Output coordinates in angstroms (scale by  1.889725989 to convert to a.u.)
 
@@ -1635,6 +1635,7 @@ def get_nwchem_energies(inp, filename=False):
         'nre'        : 'Effective nuclear repulsion energy (a.u.)',
         'scf'        : 'Total SCF energy',
         'mp2'        : 'Total MP2 energy',
+        'mbpt(2)'      : 'MBPT(2) total energy / hartree',
         'mp3'        : 'Total MP3 energy',
         'ccsd'       : 'CCSD total energy / hartree',
         'ccsd(t)'    : 'CCSD(T) total energy / hartree',
@@ -1675,21 +1676,22 @@ def get_nwchem_method(inp, filename=False):
         0	:{'nre'        : 'Effective nuclear repulsion energy (a.u.)'},
         1	:{'scf'        : 'Total SCF energy'},
         2	:{'mp2'        : 'Total MP2 energy'},
-        3	:{'mp3'        : 'Total MP3 energy'},
-        4	:{'ccsd'       : 'CCSD total energy / hartree'},
-        5	:{'ccsd(t)'    : 'CCSD(T) total energy / hartree'},
-        6	:{'ccsd(2)_t'  : 'CCSD(2)_T total energy / hartree'},
-        7	:{'ccsd(2)'    : 'CCSD(2) total energy / hartree'},
-        8	:{'ccsdt'      : 'CCSDT total energy / hartree'},
-        9	:{'ccsdt(2)_q' : 'CCSDT(2)_Q total energy / hartree'},
-        10	:{'ccsdtq'     : 'CCSDTQ total energy / hartree'}
+        3   :{'mbpt(2)'    : 'MBPT(2) total energy / hartree       ='},
+        4	:{'mp3'        : 'Total MP3 energy'},
+        5	:{'ccsd'       : 'CCSD total energy / hartree'},
+        6	:{'ccsd(t)'    : 'CCSD(T) total energy / hartree'},
+        7	:{'ccsd(2)_t'  : 'CCSD(2)_T total energy / hartree'},
+        8	:{'ccsd(2)'    : 'CCSD(2) total energy / hartree'},
+        9	:{'ccsdt'      : 'CCSDT total energy / hartree'},
+        10	:{'ccsdt(2)_q' : 'CCSDT(2)_Q total energy / hartree'},
+        11	:{'ccsdtq'     : 'CCSDTQ total energy / hartree'}
     }
     method = 'unknown'
-    for i in range(10,-1,-1):
+    for i in range(11,-1,-1):
         if nwdict[i].values()[0] in inp:
             method = nwdict[i].keys()[0]
             break
-    return method
+    return method.lower()
 
     
 def get_nwchem_basis(inp, filename=False):
@@ -1725,6 +1727,25 @@ def get_nwchem_basis(inp, filename=False):
     else:
         basis = basis[0]
     return {'basis': basis,'nbasis': nbasis}
+
+
+def get_nwchem_nbasis(out):
+    """
+    Returns the number of basis functions by parsing NWChem output.
+    Typical output:
+    functions       =    24
+    """
+    keyword = "functions       ="
+    lines = out.splitlines()
+    for line in lines:
+        if keyword in line:
+            if len(line.split()) == 3:
+                try:
+                    nbasis = int(line.split()[2])
+                    break
+                except:
+                    logging.error('Parser error for get_nwchem_nbasis  in line {}'.format(line))
+    return nbasis
 
 
 def get_nwchem_frequencies(inp, filename=False, minfreq=10):
