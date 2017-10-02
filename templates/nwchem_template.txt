@@ -2,6 +2,7 @@ start QTC(UNIQUENAME)
 memory stack 800 mb heap 200 mb global 700 mb noverify #modify based on available memory
 #task shell "mkdir ./tmp/QTC(UNIQUENAME)"
 #scratch_dir ./tmp/QTC(UNIQUENAME)
+scratch_dir ./tmp_nwchem
 ECHO
 geometry units angstrom 
     symmetry c1
@@ -30,4 +31,5 @@ tce
    QTC(METHOD) #mp2, ccsd,ccsd(t),ccsd(2)_t, ccsd(2), ccsdt,ccsdt(2)_q,ccsdtq
 end
 task QTC(TASK) # optimize, frequency or energy
-#task shell "rm -rf ./tmp/QTC(UNIQUENAME)"
+task shell "rm -rf ./tmp" 
+#./tmp/QTC(UNIQUENAME)"
