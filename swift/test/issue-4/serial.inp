@@ -1,0 +1,16 @@
+%mem=20GB
+%nproc=1
+#P ccsd(t)/cc-pvtz opt=(maxcyc=50,internal) int=ultrafine nosym
+
+O
+
+0 1
+O
+H  1  r2
+H  1  r3  2  a3
+Variables:
+r2= 0.9690
+r3= 0.9690
+a3= 103.98
+
+

@@ -1,0 +1,26 @@
+
+Copied in files from Blues:
+/home/keceli/pacc/databases/syngas/rmg_mech_170916/qtc_tz
+
+serial.inp
+mpirun.inp
+
+== tests
+
+$ ./test.sh serial.inp
+Takes 1m6s
+Uses almost 100%
+
+$ ./test.sh mpirun.inp
+Takes 46s
+Uses almost 800%
+
+$ ./test-swift.sh serial.inp
+Runs inside Swift/T
+Takes 1m7s
+Uses almost 100%
+
+$ ./test-swift.sh mpirun.inp
+Runs inside Swift/T
+Takes a long time
+Uses almost 100% - bad - should be 800%
