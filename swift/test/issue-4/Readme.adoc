@@ -7,6 +7,7 @@ mpirun.inp
 
 == tests
 
+----
 $ ./test.sh serial.inp
 Takes 1m6s
 Uses almost 100%
@@ -24,3 +25,4 @@ $ ./test-swift.sh mpirun.inp
 Runs inside Swift/T
 Takes a long time
 Uses almost 100% - bad - should be 800%
+----
