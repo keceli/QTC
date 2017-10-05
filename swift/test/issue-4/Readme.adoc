@@ -8,11 +8,11 @@ mpirun.inp
 == tests
 
 ----
-$ ./test.sh serial.inp
+$ ./time.sh serial.inp
 Takes 1m6s
 Uses almost 100%
 
-$ ./test.sh mpirun.inp
+$ ./time.sh mpirun.inp
 Takes 46s
 Uses almost 800%
 
@@ -25,4 +25,27 @@ $ ./test-swift.sh mpirun.inp
 Runs inside Swift/T
 Takes a long time
 Uses almost 100% - bad - should be 800%
+
+$ time nice mpiexec -n 1 g09 mpirun.inp
+Takes 47s
+
+$ mpiexec -n 1 ./time.sh mpirun.inp
+Takes 49s
+
+$ time ./test-tcl.sh
+Takes 49s
+
+$ time nice turbine test.tic.tcl
+Takes 51s
+
+$ time nice turbine test-sh.tic.tcl
+Takes 49s
+
+$ stc test.swift
+$ # Modify test.tic to use exec ./g09.sh
+$ turbine test.tic mpirun.inp
+Uses 100% - bad
+
+$ # Modify g09.sh to set LD_LIBRARY_PATH as in main shell
+$ $ turbine test.tic mpirun.inp
 ----
