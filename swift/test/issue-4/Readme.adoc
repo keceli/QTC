@@ -47,5 +47,6 @@ $ turbine test.tic mpirun.inp
 Uses 100% - bad
 
 $ # Modify g09.sh to set LD_LIBRARY_PATH as in main shell
-$ $ turbine test.tic mpirun.inp
+$ turbine test.tic mpirun.inp
+Uses 100% - bad
 ----
