@@ -287,10 +287,13 @@ def parse_qckeyword(parameters, calcindex=0):
             method = tokens[1]
             basis = ''
             package = tokens[2]
+        elif len(tokens) == 2:
+            method = ''
+            basis = ''
+            package = tokens[1]
         else:
             logging.error('ERROR! Invalid qckeyword: {0}'.format(tokens))
-        if task.startswith('opt')  or task.startswith('geo') or task.startswith('min'):
-            task = 'opt'
+        if task.startswith('opt') or task.startswith('geo') or task.startswith('min'):
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
