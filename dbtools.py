@@ -56,9 +56,9 @@ def dump_json(d, filename):
     """
     try:
         with open(filename, 'w') as f:
-            json.dump(d, f, ensure_ascii=False)
+            json.dump(d, f, ensure_ascii=False,indent=2)
     except Exception as e:
-        logging.error('Error in running quantum chemistry calculations')
+        logging.error('Error in dumping json file')
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         logging.error('Exception: '.format( exc_type, fname, exc_tb.tb_lineno))       
