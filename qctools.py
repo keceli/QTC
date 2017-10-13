@@ -800,7 +800,6 @@ def run(mol, parameters, mult=None):
     overwrite = parameters['overwrite']
     template = parameters['qctemplate']
     task = parameters['qctask']
-    ignore = parameters['ignorerunningjobs']
     msg = ''
     if mult is None:
         mult = ob.get_multiplicity(mol)
@@ -838,11 +837,7 @@ def run(mol, parameters, mult=None):
                         logging.info('Skipping calculation')
                         run = False
     else:
-        if ignore:
-            run = False
-            logging.info('No output found, ignoring...')
-        else:
-            run = True
+        run = True
     if run:
         io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
