@@ -26,8 +26,11 @@ def touch(fname, times=None):
     See http://stackoverflow.com/questions/1158076/implement-touch-using-python
     """
     import os
-    with open(fname, 'a'):
-        os.utime(fname, times)
+    try:
+        with open(fname, 'a'):
+            os.utime(fname, times)
+    except:
+        pass
     return
 
 
