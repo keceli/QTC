@@ -824,18 +824,19 @@ def run(mol, parameters, mult=None):
                 if io.check_file('geom.xyz'):
                     msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path('geom.xyz'))
                     run = False                
-            elif check_output(out):
-                msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path(outfile))
-                run = False
-            else: 
-                if ignore:
+            else:
+                if check_output(out):
+                    logging.info('Successful calculation found "{0}"\n'.format(io.get_path(outfile)))
                     run = False
-                    logging.info('Ignoring failed output {}'.format(io.get_path(outfile)))
                 else:
-                    msg = 'Failed output found "{0}", renaming and running a new calculation\n'.format(io.get_path(outfile))
-                    io.mv(outfile, 'failed_'+outfile)
-                    run = True
-
+                    logging.error('Failed calculation found "{0}"\n'.format(io.get_path(outfile)))
+                    if parameters['recover']:
+                        logging.info('Trying to recover')
+                        io.mv(outfile, 'failed_'+outfile)
+                        run = True
+                    else:
+                        logging.info('Skipping calculation')
+                        run = False
     else:
         if ignore:
             run = False

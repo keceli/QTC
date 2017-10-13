@@ -13,6 +13,7 @@ import sys
 import os
 import logging
 from patools import energy
+from timeit import default_timer as timer
 __updated__ = "2017-09-28"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
@@ -117,6 +118,8 @@ def get_args():
                         help='Store .xyz, .ene files')
     parser.add_argument('-I', '--ignorerunningjobs', action='store_true',
                         help='Ignores RUNNING.tmp files and run the calculations')
+    parser.add_argument('-R', '--recover', action='store_true',
+                        help='Attempt to recover failed calculations')
     parser.add_argument('-O', '--overwrite', action='store_true',
                         help='Overwrite existing calculations. Be careful, data will be lost.')
     parser.add_argument('-X', '--excel', action='store_true',
@@ -230,17 +233,18 @@ def run(s):
     if parameters['writefiles']:
         parameters['parseqc'] = True
 
-    msg  = "Formula = {0}\n".format(formula)
-    msg += "SMILES = {0}\n".format(s)
+    msg  = "Formula      = {0}\n".format(formula)
+    msg += "SMILES       = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
-    msg += "Number of atoms = {0}\n".format(natom)
-    msg += "Number of rotors (open babel) = {0}\n".format(nrotor)
-    msg += 'Task = {0}\n'.format(parameters['qctask'])
-    msg += 'Method = {0}\n'.format(parameters['qcmethod'])
-    msg += 'Basis = {0}\n'.format(parameters['qcbasis'])
-    msg += 'Package = {0}\n'.format(parameters['qcpackage'])
-    msg += 'Label = {0}\n'.format(parameters['label'])
-    msg += 'Template = {0}\n'.format(parameters['qctemplate'])
+    msg += "N_atoms      = {0}\n".format(natom)
+    msg += "N_obrotors   = {0}\n".format(nrotor)
+    msg += 'Task         = {0}\n'.format(parameters['qctask'])
+    msg += 'Method       = {0}\n'.format(parameters['qcmethod'])
+    msg += 'Basis        = {0}\n'.format(parameters['qcbasis'])
+    msg += 'Package      = {0}\n'.format(parameters['qcpackage'])
+    msg += 'Label        = {0}\n'.format(parameters['label'])
+    msg += 'Template     = {0}\n'.format(parameters['qctemplate'])
+    msg += 'Mol. index   = {0}\n'.format(parameters['mol_index'])
     logging.info(msg)
     smilesname = io.fix_path(s)
     parameters['smilesname' ] = smilesname
@@ -305,6 +309,7 @@ def run(s):
         runqc = False
     if task is 'composite':
         runqc = True
+    runtime = 0
     if runqc:
         io.touch(runfile)
         try:
@@ -318,7 +323,10 @@ def run(s):
            #     else:
            #         logging.warning("test_chem not found")
             if qcpackage in available_packages:
+                runstart = timer()
                 qc.run(mol, parameters, mult)
+                runtime = timer() - runstart
+                logging.info("Runtime = {:15.3f} s".format(runtime))
             elif task == 'composite':
                 qc.run_extrapolation_keyword(parameters)
             elif qcpackage == 'qcscript':
@@ -422,7 +430,9 @@ def run(s):
     parameters['all results'][s][label]['deltaH0'] = 0   
     parameters['results']['deltaH298'] = 0
     parameters['all results'][s][label]['deltaH298'] = 0                                    
-    parameters['all results'][s][label]['chemkin'] = ''                                   
+    parameters['all results'][s][label]['chemkin'] = ''
+    if runtime > 1:
+        parameters['all results'][s][label]['runtime'] = runtime
     if runthermo:
         sym = 1
         if natom == 1:
@@ -577,7 +587,7 @@ def main(arg_update={}):
         logging.info('List of species')
         logging.info(pprint.pformat(mylist))
         if nproc == 1:
-            for s in mylist:
+            for mid,s in enumerate(mylist):
                 parameters['runthermo'] = False
                 parameters['optdir'] = ''
                 parameters['freqdir'] = ''
@@ -585,6 +595,7 @@ def main(arg_update={}):
                 parameters['qcdirectory'] = ''
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
+                parameters['mol_index'] = mid
                 parameters['results'] = {}
                 parameters['all results'].update({s:{}}) 
                 mol = ob.get_mol(s,make3D=True)
@@ -704,7 +715,7 @@ def main(arg_update={}):
                     logging.info('Writing csv file {}'.format(csvfile))
                     io.write_file(csvtext,csvfile)
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
-    logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
+    logging.info("QTC: Total time (s)          = {0:.2f}".format(end - start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
 
 if __name__ == "__main__":
