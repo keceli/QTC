@@ -13,7 +13,8 @@ task.sh::
 The user task.  Simply reports its ID, rank, and size
 
 workflow.swift::
-The Swift workflow, a simple loop
+The Swift workflow, a simple loop +
+The @par=P launch() syntax launches the command on P processes
 
 == Usage
 
