@@ -533,8 +533,8 @@ def main(arg_update={}):
     inp = args.input
     jsonfile = args.jsoninput
     nproc = args.nproc
+    jlist = []
     if io.check_file(inp):
-        jlist = []
         if inp.split('.')[-1] == 'json':
             jlist = db.load_json(inp)
             mylist = qc.get_slabels_from_json(jlist)
