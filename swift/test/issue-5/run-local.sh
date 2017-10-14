@@ -2,7 +2,7 @@
 set -eu
 
 # Set P to argument 1 if given, else use default of 2
-P=${1:2}
+P=${1:-2}
 
 PATH=$HOME/Public/sfw/blues/compute/swift-t/stc/bin:$PATH
 
