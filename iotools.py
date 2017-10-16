@@ -46,6 +46,18 @@ def rm(fname):
     return
 
 
+def rmrf(dname):
+    """
+    Deletes directories recursively including all of the contents.
+    """
+    import shutil
+    try:
+        shutil.rmtree(dname,ignore_errors=True)
+    except OSError, e:
+        logging.error("Error in deleting {}: {}" % (dname,e.strerror))
+    return
+
+
 def mkdir(path):
     """
     Creates directory if it doesn't exist.
