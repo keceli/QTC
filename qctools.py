@@ -843,14 +843,18 @@ def run(mol, parameters, mult=None):
         if io.check_file(inpfile, timeout=1):
             if package in  ['nwchem', 'torsscan','torsopt']:
                 command = parameters['qcexe'] + ' ' + inpfile
+                if package == 'nwchem':
+                    io.mkdir('tmp_nwchem')
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
+                if package == 'nwchem':
+                    io.rmrf('tmp_nwchem')
             elif package in  ['molpro']:
-                command = parameters['qcexe'] + ' ' + inpfile
+                command = parameters['qcexe'] + ' ' + inpfile + ' -o ' + outfile
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
-                logfile = prefix + '.log'
-                if io.check_file(logfile):
-                    io.append_file(io.read_file(logfile),filename=outfile)
-                    io.rm(logfile)
+               # logfile = prefix + '.log'
+               # if io.check_file(logfile):
+               #     io.append_file(io.read_file(logfile),filename=outfile)
+               #     io.rm(logfile)
             else:
                 command = parameters['qcexe'] + ' ' + inpfile + ' ' + outfile
                 msg += io.execute(command)
