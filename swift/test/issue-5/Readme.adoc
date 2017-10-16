@@ -1,0 +1,34 @@
+
+= Parallel task launch example
+
+* Runs a 10 process Swift job
+* Runs 4 MPI tasks within that job, on P processes each (default 2)
+
+== File index
+
+run-local.sh::
+The entry point
+
+task.sh::
+The user task.  Simply reports its ID, rank, and size
+
+workflow.swift::
+The Swift workflow, a simple loop +
+The @par=P launch() syntax launches the command on P processes
+
+== Usage
+
+On blues:
+----
+$ ./run-local.sh | sort
+ID=0 RANK=0 SIZE=2
+ID=0 RANK=1 SIZE=2
+ID=1 RANK=0 SIZE=2
+ID=1 RANK=1 SIZE=2
+ID=2 RANK=0 SIZE=2
+ID=2 RANK=1 SIZE=2
+ID=3 RANK=0 SIZE=2
+ID=3 RANK=1 SIZE=2
+----
+
+As shown each task has size 2.  The two ranks within each task are reported, and there are 4 unique IDs.
