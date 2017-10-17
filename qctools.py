@@ -876,6 +876,16 @@ def run(mol, parameters, mult=None, trial=0):
                 msg += io.execute(command)
             if io.check_file(outfile, timeout=1):
                 msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
+                if not check_output(out):
+                    logging.error('Failed calculation "{0}"\n'.format(io.get_path(outfile)))
+                    if recover:
+                        logging.info('Attempting to recover, trial {}'.format(trial+1))
+                        logging.info('Renamed failed output')
+                        io.mv(outfile, 'failed_{}_{}'.format(outfile,trial))
+                        run(mol, parameters, mult=mult, trial=trial+1)
+                    else:
+                        logging.info('Skipping calculation')
+                        runqc = False
         else:
             msg += 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
     return msg
