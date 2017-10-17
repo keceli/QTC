@@ -310,7 +310,7 @@ def run(s):
            #         logging.warning("test_chem not found")
             if qcpackage in available_packages:
                 runstart = timer()
-                qc.run(mol, parameters, mult)
+                qc.run(mol, parameters, mult=mult)
                 runtime = timer() - runstart
                 logging.info("Runtime = {:15.3f} s".format(runtime))
             elif task == 'composite':

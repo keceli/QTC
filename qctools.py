@@ -810,23 +810,23 @@ def run(mol, parameters, mult=None, trial=0):
         parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
     else:
         if trial > 0:
-            templatename = '{0}_{1}_{2:d1}_template.txt'.format(task,package,trial)
+            templatename = '{0}_{1}_{2}_template.txt'.format(task,package,trial)
         else:
             templatename = '{0}_{1}_template.txt'.format(task,package)
         templatefile =  io.join_path(*[tempdir,templatename])
         if not io.check_file(templatefile):
             if trial > 0:
-                templatename = '{0}_{1:d1}_template.txt'.format(package,trial)
+                templatename = '{0}_{1}_template.txt'.format(package,trial)
             else:
                 templatename = '{0}_template.txt'.format(package)
             templatefile =  io.join_path(*[tempdir,templatename])
     if io.check_file(templatefile):           
         tmp = io.read_file(templatefile)
         inptext = get_input(mol, tmp, parameters)
-        run = True
+        runqc = True
     else:
         logging.error('Template file "{}" cannot be found'.format(templatefile))
-        run = False
+        runqc = False
         recover = False
     
     if task.startswith('tors'):
@@ -836,29 +836,29 @@ def run(mol, parameters, mult=None, trial=0):
     if io.check_file(outfile, timeout=1):
         if overwrite:
             msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
-            run = True
+            runqc = True
         else:
             out = io.read_file(outfile)
             if task.startswith('tors'):
                 if io.check_file('geom.xyz'):
                     msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path('geom.xyz'))
-                    run = False                
+                    runqc = False                
             else:
                 if check_output(out):
                     logging.info('Successful calculation found "{0}"\n'.format(io.get_path(outfile)))
-                    run = False
+                    runqc = False
                 else:
                     logging.error('Failed calculation found "{0}"\n'.format(io.get_path(outfile)))
                     if recover:
                         logging.info('Renaming failed output and trying to recover')
-                        io.mv(outfile, 'failed_{}_{:d1}'.format(outfile,trial))
+                        io.mv(outfile, 'failed_{}_{}'.format(outfile,trial))
                         run(mol, parameters, mult=mult, trial=trial+1)
                     else:
                         logging.info('Skipping calculation')
-                        run = False
+                        runqc = False
     else:
-        run = True
-    if run:
+        runqc = True
+    if runqc:
         io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
             if package in  ['nwchem', 'torsscan','torsopt']:
