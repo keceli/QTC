@@ -799,6 +799,7 @@ def run(mol, parameters, mult=None, trial=0):
     overwrite = parameters['overwrite']
     tempdir = parameters['qctemplate']
     task = parameters['qctask']
+    recover = parameters['recover']
     msg = ''
     if mult is None:
         mult = ob.get_multiplicity(mol)
@@ -826,6 +827,7 @@ def run(mol, parameters, mult=None, trial=0):
     else:
         logging.error('Template file "{}" cannot be found'.format(templatefile))
         run = False
+        recover = False
     
     if task.startswith('tors'):
         package = task
@@ -847,7 +849,7 @@ def run(mol, parameters, mult=None, trial=0):
                     run = False
                 else:
                     logging.error('Failed calculation found "{0}"\n'.format(io.get_path(outfile)))
-                    if parameters['recover']:
+                    if recover:
                         logging.info('Renaming failed output and trying to recover')
                         io.mv(outfile, 'failed_{}_{:d1}'.format(outfile,trial))
                         run(mol, parameters, mult=mult, trial=trial+1)
