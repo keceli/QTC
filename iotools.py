@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 import logging
-__updated__ = "2017-07-13"
+__updated__ = "2017-10-17"
 
 
 def get_date():
@@ -139,7 +139,7 @@ def write_file(s, filename='newfile'):
 def append_file(s, filename='newfile'):
 
     """
-    Appends s string to a file with teh given 'filename'.
+    Appends s string to a file with the given 'filename'.
     """
     with open(filename, 'a') as f:
         f.write(s)

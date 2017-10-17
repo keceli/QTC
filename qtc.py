@@ -14,7 +14,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-09-28"
+__updated__ = "2017-10-17"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -82,9 +82,9 @@ def get_args():
     parser.add_argument('-g', '--logindex', type=str,
                         default= '',
                         help='Log file index')
-    parser.add_argument('-d', '--qcdirectory', type=str,
-                        default='',
-                        help='Path for the directory for running qc jobs')
+    parser.add_argument('-d', '--database', type=str,
+                        default= io.pwd(),
+                        help='Path for database directory')
     parser.add_argument('-x', '--xyzpath', type=str,
                         default='',
                         help='Path for the directory for xyz file')
@@ -99,9 +99,6 @@ def get_args():
     parser.add_argument('-B', '--hfbasis', type=str,
                         default='auto',
                         help='List of SMILES (seperated by commas) for reference thermo species')
-    parser.add_argument('-D', '--database', type=str,
-                        default= io.pwd(),
-                        help='Path for database directory')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
     parser.add_argument('-Q', '--runqc', action='store_true',
@@ -211,25 +208,15 @@ def run(s):
     if parameters['qctemplate']:
         parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     if io.check_dir(parameters['qctemplate']):
-        tempdir = parameters['qctemplate']
+        pass
     else:
-        tempdir = io.join_path(*[parameters['qtcdirectory'],'templates'])
+        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates'])
     if not parameters['qckeyword']:
         runqc = False
         parseqc = False
         runthermo = False      
     if task=='composite':
         parameters['qctemplate'] = ''
-    elif task.startswith('tors'):
-        templatename = task + '_template' + '.txt'
-        parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
-    else:
-        templatename = '{0}_{1}_template.txt'.format(task,package)
-        templatename =  io.join_path(*[tempdir,templatename])
-        if not io.check_file(templatename):
-            templatename = '{0}_template.txt'.format(package)
-            templatename =  io.join_path(*[tempdir,templatename])            
-        parameters['qctemplate'] = templatename
     if parameters['writefiles']:
         parameters['parseqc'] = True
 
@@ -243,7 +230,7 @@ def run(s):
     msg += 'Basis        = {0}\n'.format(parameters['qcbasis'])
     msg += 'Package      = {0}\n'.format(parameters['qcpackage'])
     msg += 'Label        = {0}\n'.format(parameters['label'])
-    msg += 'Template     = {0}\n'.format(parameters['qctemplate'])
+    msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
     msg += 'Mol. index   = {0}'.format(parameters['mol_index'])
     logging.info(msg)
     smilesname = io.fix_path(s)
@@ -346,7 +333,7 @@ def run(s):
             logging.error('Error in running quantum chemistry calculations')
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
+            logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
             io.rm(runfile)
     if parseqc:
         logging.info('Parsing output...')
@@ -369,7 +356,7 @@ def run(s):
                     logging.error('Error in parsing {}'.format(io.get_path(qcoutput)))
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
+                    logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))        
                 for key in results.keys():
                     val = results[key]
                     if hasattr(val,'sort'):
@@ -427,7 +414,6 @@ def run(s):
                 parameters['all results'][s][label].update({key: results[key]})
                 if key == 'energy' or 'zpve' in key:
                     logging.info('{:10s} = {:10.8f}'.format(key,results[key]))
- #   parameters['all results'][s].update({label:parameters['results']})
     parameters['results']['deltaH0'] = 0
     parameters['all results'][s][label]['deltaH0'] = 0   
     parameters['results']['deltaH298'] = 0
