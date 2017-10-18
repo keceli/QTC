@@ -10,8 +10,8 @@ import time
 import os
 from os.path import isfile
 import logging
-__updated__ = "2017-10-17"
-
+__updated__ = "2017-10-18"
+__author__  = "Murat Keceli"
 
 def get_date():
     """
@@ -348,6 +348,59 @@ def execute_old(exe,inp=None,out=None):
         write_file(errstr, errfile)
         msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, get_path(errfile))
     return msg
+
+
+def get_mpi_rank(default=None):
+    """
+    Return mpi rank (int) if defined as an environment variable
+    """
+    if os.getenv("PMI_RANK") is not None:
+        rank = int(os.getenv("PMI_RANK"))
+    elif os.getenv("OMPI_COMM_WORLD_RANK") is not None:
+        rank = int(os.getenv("OMPI_COMM_WORLD_RANK"))
+    else:
+        rank = default
+    return rank
+
+
+def get_mpi_size(default=None):
+    """
+    Return mpi size (int) if defined as an environment variable
+    """
+    if os.getenv("PMI_SIZE") is not None:
+        size = int(os.getenv("PMI_SIZE"))
+    elif os.getenv("OMPI_COMM_WORLD_SIZE") is not None:
+        size = int(os.getenv("OMPI_COMM_WORLD_SIZE"))
+    else:
+        size = int(default)
+    return size
+
+
+def get_mpi_local_rank(default=None):
+    """
+    Return mpi local rank (int) if defined as an environment variable
+    https://www.open-mpi.org/faq/?category=running#mpi-environmental-variables
+    The relative rank of this process on this node within its job. 
+    For example, if four processes in a job share a node, they will each be given a local rank ranging from 0 to 3.
+    """
+    if os.getenv("OMPI_COMM_WORLD_LOCAL_RANK") is not None:
+        rank = int(os.getenv("OMPI_COMM_WORLD_LOCAL_RANK"))
+    else:
+        rank = int(default)
+    return rank
+
+
+def get_mpi_local_size(default=None):
+    """
+    Return mpi local size (int) if defined as an environment variable
+    https://www.open-mpi.org/faq/?category=running#mpi-environmental-variables
+    The number of processes on this node within its job. 
+    """
+    if os.getenv("OMPI_COMM_WORLD_LOCAL_SIZE") is not None:
+        size = int(os.getenv("OMPI_COMM_WORLD_LOCAL_SIZE"))
+    else:
+        size = int(default)
+    return size
 
 
 def execute(command, stdoutfile=None, stderrfile=None, merge=False):
