@@ -804,33 +804,7 @@ def run(mol, parameters, mult=None, trial=0):
     if mult is None:
         mult = ob.get_multiplicity(mol)
     else:
-        ob.set_mult(mol, mult)
-    if task.startswith('tors'):
-        templatename = task + '_template' + '.txt'
-        parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
-    else:
-        if trial > 0:
-            templatename = '{0}_{1}_{2}_template.txt'.format(task,package,trial)
-        else:
-            templatename = '{0}_{1}_template.txt'.format(task,package)
-        templatefile =  io.join_path(*[tempdir,templatename])
-        if not io.check_file(templatefile):
-            if trial > 0:
-                templatename = '{0}_{1}_template.txt'.format(package,trial)
-            else:
-                templatename = '{0}_template.txt'.format(package)
-            templatefile =  io.join_path(*[tempdir,templatename])
-    if io.check_file(templatefile):           
-        tmp = io.read_file(templatefile)
-        inptext = get_input(mol, tmp, parameters)
-        runqc = True
-    else:
-        logging.error('Template file "{}" cannot be found'.format(templatefile))
-        runqc = False
-        recover = False
-    
-    if task.startswith('tors'):
-        package = task
+        ob.set_mult(mol, mult)      
     outfile = parameters['qcoutput']
     inpfile = outfile.replace('out','inp')
     if io.check_file(outfile, timeout=1):
@@ -858,6 +832,30 @@ def run(mol, parameters, mult=None, trial=0):
                         runqc = False
     else:
         runqc = True
+    if task.startswith('tors'):
+        package = task
+        templatename = task + '_template' + '.txt'
+        parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
+    else:
+        if trial > 0:
+            templatename = '{0}_{1}_{2}_template.txt'.format(task,package,trial)
+        else:
+            templatename = '{0}_{1}_template.txt'.format(task,package)
+        templatefile =  io.join_path(*[tempdir,templatename])
+        if not io.check_file(templatefile):
+            if trial > 0:
+                templatename = '{0}_{1}_template.txt'.format(package,trial)
+            else:
+                templatename = '{0}_template.txt'.format(package)
+            templatefile =  io.join_path(*[tempdir,templatename])
+    if io.check_file(templatefile):           
+        tmp = io.read_file(templatefile)
+        inptext = get_input(mol, tmp, parameters)
+        runqc = True
+    else:
+        logging.error('Template file "{}" cannot be found'.format(templatefile))
+        runqc = False
+        recover = False
     if runqc:
         io.write_file(inptext, inpfile)
         if io.check_file(inpfile, timeout=1):
