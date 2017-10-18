@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 import logging
-__updated__ = "2017-07-13"
+__updated__ = "2017-10-17"
 
 
 def get_date():
@@ -26,8 +26,11 @@ def touch(fname, times=None):
     See http://stackoverflow.com/questions/1158076/implement-touch-using-python
     """
     import os
-    with open(fname, 'a'):
-        os.utime(fname, times)
+    try:
+        with open(fname, 'a'):
+            os.utime(fname, times)
+    except:
+        pass
     return
 
 
@@ -40,6 +43,18 @@ def rm(fname):
         os.remove(fname)
     else:
         logging.debug('Cannot delete file. {} does not exist.'.format(fname))
+    return
+
+
+def rmrf(dname):
+    """
+    Deletes directories recursively including all of the contents.
+    """
+    import shutil
+    try:
+        shutil.rmtree(dname,ignore_errors=True)
+    except OSError, e:
+        logging.error("Error in deleting {}: {}" % (dname,e.strerror))
     return
 
 
@@ -124,7 +139,7 @@ def write_file(s, filename='newfile'):
 def append_file(s, filename='newfile'):
 
     """
-    Appends s string to a file with teh given 'filename'.
+    Appends s string to a file with the given 'filename'.
     """
     with open(filename, 'a') as f:
         f.write(s)

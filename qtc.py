@@ -13,7 +13,8 @@ import sys
 import os
 import logging
 from patools import energy
-__updated__ = "2017-09-28"
+from timeit import default_timer as timer
+__updated__ = "2017-10-17"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -81,9 +82,9 @@ def get_args():
     parser.add_argument('-g', '--logindex', type=str,
                         default= '',
                         help='Log file index')
-    parser.add_argument('-d', '--qcdirectory', type=str,
-                        default='',
-                        help='Path for the directory for running qc jobs')
+    parser.add_argument('-d', '--database', type=str,
+                        default= io.pwd(),
+                        help='Path for database directory')
     parser.add_argument('-x', '--xyzpath', type=str,
                         default='',
                         help='Path for the directory for xyz file')
@@ -98,9 +99,6 @@ def get_args():
     parser.add_argument('-B', '--hfbasis', type=str,
                         default='auto',
                         help='List of SMILES (seperated by commas) for reference thermo species')
-    parser.add_argument('-D', '--database', type=str,
-                        default= io.pwd(),
-                        help='Path for database directory')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
     parser.add_argument('-Q', '--runqc', action='store_true',
@@ -117,6 +115,8 @@ def get_args():
                         help='Store .xyz, .ene files')
     parser.add_argument('-I', '--ignorerunningjobs', action='store_true',
                         help='Ignores RUNNING.tmp files and run the calculations')
+    parser.add_argument('-R', '--recover', action='store_true',
+                        help='Attempt to recover failed calculations')
     parser.add_argument('-O', '--overwrite', action='store_true',
                         help='Overwrite existing calculations. Be careful, data will be lost.')
     parser.add_argument('-X', '--excel', action='store_true',
@@ -208,39 +208,30 @@ def run(s):
     if parameters['qctemplate']:
         parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     if io.check_dir(parameters['qctemplate']):
-        tempdir = parameters['qctemplate']
+        pass
     else:
-        tempdir = io.join_path(*[parameters['qtcdirectory'],'templates'])
+        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates'])
     if not parameters['qckeyword']:
         runqc = False
         parseqc = False
         runthermo = False      
     if task=='composite':
         parameters['qctemplate'] = ''
-    elif task.startswith('tors'):
-        templatename = task + '_template' + '.txt'
-        parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
-    else:
-        templatename = '{0}_{1}_template.txt'.format(task,package)
-        templatename =  io.join_path(*[tempdir,templatename])
-        if not io.check_file(templatename):
-            templatename = '{0}_template.txt'.format(package)
-            templatename =  io.join_path(*[tempdir,templatename])            
-        parameters['qctemplate'] = templatename
     if parameters['writefiles']:
         parameters['parseqc'] = True
 
-    msg  = "Formula = {0}\n".format(formula)
-    msg += "SMILES = {0}\n".format(s)
+    msg  = "Formula      = {0}\n".format(formula)
+    msg += "SMILES       = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
-    msg += "Number of atoms = {0}\n".format(natom)
-    msg += "Number of rotors (open babel) = {0}\n".format(nrotor)
-    msg += 'Task = {0}\n'.format(parameters['qctask'])
-    msg += 'Method = {0}\n'.format(parameters['qcmethod'])
-    msg += 'Basis = {0}\n'.format(parameters['qcbasis'])
-    msg += 'Package = {0}\n'.format(parameters['qcpackage'])
-    msg += 'Label = {0}\n'.format(parameters['label'])
-    msg += 'Template = {0}\n'.format(parameters['qctemplate'])
+    msg += "N_atoms      = {0}\n".format(natom)
+    msg += "N_obrotors   = {0}\n".format(nrotor)
+    msg += 'Task         = {0}\n'.format(parameters['qctask'])
+    msg += 'Method       = {0}\n'.format(parameters['qcmethod'])
+    msg += 'Basis        = {0}\n'.format(parameters['qcbasis'])
+    msg += 'Package      = {0}\n'.format(parameters['qcpackage'])
+    msg += 'Label        = {0}\n'.format(parameters['label'])
+    msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
+    msg += 'Mol. index   = {0}'.format(parameters['mol_index'])
     logging.info(msg)
     smilesname = io.fix_path(s)
     parameters['smilesname' ] = smilesname
@@ -259,14 +250,13 @@ def run(s):
     xyzfile = ''
     if xyzpath:
         xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
-        logging.info('XYZdir = {0}\n'.format(xyzpath))
+        logging.info('XYZdir       = {0}'.format(xyzpath))
     elif optdir:
         xyzfilename = smilesname + '.xyz'
-        logging.info('Optdir = {0}\n'.format(optdir))
         if io.check_file(io.join_path(*[smilesdir,optdir,xyzfilename])):
             xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
     if xyzfile and natom > 1:
-        logging.info("XYZ file = '{0}'\n".format(xyzfile))
+        logging.info("XYZ file     = '{0}'".format(xyzfile))
         try:
             mol = ob.get_mol(xyzfile)
         except:
@@ -288,7 +278,7 @@ def run(s):
     io.mkdir(workdirectory)
     if io.check_dir(workdirectory, 1):
         io.cd(workdirectory)
-        logging.info("Rundir = '{0}'\n".format(workdirectory))
+        logging.info("Rundir       = '{0}'".format(workdirectory))
     else:
         logging.error('I/O error, {0} directory not found.\n'.format(workdirectory))
         return -1
@@ -305,6 +295,7 @@ def run(s):
         runqc = False
     if task is 'composite':
         runqc = True
+    runtime = 0
     if runqc:
         io.touch(runfile)
         try:
@@ -318,7 +309,10 @@ def run(s):
            #     else:
            #         logging.warning("test_chem not found")
             if qcpackage in available_packages:
-                qc.run(mol, parameters, mult)
+                runstart = timer()
+                qc.run(mol, parameters, mult=mult)
+                runtime = timer() - runstart
+                logging.info("Runtime = {:15.3f} s".format(runtime))
             elif task == 'composite':
                 qc.run_extrapolation_keyword(parameters)
             elif qcpackage == 'qcscript':
@@ -339,7 +333,7 @@ def run(s):
             logging.error('Error in running quantum chemistry calculations')
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
+            logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
             io.rm(runfile)
     if parseqc:
         logging.info('Parsing output...')
@@ -351,35 +345,33 @@ def run(s):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
             else:
-                logging.error('Cannot find "{0}".\n'.format(enefile))
-                logging.error('Cannot run thermo\n')
+                logging.error('Cannot run thermo, no ene file "{0}".\n'.format(enefile))
                 runthermo = False
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput, aslines=False)
             if qc.check_output(out):
                 try:
-                    results = qc.parse_output(out,smilesname, parameters['writefiles'], parameters['storefiles'], parameters['optlevel'])
+                    results = qc.parse_output(out,smilesname,parameters['writefiles'],parameters['storefiles'],parameters['optlevel'])
                 except Exception as e:
                     logging.error('Error in parsing {}'.format(io.get_path(qcoutput)))
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
+                    logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))        
                 for key in results.keys():
                     val = results[key]
-                    if hasattr(val, "any"):
-                        if val.any():
+                    if hasattr(val,'sort'):
+                        if any(val):
                             parameters['results'][key] = results[key]
                     else:
                         if val:
                             parameters['results'].update({key: results[key]})
             else:
-                logging.error('Failed calculation in "{0}"'.format(qcoutput))
-                logging.error('Cannot run thermo')
+                logging.error('Cannot run thermo failed calculation in "{0}"'.format(qcoutput))
                 runthermo = False
             if 'xyz' in results or natom == 1:
                 pass
             else:
-                logging.error('Cannot run thermo')
+                logging.error('Cannot run thermo, no xyz')
                 runthermo = False
 ############################ BLUES specific
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
@@ -408,21 +400,27 @@ def run(s):
             logging.error('Output file "{0}" not found.\n'.format(qcoutput))
             logging.error('Cannot run thermo')
             runthermo = False
-    logging.info(pprint.pformat((parameters['results'])))
+    parameters['all results'][s][label]['energy'] = 0   
+    parameters['all results'][s][label]['zpve'] = 0   
     for key in results.keys():
         val = results[key]
-        if hasattr(val, "any"):
-            if val.any():
+        if hasattr(val, 'sort'):
+            if any(val):
                 parameters['all results'][s][label][key] = results[key]
+                if 'freqs' in key:
+                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in results[key]]))
         else:
             if val:
                 parameters['all results'][s][label].update({key: results[key]})
- #   parameters['all results'][s].update({label:parameters['results']})
+                if key == 'energy' or 'zpve' in key:
+                    logging.info('{:10s} = {:10.8f}'.format(key,results[key]))
     parameters['results']['deltaH0'] = 0
     parameters['all results'][s][label]['deltaH0'] = 0   
     parameters['results']['deltaH298'] = 0
     parameters['all results'][s][label]['deltaH298'] = 0                                    
-    parameters['all results'][s][label]['chemkin'] = ''                                   
+    parameters['all results'][s][label]['chemkin'] = ''
+    if runtime > 1:
+        parameters['all results'][s][label]['runtime'] = runtime
     if runthermo:
         sym = 1
         if natom == 1:
@@ -577,7 +575,7 @@ def main(arg_update={}):
         logging.info('List of species')
         logging.info(pprint.pformat(mylist))
         if nproc == 1:
-            for s in mylist:
+            for mid,s in enumerate(mylist):
                 parameters['runthermo'] = False
                 parameters['optdir'] = ''
                 parameters['freqdir'] = ''
@@ -585,6 +583,7 @@ def main(arg_update={}):
                 parameters['qcdirectory'] = ''
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
+                parameters['mol_index'] = mid
                 parameters['results'] = {}
                 parameters['all results'].update({s:{}}) 
                 mol = ob.get_mol(s,make3D=True)
@@ -627,7 +626,13 @@ def main(arg_update={}):
     end = timer()
     if parameters['all results']:
         logging.info('\n' + 100*'-' + '\n')
-        logging.info(pprint.pformat((parameters['all results'])))
+        out   = '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format(   'SMILES', 'Energy', 'ZPVE', 'Key')
+        out += '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('      ', '[Hartree]', '[Hartree]', '  ')
+        for resultkey,resultval in parameters['all results'].iteritems():
+            for qcresultkey, qcresultval in sorted(resultval.iteritems(),key= lambda x: x[0]):
+                out += '{0:30s} {1:15.5f} {2:15.5f}\t   {3:50s}\n'.format(
+                    resultkey, qcresultval['energy'],qcresultval['zpve'],qcresultkey)
+        logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
             ckin = ''
@@ -704,7 +709,7 @@ def main(arg_update={}):
                     logging.info('Writing csv file {}'.format(csvfile))
                     io.write_file(csvtext,csvfile)
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
-    logging.info("QTC: Total time (s)          = {0:.2f}".format(end-start))
+    logging.info("QTC: Total time (s)          = {0:.2f}".format(end - start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
 
 if __name__ == "__main__":
