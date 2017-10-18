@@ -7,4 +7,4 @@ soft add +java-1.8
 soft add +g09-e.01
 
 set -x
-nice swift-t test.swift $*
+time nice swift-t test.swift $*
