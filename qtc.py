@@ -14,7 +14,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-10-17"
+__updated__ = "2017-10-24"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -67,6 +67,9 @@ def get_args():
     parser.add_argument('-n', '--nproc', type=int,
                         default=1,
                         help='Number of processors for qtc calculations, to run different species in parallel')
+    parser.add_argument('-m', '--machinefile', type=str,
+                        default='',
+                        help='Machinefile for mpirun')
     parser.add_argument('-k', '--qckeyword', type=str,
                         default='',
                         help='Keyword string that defines quantum chemistry calculations i.e.: "opt/ccsd/cc-pvdz/gaussian,energy/ccsd/cc-pvtz/nwchem,extrapolation/cbs/energy=0.3*E0+0.7*E1" Note that each calculation is separated by a comma (,) and calculations are defined by TASK/METHOD/BASIS/PACKAGE. TASK can be opt, freq, anharm,extrapolation.METHOD and BASIS are simply copied into quantum chemistry input file as defined in the templates folder. PACKAGE can be gaussian, molpro or nwchem')
@@ -198,7 +201,10 @@ def run(s):
     results = parameters['results']
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
         if package.startswith('nwc'):
-            parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
+            if parameters['machinefile']:
+                parameters['qcexe'] = 'mpirun --machinefile {0} nwchem'.format(parameters['machinefile'])
+            else:
+                parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
         elif package.startswith('mol'):
             parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
         else:
@@ -478,7 +484,9 @@ def main(arg_update={}):
     import os
     from time import strftime as get_date_time
     global parameters
-
+    mpirank = io.get_mpi_rank()
+    if mpirank > 0:
+        sys.exit()
     start  = timer()
     args = get_args()
     parameters = vars(args)
