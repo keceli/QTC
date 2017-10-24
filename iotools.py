@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 import logging
-__updated__ = "2017-10-18"
+__updated__ = "2017-10-20"
 __author__  = "Murat Keceli"
 
 def get_date():
@@ -402,6 +402,15 @@ def get_mpi_local_size(default=None):
         size = int(default)
     return size
 
+
+def get_ppn(includethreads=False):
+    """
+    Return number of processors per node.
+    For alternative solutions:
+    https://stackoverflow.com/questions/1006289/how-to-find-out-the-number-of-cpus-using-python
+    """
+    import psutil
+    return psutil.cpu_count(includethreads)
 
 def execute(command, stdoutfile=None, stderrfile=None, merge=False):
     """
