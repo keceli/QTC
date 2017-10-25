@@ -410,7 +410,8 @@ def run(s):
     parameters['all results'][s][label]['zpve'] = 0   
     for key in results.keys():
         val = results[key]
-        if hasattr(val, 'sort'):
+        if hasattr(val, '__iter__'):
+            if len(list(val))>0:
             if any(val):
                 parameters['all results'][s][label][key] = results[key]
                 if 'freqs' in key:
@@ -485,7 +486,7 @@ def main(arg_update={}):
     from time import strftime as get_date_time
     global parameters
     mpirank = io.get_mpi_rank()
-    if mpirank > 0:
+    if mpirank:
         sys.exit()
     start  = timer()
     args = get_args()
