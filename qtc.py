@@ -188,6 +188,7 @@ def run(s):
     optdir = parameters['optdir']
     ignore = parameters['ignorerunningjobs']
     overwrite=parameters['overwrite']
+    machinefile=io.get_path(parameters['machinefile'])
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
     formula = ob.get_formula(mol)
@@ -202,7 +203,7 @@ def run(s):
     if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
         if package.startswith('nwc'):
             if parameters['machinefile']:
-                parameters['qcexe'] = 'mpirun --machinefile {0} nwchem'.format(parameters['machinefile'])
+                parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(machinefile)
             else:
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
         elif package.startswith('mol'):
@@ -412,10 +413,10 @@ def run(s):
         val = results[key]
         if hasattr(val, '__iter__'):
             if len(list(val))>0:
-            if any(val):
-                parameters['all results'][s][label][key] = results[key]
-                if 'freqs' in key:
-                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in results[key]]))
+                if any(val):
+                    parameters['all results'][s][label][key] = results[key]
+                    if 'freqs' in key:
+                        logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in results[key]]))
         else:
             if val:
                 parameters['all results'][s][label].update({key: results[key]})
