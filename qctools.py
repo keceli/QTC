@@ -293,15 +293,16 @@ def parse_qckeyword(parameters, calcindex=0):
         else:
             logging.error('ERROR! Invalid qckeyword: {0}'.format(tokens))
         if task.startswith('opt') or task.startswith('geo') or task.startswith('min'):
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('tors'):
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-            parameters['freqdir'] = qcdirectory
-            parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
+            if task.endswith('scan'):
+                parameters['freqdir'] = qcdirectory
+                parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('freq') or task.startswith('harm') or task.startswith('hrm'):
             task = 'freq'
             qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
@@ -506,7 +507,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         basis          = pa.molpro_basisset(s)
         zmat           = pa.molpro_zmat(s)
         hessian        = pa.molpro_hessian(s)
-        freqs       = pa.molpro_freqs(s)
+        freqs          = list(pa.molpro_freqs(s))
         if energy:
             parsed = True
     elif package == 'gaussian':
@@ -519,8 +520,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         xyz            = pa.gaussian_xyz(s)
         geo            = pa.gaussian_geo(s)
         hessian        = pa.gaussian_hessian(s)
-        freqs       = pa.gaussian_freqs(s)
-        afreqs  = get_gaussian_fundamentals(s)[:,1]
+        freqs          = list(pa.gaussian_freqs(s))
+        afreqs         = list(get_gaussian_fundamentals(s)[:,1])
         if sum(afreqs) > 0:
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
             if type(xmat) == str:
@@ -807,6 +808,7 @@ def run(mol, parameters, mult=None, trial=0):
         ob.set_mult(mol, mult)      
     outfile = parameters['qcoutput']
     inpfile = outfile.replace('out','inp')
+    runqc   = True
     if io.check_file(outfile, timeout=1):
         if overwrite:
             msg = 'Overwriting previous calculation "{0}"\n'.format(io.get_path(outfile))
@@ -835,7 +837,7 @@ def run(mol, parameters, mult=None, trial=0):
     if task.startswith('tors'):
         package = task
         templatename = task + '_template' + '.txt'
-        parameters['qctemplate'] = io.join_path(*[tempdir,templatename])
+        templatefile = io.join_path(*[tempdir,templatename])
     else:
         if trial > 0:
             templatename = '{0}_{1}_{2}_template.txt'.format(task,package,trial)
@@ -848,11 +850,10 @@ def run(mol, parameters, mult=None, trial=0):
             else:
                 templatename = '{0}_template.txt'.format(package)
             templatefile =  io.join_path(*[tempdir,templatename])
-    if io.check_file(templatefile) and recover and runqc:           
+    if io.check_file(templatefile) and runqc:           
         tmp = io.read_file(templatefile)
         inptext = get_input(mol, tmp, parameters)
     else:
-        logging.error('Template file "{}" cannot be found'.format(templatefile))
         runqc = False
         recover = False
     if runqc:
@@ -1395,7 +1396,6 @@ def get_gaussian_xmatrix(s,nfreq):
             line = lines[iline]
             cols = line.split()
             ncol = len(cols) - 1
-            print cols[1:]
             xmat[irow,icol:icol+ncol] = [float(num.replace('D','E')) for num in cols[1:]]
         iline += 1
         line = lines[iline]
@@ -1450,7 +1450,7 @@ Overtones (DE w.r.t. Ground State)
             line = lines[iline]
             cols = line.split()
             freqs[i,:] = [float(cols[-5]),float(cols[-4])]
-    return freqs[freqs[:,0].argsort()].tolist()
+    return freqs[freqs[:,0].argsort()]
 
 
 def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1, dothermo=False):
@@ -1580,7 +1580,7 @@ def get_mopac_freq(lines):
         if keyword in line:
             freqs[i] = float(line.split()[1])
             i += 1
-    return freqs[:i].tolist()
+    return freqs[:i]
 
 
 def get_mopac_zpe(lines):
@@ -1904,7 +1904,7 @@ def get_mess_frequencies(out):
             items = line.split()
             for item in items:
                 try:
-                    freqs.append(item)
+                    freqs.append(float(item))
                 except:
                     logging.error('Non-numeric string in frequency lines of mess input: {0}'.format(item))
         else:

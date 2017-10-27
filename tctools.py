@@ -12,6 +12,7 @@ import patools as pa
 import logging
 import unittools as ut
 import math
+import numpy as np
 """
 Thermochemistry tools.
 Requires:
@@ -518,7 +519,7 @@ def get_messpf_input(mol,parameters):
             inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
             inp += ' '.join([str(x) for x in freqs]) + '\n'
         if 'xmat' in results:
-            xmat = results['xmat']
+            xmat = np.asarray(results['xmat'])
             inp += ' Anharmonicities[1/cm]\n'
             for i in range( len(xmat)):
                 for j in range(i+1):
