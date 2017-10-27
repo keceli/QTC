@@ -828,7 +828,7 @@ def E_QTC(bas, opt, en, freq, parameters):
     if zpve:
         logging.debug('ZPVE (harmonic) for {0} {1} = {2} Hartree'.format(slabel,zpvelabel,zpve))
     else: 
-        logging.error('ZPVE not found for {0} {1}'.format(slabel, qclabel))
+        logging.warning('ZPVE not found for {0} {1}'.format(slabel, qclabel))
     return  float(en) + float(zpve)
 
 

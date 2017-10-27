@@ -61,7 +61,7 @@ def dump_json(d, filename):
         logging.error('Error in dumping json file')
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        logging.error('Exception: '.format( exc_type, fname, exc_tb.tb_lineno))       
+        logging.error('Exception {}: {}, {}, {} '.format(e, exc_type, fname, exc_tb.tb_lineno))       
     return
 
 
