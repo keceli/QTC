@@ -366,9 +366,10 @@ def run(s):
                     logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))        
                 for key in results.keys():
                     val = results[key]
-                    if hasattr(val,'sort'):
-                        if any(val):
-                            parameters['results'][key] = results[key]
+                    if hasattr(val, '__iter__'):
+                        if len(list(val))>0:
+                            if val[0]:
+                                parameters['results'][key] = results[key]
                     else:
                         if val:
                             parameters['results'].update({key: results[key]})
@@ -413,7 +414,7 @@ def run(s):
         val = results[key]
         if hasattr(val, '__iter__'):
             if len(list(val))>0:
-                if any(val):
+                if val[0]:
                     parameters['all results'][s][label][key] = results[key]
                     if 'freqs' in key:
                         logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in results[key]]))
@@ -590,7 +591,7 @@ def main(arg_update={}):
                 parameters['optdir'] = ''
                 parameters['freqdir'] = ''
                 parameters['anharmdir'] = ''
-                parameters['qcdirectory'] = ''
+                parameters['qcdirectory'] = parameters['database']
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
                 parameters['mol_index'] = mid
@@ -618,7 +619,7 @@ def main(arg_update={}):
                 parameters['optdir'] = ''
                 parameters['freqdir'] = ''
                 parameters['anharmdir'] = ''
-                parameters['qcdirectory'] = ''
+                parameters['qcdirectory'] = parameters['database']
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
                 parameters['results'] = {}
