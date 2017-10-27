@@ -1399,7 +1399,7 @@ def get_gaussian_xmatrix(s,nfreq):
             xmat[irow,icol:icol+ncol] = [float(num.replace('D','E')) for num in cols[1:]]
         iline += 1
         line = lines[iline]
-    return xmat
+    return xmat.tolist()
 
 
 def get_gaussian_fundamentals(s,nfreq=None):
@@ -1450,7 +1450,7 @@ Overtones (DE w.r.t. Ground State)
             line = lines[iline]
             cols = line.split()
             freqs[i,:] = [float(cols[-5]),float(cols[-4])]
-    return freqs[freqs[:,0].argsort()]
+    return freqs[freqs[:,0].argsort()].tolist()
 
 
 def get_mopac_input(x, method='pm3', keys='precise nosym threads=1 opt', mult=1, dothermo=False):
@@ -1580,7 +1580,7 @@ def get_mopac_freq(lines):
         if keyword in line:
             freqs[i] = float(line.split()[1])
             i += 1
-    return freqs[:i]
+    return freqs[:i].tolist()
 
 
 def get_mopac_zpe(lines):
