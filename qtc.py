@@ -369,8 +369,7 @@ def run(s):
                     val = results[key]
                     if hasattr(val, '__iter__'):
                         if len(list(val))>0:
-                            if any(val):
-                                parameters['results'][key] = results[key]
+                            parameters['results'][key] = results[key]
                     else:
                         if val:
                             parameters['results'].update({key: results[key]})
@@ -406,7 +405,7 @@ def run(s):
                     logging.warning('{} not found.'.format(RPHtexe))
 #########################
         else:
-            logging.error('Output file "{0}" not found.\n'.format(qcoutput))
+            logging.error('Output file "{0}" not found in {1}.'.format(qcoutput,io.pwd()))
             logging.error('Cannot run thermo')
             runthermo = False
     parameters['all results'][s][label]['energy'] = 0   
@@ -415,10 +414,9 @@ def run(s):
         val = results[key]
         if hasattr(val, '__iter__'):
             if len(list(val))>0:
-                if any(val):
-                    parameters['all results'][s][label][key] = results[key]
-                    if 'freqs' in key:
-                        logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in results[key]]))
+                parameters['all results'][s][label][key] = results[key]
+                if 'freqs' in key:
+                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in results[key]]))
         else:
             if val:
                 parameters['all results'][s][label].update({key: results[key]})
@@ -473,7 +471,7 @@ def run(s):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error('Failed in chemkin polynomial generation')
-            logging.error('Exception: {} {} {}'.format( exc_type, fname, exc_tb.tb_lineno))         
+            logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))         
         parameters['results']['deltaH298'] = hof298
         parameters['all results'][s][label]['deltaH298'] = hof298   
         parameters['all results'][s][label]['chemkin'] = chemkintext
