@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-10-17"
+__updated__ = "2017-10-27"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -848,10 +848,9 @@ def run(mol, parameters, mult=None, trial=0):
             else:
                 templatename = '{0}_template.txt'.format(package)
             templatefile =  io.join_path(*[tempdir,templatename])
-    if io.check_file(templatefile):           
+    if io.check_file(templatefile) and recover and runqc:           
         tmp = io.read_file(templatefile)
         inptext = get_input(mol, tmp, parameters)
-        runqc = True
     else:
         logging.error('Template file "{}" cannot be found'.format(templatefile))
         runqc = False
