@@ -14,7 +14,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-10-24"
+__updated__ = "2017-10-27"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -342,6 +342,7 @@ def run(s):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
             io.rm(runfile)
+            io.rm(qcoutput)
     if parseqc:
         logging.info('Parsing output...')
         if io.check_file('geom1.xyz'):
@@ -368,7 +369,7 @@ def run(s):
                     val = results[key]
                     if hasattr(val, '__iter__'):
                         if len(list(val))>0:
-                            if val[0]:
+                            if any(val):
                                 parameters['results'][key] = results[key]
                     else:
                         if val:
@@ -414,7 +415,7 @@ def run(s):
         val = results[key]
         if hasattr(val, '__iter__'):
             if len(list(val))>0:
-                if val[0]:
+                if any(val):
                     parameters['all results'][s][label][key] = results[key]
                     if 'freqs' in key:
                         logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in results[key]]))
