@@ -244,10 +244,9 @@ def parse_qckeyword(parameters, calcindex=0):
     enlevel
     """
     keyword = parameters['qckeyword']
-    xyzdir = parameters['xyzpath']
-    optdir   = parameters['optdir']
+    optdir  = parameters['optdir']
     package = 'nwchem'
-    calcs = keyword.split(',')
+    calcs   = keyword.split(',')
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
     task = tokens[0]
@@ -273,7 +272,7 @@ def parse_qckeyword(parameters, calcindex=0):
         else:
             logging.info('ERROR! Invalid qckeyword: {0}'.format(tokens))
             return
-        qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method]))
+        qcdirectory = io.fix_path(io.join_path(*[optdir,task,method]))
         package = ''
         basis = ''
     else:
@@ -292,11 +291,11 @@ def parse_qckeyword(parameters, calcindex=0):
         else:
             logging.error('ERROR! Invalid qckeyword: {0}'.format(tokens))
         if task.startswith('opt') or task.startswith('geo') or task.startswith('min'):
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('tors'):
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
             parameters['optdir'] = qcdirectory
             parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
             if task.endswith('scan'):
@@ -304,17 +303,17 @@ def parse_qckeyword(parameters, calcindex=0):
                 parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('freq') or task.startswith('harm') or task.startswith('hrm'):
             task = 'freq'
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
             parameters['freqdir'] = qcdirectory
             parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('anh') or task.startswith('afre'):
             task = 'anharm'
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
             parameters['anharmdir'] = qcdirectory
             parameters['anharmonic'] = True
         elif task.startswith('sp') or task.startswith('single') or task.startswith('ene'):
             task = 'energy'
-            qcdirectory = io.fix_path(io.join_path(*[xyzdir,optdir,task,method,basis,package]))
+            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
             parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
         else:
             logging.info('ERROR! Invalid qckeyword task: {0}'.format(task))

@@ -88,9 +88,6 @@ def get_args():
     parser.add_argument('-d', '--database', type=str,
                         default= io.pwd(),
                         help='Path for database directory')
-    parser.add_argument('-x', '--xyzpath', type=str,
-                        default='',
-                        help='Path for the directory for xyz file')
     parser.add_argument('-o', '--qcoutput', type=str,
                         default='',
                         help='Path for the qc output file')
@@ -253,12 +250,8 @@ def run(s):
     else:
         qcoutput = smilesname + '_' + qcpackage + '.out'
     parameters['qcoutput'] = qcoutput
-    xyzpath = parameters['xyzpath']
     xyzfile = ''
-    if xyzpath:
-        xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
-        logging.info('XYZ path     = {0}'.format(xyzpath))
-    elif optdir:
+    if optdir:
         xyzfilename = smilesname + '.xyz'
         if io.check_file(io.join_path(*[smilesdir,optdir,xyzfilename])):
             xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
@@ -280,7 +273,7 @@ def run(s):
         if natom == 1:
             logging.info("XYZ not required, single atom calculation")
         elif task.startswith('tors') or task.startswith('opt'):
-            logging.info("XYZ file not found in optdir '{0}' or xyzpath '{1}' \n".format(optdir,xyzpath))
+            logging.info("XYZ file not found in optdir '{0}'".format(optdir))
         else:
             logging.error('No optimized geometry found, skipping subsequent calculations')
             runqc = False
@@ -620,6 +613,7 @@ def main(arg_update={}):
             logging.info("Starting thermo calculations")
             for s in mylist:
                 parameters['runthermo'] = runthermo
+                parameters['runqc'] = False
                 parameters['optdir'] = ''
                 parameters['freqdir'] = ''
                 parameters['anharmdir'] = ''

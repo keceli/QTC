@@ -800,7 +800,7 @@ def E_QTC(bas, opt, en, freq, parameters):
     slabel = qc.get_slabel(bas)
     parameters['natom'] = natom
     calcindex = parameters['calcindex']
-    parameters = qc.parse_qckeyword(parameters, calcindex)
+ #   parameters = qc.parse_qckeyword(parameters, calcindex)
     qckeyword = parameters['qckeyword']
     qclabel = qc.get_qc_label(natom, qckeyword, calcindex)
     en, zpve = 0., 0.
@@ -837,7 +837,7 @@ def get_total_energy(mol, parameters):
     natom = ob.get_natom(mol)
     parameters['natom'] = natom
     calcindex = parameters['calcindex']
-    parameters = qc.parse_qckeyword(parameters, calcindex)
+#    parameters = qc.parse_qckeyword(parameters, calcindex)
     dbdir = parameters['database']
     anharm = parameters['anharmonic']
     if anharm:
@@ -853,7 +853,6 @@ def main_keyword(s,parameters):
     anharm = parameters['anharmonic']
     dbdir  = parameters['database']
     index  = parameters['calcindex']
-    xyz    = parameters['xyzpath']
     natom = ob.get_natom(s)
     optlevel  = 'sp'
     extrap    = False
@@ -881,7 +880,6 @@ def main_keyword(s,parameters):
     hf0k = AU_to_kcal(E)
     parameters['runthermo']=True
     parameters['suppress_printing']=False
-    parameters['xyzpath']=xyz
     parameters['input']=s
     parameters['qckeyword'] = ','.join(qckeys)
     return hf0k, basis
