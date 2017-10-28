@@ -64,14 +64,13 @@ def get_input(x, template, parameters):
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
+    heat    = 0
     if 'results' in parameters.keys():
         results = parameters['results']
         if 'deltaH0' in results.keys():
             heat = results['deltaH0']
-        else:
-            heat = 0.
-    else:
-        heat = 0.    
+        if 'xyz' in results.keys():
+            xyz = results['xyz']
     task    = parameters['qctask']
     nproc   = parameters['qcnproc']
     inp = template

@@ -257,7 +257,7 @@ def run(s):
     xyzfile = ''
     if xyzpath:
         xyzfile = qc.find_xyzfile(xyzpath, smilesdir)
-        logging.info('XYZdir       = {0}'.format(xyzpath))
+        logging.info('XYZ path     = {0}'.format(xyzpath))
     elif optdir:
         xyzfilename = smilesname + '.xyz'
         if io.check_file(io.join_path(*[smilesdir,optdir,xyzfilename])):
@@ -271,6 +271,11 @@ def run(s):
             runqc = False
             parseqc = False
             runthermo = False
+    elif 'results' in parameters.keys():
+        results = parameters['results']
+        if 'xyz' in results.keys():
+            logging.info('Using a previously calculated xyz:\n {}'.format(results['xyz']))
+            mol = ob.get_mol(results['xyz'])
     else:
         if natom == 1:
             logging.info("XYZ not required, single atom calculation")
