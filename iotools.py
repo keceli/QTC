@@ -378,7 +378,7 @@ def get_mpi_size(default=None):
 
 def get_mpi_local_rank(default=None):
     """
-    Return mpi local rank (int) if defined as an environment variable
+    Return mpi local rank as an integer if defined as an environment variable
     https://www.open-mpi.org/faq/?category=running#mpi-environmental-variables
     The relative rank of this process on this node within its job. 
     For example, if four processes in a job share a node, they will each be given a local rank ranging from 0 to 3.
@@ -386,20 +386,20 @@ def get_mpi_local_rank(default=None):
     if os.getenv("OMPI_COMM_WORLD_LOCAL_RANK") is not None:
         rank = int(os.getenv("OMPI_COMM_WORLD_LOCAL_RANK"))
     else:
-        rank = int(default)
+        rank = default
     return rank
 
 
 def get_mpi_local_size(default=None):
     """
-    Return mpi local size (int) if defined as an environment variable
+    Return mpi local size as an integer if defined as an environment variable
     https://www.open-mpi.org/faq/?category=running#mpi-environmental-variables
     The number of processes on this node within its job. 
     """
     if os.getenv("OMPI_COMM_WORLD_LOCAL_SIZE") is not None:
         size = int(os.getenv("OMPI_COMM_WORLD_LOCAL_SIZE"))
     else:
-        size = int(default)
+        size = default
     return size
 
 
