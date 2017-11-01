@@ -193,6 +193,7 @@ def run(s):
     natom = ob.get_natom(mol)
     label = qc.get_qc_label(natom, qckeyword, calcindex)
     parameters['all results'][s].update({label:{}})
+    parameters['natom'] = natom
     parameters['nrotor'] = nrotor
     parameters['label'] = label
     parameters['slabel'] = s
@@ -319,7 +320,7 @@ def run(s):
                 runtime = timer() - runstart
                 logging.info("Runtime = {:15.3f} s".format(runtime))
             elif task == 'composite':
-                qc.run_extrapolation_keyword(parameters)
+                qc.run_composite(parameters)
             elif qcpackage == 'qcscript':
                 geofile = smilesname + '.geo'
                 geo = ob.get_geo(mol)

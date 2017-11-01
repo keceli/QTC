@@ -910,7 +910,7 @@ def run_composite(parameters):
     natom = parameters['natom']
     allresults = parameters['all results']
     smilesname = parameters['smilesname']
-    logging.info('Composite energy formula: {0}\n'.format(formula))
+    logging.info('Composite energy formula = {0}'.format(formula))
     calcindex = parameters['calcindex']
     e = [0.] * calcindex
     energy = None
@@ -927,8 +927,8 @@ def run_composite(parameters):
     if energy:
         io.write_file(str(energy),enefile )
         io.write_file(formula,inpfile )
-        logging.info('Composite energy: {}\n'.format(energy))
-        logging.info('Energy file: "{}"\n'.format(io.get_path(enefile)))
+        logging.info('Composite energy = {} Hartree\n'.format(energy))
+        logging.debug('Energy file: "{}"\n'.format(io.get_path(enefile)))
     else:
         energy = 0.
         logging.error('Problem in given composite formula: {}'.format(formula))
