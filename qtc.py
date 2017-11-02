@@ -193,6 +193,7 @@ def run(s):
     natom = ob.get_natom(mol)
     label = qc.get_qc_label(natom, qckeyword, calcindex)
     parameters['all results'][s].update({label:{}})
+    parameters['natom'] = natom
     parameters['nrotor'] = nrotor
     parameters['label'] = label
     parameters['slabel'] = s
@@ -237,7 +238,7 @@ def run(s):
     msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
     msg += 'Mol. index   = {0}'.format(parameters['mol_index'])
     logging.info(msg)
-    smilesname = io.fix_path(s)
+    smilesname = ob.get_smiles_filename(s)
     parameters['smilesname' ] = smilesname
     smilesdir =  ob.get_smiles_path(s, mult)
     smilesdir = io.join_path(parameters['database'], smilesdir)
@@ -319,7 +320,7 @@ def run(s):
                 runtime = timer() - runstart
                 logging.info("Runtime = {:15.3f} s".format(runtime))
             elif task == 'composite':
-                qc.run_extrapolation_keyword(parameters)
+                qc.run_composite(parameters)
             elif qcpackage == 'qcscript':
                 geofile = smilesname + '.geo'
                 geo = ob.get_geo(mol)
@@ -457,7 +458,7 @@ def run(s):
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][s][label]['deltaH0'] = hof
         parameters['all results'][s][label]['heat of formation basis'] = hfset
-        io.write_file(hftxt,s + '.hofk')
+        io.write_file(hftxt,smilesname + '.hofk')
         if not io.check_file('new.groups'):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')

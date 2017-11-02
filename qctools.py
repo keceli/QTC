@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-10-27"
+__updated__ = "2017-11-01"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -896,6 +896,43 @@ def run_extrapolation(mol,parameters):
     else:
         msg = 'Cannot run extrapolation, you need to specify qckeyword with -k or qctemplate with -t. \n'
     return msg
+
+
+def run_composite(parameters):
+    """
+    Parses qckeyword for composite method. 
+    'opt/mp2/cc-pvdz/gaussian,freq/mp2/cc-pvtz/molpro,sp/mp2/cc-pvqz,composite/cbs-dtq/energy=0.1 * E[0] + 0.4 * E[1] + 0.5 * E[2]'
+    """
+    qckeyword = parameters['qckeyword'] 
+    slabel  = parameters['slabel']
+    formula = parameters['formula'][0]
+    method = parameters['qcmethod']
+    natom = parameters['natom']
+    allresults = parameters['all results']
+    smilesname = parameters['smilesname']
+    logging.info('Composite energy formula = {0}'.format(formula))
+    calcindex = parameters['calcindex']
+    e = [0.] * calcindex
+    energy = None
+    enefile = smilesname + '.ene'  
+    inpfile = smilesname + '_' + method  + '.inp'  
+    for i in range(0,calcindex):
+        try:
+            qlabel = get_qc_label(natom, qckeyword, i)
+            e[i] = allresults[slabel][qlabel]['energy']
+        except Exception as err:
+            e[i] = 0.
+            logging.error('Energy not found for {0} {1}. Exception: {2}'.format(slabel,qlabel,err))
+    exec(formula)
+    if energy:
+        io.write_file(str(energy),enefile )
+        io.write_file(formula,inpfile )
+        logging.info('Composite energy = {} Hartree\n'.format(energy))
+        logging.debug('Energy file: "{}"\n'.format(io.get_path(enefile)))
+    else:
+        energy = 0.
+        logging.error('Problem in given composite formula: {}'.format(formula))
+    return energy
 
 
 def run_extrapolation_keyword(parameters):
