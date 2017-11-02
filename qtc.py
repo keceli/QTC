@@ -457,7 +457,7 @@ def run(s):
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][s][label]['deltaH0'] = hof
         parameters['all results'][s][label]['heat of formation basis'] = hfset
-        io.write_file(hftxt,s + '.hofk')
+        io.write_file(hftxt,smilesname + '.hofk')
         if not io.check_file('new.groups'):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')
