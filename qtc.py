@@ -238,7 +238,7 @@ def run(s):
     msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
     msg += 'Mol. index   = {0}'.format(parameters['mol_index'])
     logging.info(msg)
-    smilesname = io.fix_path(s)
+    smilesname = ob.get_smiles_filename(s)
     parameters['smilesname' ] = smilesname
     smilesdir =  ob.get_smiles_path(s, mult)
     smilesdir = io.join_path(parameters['database'], smilesdir)
