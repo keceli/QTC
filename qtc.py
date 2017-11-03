@@ -62,8 +62,8 @@ def get_args():
                         default='queue.json',
                         help='Input file in  json format, i.e. RMG queue.json files')
     parser.add_argument('-p', '--qcnproc', type=int,
-                        default=1,
-                        help='Number of processors for each quantum chemistry calculation')
+                        default=io.get_ppn(),
+                        help='Number of processors for quantum chemistry calculations. Default is total number of cores on a node.')
     parser.add_argument('-n', '--nproc', type=int,
                         default=1,
                         help='Number of processors for qtc calculations, to run different species in parallel')
