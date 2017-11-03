@@ -412,6 +412,17 @@ def get_ppn(includethreads=False):
     import psutil
     return psutil.cpu_count(includethreads)
 
+
+def get_env(var,default=None):
+    """
+    Return the value of environment variable.
+    """
+    val = os.getenv(var)
+    if val is None:
+        val = default
+    return val
+
+
 def execute(command, stdoutfile=None, stderrfile=None, merge=False):
     """
     Executes a given command, and optionally write stderr and/or stdout.
