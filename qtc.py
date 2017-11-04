@@ -238,7 +238,7 @@ def run(s):
     msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
     msg += 'Mol. index   = {0}'.format(parameters['mol_index'])
     logging.info(msg)
-    smilesname = io.fix_path(s)
+    smilesname = ob.get_smiles_filename(s)
     parameters['smilesname' ] = smilesname
     smilesdir =  ob.get_smiles_path(s, mult)
     smilesdir = io.join_path(parameters['database'], smilesdir)
@@ -340,6 +340,7 @@ def run(s):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
+            # Cf. #7
             io.rm(runfile)
             io.rm(qcoutput)
     if parseqc:
@@ -457,7 +458,7 @@ def run(s):
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][s][label]['deltaH0'] = hof
         parameters['all results'][s][label]['heat of formation basis'] = hfset
-        io.write_file(hftxt,s + '.hofk')
+        io.write_file(hftxt,smilesname + '.hofk')
         if not io.check_file('new.groups'):
             groupstext = tc.get_new_groups()
             io.write_file(groupstext, 'new.groups')
