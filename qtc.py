@@ -205,7 +205,7 @@ def run(s):
             else:
                 parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
         elif package.startswith('mol'):
-            parameters['qcexe'] = '{0} -n {1}'.format(parameters['molpro'],qcnproc)
+            parameters['qcexe'] = '{0} -n {1} -d {2}'.format(parameters['molpro'],qcnproc,io.get_env('TMPDIR'))
         else:
             parameters['qcexe'] = parameters[package]
     if task.startswith('tors'):
