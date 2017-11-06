@@ -64,6 +64,8 @@ def get_input(x, template, parameters):
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
+    slabel  = parameters[  'slabel']
+    nrotor  = parameters[  'nrotor']
     heat    = 0
     if 'results' in parameters.keys():
         results = parameters['results']
@@ -82,8 +84,11 @@ def get_input(x, template, parameters):
             else:
                 inp = inp.replace("QTC(OPTDIR)", 'false') 
         else:
-            inp = inp.replace("QTC(OPTDIR)", 'false') 
-        inp = inp.replace(      "QTC(NMC)", str(min(100,3**parameters['nrotor']+3)) )
+            inp = inp.replace("QTC(OPTDIR)", 'false')
+        if nrotor == 0:
+            inp = inp.replace(      "QTC(NMC)", str(1))
+        else:
+            inp = inp.replace(      "QTC(NMC)", str(min(100,3**nrotor+3)) )
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
@@ -138,7 +143,11 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(NOPEN)", str(nopen))
     inp = inp.replace("QTC(UNIQUENAME)", uniquename)
     inp = inp.replace("QTC(SMILESNAME)", smilesname)
-    inp = inp.replace("QTC(SMILES)", smiles)
+    if task.startswith('tors'):
+        inp = inp.replace("QTC(SMILES)", slabel)
+    else:
+        inp = inp.replace("QTC(SMILES)", smiles)
+    inp = inp.replace("QTC(SLABEL)", slabel)
     inp = inp.replace("QTC(ZMAT)", zmat)
     inp = inp.replace("QTC(GEO)", geo)
     inp = inp.replace("QTC(XYZ)", xyz)
