@@ -82,6 +82,9 @@ def get_args():
     parser.add_argument('-f', '--logfile', type=str,
                         default= 'none',
                         help='Log file prefix, use none for logging to STDOUT, include DATE if you want a date stamp')
+    parser.add_argument('-s', '--scratch', type=str,
+                        default=io.get_env('TMPDIR'),
+                        help='Scratch directory. Default is obtained from TMPDIR env. variable.')
     parser.add_argument('-g', '--logindex', type=str,
                         default= '',
                         help='Log file index')
@@ -125,6 +128,8 @@ def get_args():
                         help='Writes a json file containing all the results')
     parser.add_argument('-A', '--anharmonic', action='store_true',
                         help='Anharmonic corrections')
+    parser.add_argument('-D', '--debug', action='store_true',
+                        help='Run in debug mode')
     parser.add_argument('--fix', type=int,
                         default=0,
                         help='If FIX > 0, interpolate negative energies in hindered potential input for mess')
@@ -185,6 +190,7 @@ def run(s):
     optdir = parameters['optdir']
     ignore = parameters['ignorerunningjobs']
     overwrite=parameters['overwrite']
+    scratch = parameters['scratch']
     machinefile=io.get_path(parameters['machinefile'])
     mol = ob.get_mol(s,make3D=True)
     mult = ob.get_mult(mol)
@@ -197,19 +203,8 @@ def run(s):
     parameters['nrotor'] = nrotor
     parameters['label'] = label
     parameters['slabel'] = s
+    parameters['tmpdir']  = io.join_path(*[scratch,ob.get_smiles_filename(s)])
     results = parameters['results']
-    if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
-        if package.startswith('nwc'):
-            if parameters['machinefile']:
-                parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(machinefile)
-            else:
-                parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
-        elif package.startswith('mol'):
-            parameters['qcexe'] = '{0} -n {1} -d {2}'.format(parameters['molpro'],qcnproc,io.get_env('TMPDIR'))
-        else:
-            parameters['qcexe'] = parameters[package]
-    if task.startswith('tors'):
-        parameters['qcexe'] = parameters['torsscan']
     if parameters['qctemplate']:
         parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     if io.check_dir(parameters['qctemplate']):
@@ -336,13 +331,16 @@ def run(s):
             io.rm(runfile)
             sys.exit()
         except Exception as e:
-            logging.error('Error in running quantum chemistry calculations')
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
-            # Cf. #7
-            io.rm(runfile)
-            io.rm(qcoutput)
+            if parameters['debug']:
+                raise
+            else:
+                logging.error('Error in running quantum chemistry calculations')
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
+                # Cf. #7
+                io.rm(runfile)
+                io.rm(qcoutput)
     if parseqc:
         logging.info('Parsing output...')
         if io.check_file('geom1.xyz'):
@@ -361,10 +359,13 @@ def run(s):
                 try:
                     results = qc.parse_output(out,smilesname,parameters['writefiles'],parameters['storefiles'],parameters['optlevel'])
                 except Exception as e:
-                    logging.error('Error in parsing {}'.format(io.get_path(qcoutput)))
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))        
+                    if parameters['debug']:
+                        raise
+                    else:
+                        logging.error('Error in parsing {}'.format(io.get_path(qcoutput)))
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))        
                 for key in results.keys():
                     val = results[key]
                     if hasattr(val, '__iter__'):

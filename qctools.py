@@ -66,6 +66,7 @@ def get_input(x, template, parameters):
     basis   = parameters[  'qcbasis']
     slabel  = parameters[  'slabel']
     nrotor  = parameters[  'nrotor']
+    tmpdir  = parameters[  'tmpdir']
     heat    = 0
     if 'results' in parameters.keys():
         results = parameters['results']
@@ -143,6 +144,7 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(NOPEN)", str(nopen))
     inp = inp.replace("QTC(UNIQUENAME)", uniquename)
     inp = inp.replace("QTC(SMILESNAME)", smilesname)
+    inp = inp.replace("QTC(TMPDIR)", tmpdir)
     if task.startswith('tors'):
         inp = inp.replace("QTC(SMILES)", slabel)
     else:
@@ -808,6 +810,9 @@ def run(mol, parameters, mult=None, trial=0):
     tempdir = parameters['qctemplate']
     task = parameters['qctask']
     recover = parameters['recover']
+    tmpdir = parameters['tmpdir']
+    slabel  = parameters['slabel']
+    qcnproc  = parameters['qcnproc']
     msg = ''
     if mult is None:
         mult = ob.get_multiplicity(mol)
@@ -865,6 +870,19 @@ def run(mol, parameters, mult=None, trial=0):
         recover = False
     if runqc:
         io.write_file(inptext, inpfile)
+        io.mkdir(tmpdir)
+        if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
+            if package.startswith('nwc'):
+                if parameters['machinefile']:
+                    parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(machinefile)
+                else:
+                    parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
+            elif package.startswith('mol'):
+                parameters['qcexe'] = '{0} -n {1} -d {2}'.format(parameters['molpro'],qcnproc,parameters['tmpdir'])
+            elif task.startswith('tors'):
+                parameters['qcexe'] = parameters['torsscan']
+            else:
+               parameters['qcexe'] = parameters[package]
         if io.check_file(inpfile, timeout=1):
             if package in  ['nwchem', 'torsscan','torsopt']:
                 command = parameters['qcexe'] + ' ' + inpfile
@@ -892,6 +910,7 @@ def run(mol, parameters, mult=None, trial=0):
                     else:
                         logging.info('Skipping calculation')
                         runqc = False
+            io.rmrf(tmpdir)
         else:
             msg += 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
     return msg
