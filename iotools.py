@@ -413,6 +413,17 @@ def get_ppn(includethreads=False):
     return psutil.cpu_count(includethreads)
 
 
+def get_total_memory():
+    """
+    Return totol physical memory in GB as an integer.
+    """
+    from psutil import virtual_memory
+
+    mem = virtual_memory() # In bytes
+    m = mem.total >> 30 # Using bit shift to get in GB
+    return m
+
+
 def get_env(var,default=None):
     """
     Return the value of environment variable.
