@@ -535,6 +535,8 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
             if type(xmat) == str:
                 xmat = []
+        else:
+            afreqs = []
         if energy:
             parsed = True
     elif package.startswith('tors'):
@@ -570,9 +572,13 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                 fname = smilesname + '.anzpve'
                 io.write_file(str(azpve), fname)
             if len(freqs) > 0:
+                if any(freq < 0 for freq in freqs):
+                    logging.error('Imaginary frequency dedected: {}'.format(['{:6.1f}'.format(freq) for freq in freqs]))
                 fname = smilesname + '.hrm'
                 io.write_file('\n'.join(str(x) for x in freqs), fname )
             if sum(afreqs) > 0:
+                if any(freq < 0 for freq in afreqs):
+                    logging.error('Imaginary frequency dedected: {}'.format(['{:6.1f}'.format(freq) for freq in afreqs]))
                 fname = smilesname + '.anhrm'
                 io.write_file('\n'.join(str(x) for x in afreqs), fname)
         d = {'nbasis':nbasis,
