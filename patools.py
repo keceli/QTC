@@ -551,6 +551,7 @@ def rotconsts(lines):
 def get_298(lines):
     deltaH298 = ' h298 final\s*([\d,\-,\.]*)'
     lines = lines.splitlines()
+    tmp = ''
     for line in lines:
         if 'h298 final' in line:
             tmp = float(line.split()[-1])
