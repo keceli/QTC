@@ -220,7 +220,8 @@ def run(s):
     if parameters['writefiles']:
         parameters['parseqc'] = True
 
-    msg  = "Formula      = {0}\n".format(formula)
+    msg  = 'Mol. index   = {0}\n'.format(parameters['mol_index'])
+    msg += "Formula      = {0}\n".format(formula)
     msg += "SMILES       = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "N_atoms      = {0}\n".format(natom)
@@ -231,7 +232,6 @@ def run(s):
     msg += 'Package      = {0}\n'.format(parameters['qcpackage'])
     msg += 'Label        = {0}\n'.format(parameters['label'])
     msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
-    msg += 'Mol. index   = {0}'.format(parameters['mol_index'])
     logging.info(msg)
     smilesname = ob.get_smiles_filename(s)
     parameters['smilesname' ] = smilesname
@@ -351,8 +351,12 @@ def run(s):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
             else:
-                logging.error('Cannot run thermo, no ene file "{0}".\n'.format(enefile))
-                runthermo = False
+                if runthermo:
+                    logging.error('Cannot run thermo, no energy file "{0}".\n'.format(enefile))
+                    runthermo = False
+                else:
+                    logging.debug('No energy file "{0}".\n'.format(enefile))
+                    
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput, aslines=False)
             if qc.check_output(out):
@@ -375,8 +379,11 @@ def run(s):
                         if val:
                             parameters['results'].update({key: results[key]})
             else:
-                logging.error('Cannot run thermo failed calculation in "{0}"'.format(qcoutput))
-                runthermo = False
+                if runthermo:
+                    logging.error('Cannot run thermo failed calculation in "{0}"'.format(qcoutput))
+                    runthermo = False
+                else:
+                    logging.debug('Parsing error: failed calculation "{0}"'.format(qcoutput))
             if 'xyz' in results or natom == 1:
                 pass
             else:
@@ -394,7 +401,7 @@ def run(s):
                 parameters['results']['RPHtinput'] = RPHt
                 RPHtexe = '/lcrc/project/PACC/codes/EStokTP/exe/RPHt.exe'
                 RPHtfile = 'RPHt_input_data.dat'
-                if io.check_file('RPHtexe'):
+                if io.check_file(RPHtexe):
                     io.write_file(RPHt,RPHtfile)
                     io.execute(RPHtexe  + ' ' + RPHtfile)
                     if io.check_file( 'hrproj_freq.dat'):
@@ -407,8 +414,9 @@ def run(s):
 #########################
         else:
             logging.error('Output file "{0}" not found in {1}.'.format(qcoutput,io.pwd()))
-            logging.error('Cannot run thermo')
-            runthermo = False
+            if runthermo:
+                logging.error('Cannot run thermo')
+                runthermo = False
     parameters['all results'][s][label]['energy'] = 0   
     parameters['all results'][s][label]['zpve'] = 0   
     for key in results.keys():
@@ -417,7 +425,7 @@ def run(s):
             if len(list(val))>0:
                 parameters['all results'][s][label][key] = results[key]
                 if 'freqs' in key:
-                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in results[key]]))
+                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(float(freq)) for freq in results[key]]))
         else:
             if val:
                 parameters['all results'][s][label].update({key: results[key]})
@@ -469,6 +477,8 @@ def run(s):
         try:
             hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
         except Exception as e:
+            if parameters['debug']:
+                raise
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error('Failed in chemkin polynomial generation')
@@ -504,6 +514,8 @@ def main(arg_update={}):
     elif parameters['loglevel'] == 2:
         loglevel = logging.INFO
     elif parameters['loglevel'] == 3:
+        loglevel = logging.DEBUG
+    if parameters['debug']:
         loglevel = logging.DEBUG
     logging.addLevelName(logging.INFO, '')
     logging.addLevelName(logging.DEBUG, 'Debug:')
