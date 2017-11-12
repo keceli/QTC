@@ -492,6 +492,23 @@ def get_messpf_input(mol,parameters):
     formula = mol.formula
     multiplicity = mol.spin
     freqs = []
+    xmat = []
+    zpe = 0
+    emax = 500 #kcal/mol, not sure
+    if 'azpve' in results:
+        zpve = results['azpve']
+    elif 'zpve' in results:
+        zpve = results['zpve']
+    else:
+        zpve = 0.
+    if 'pfreqs' in results:
+        freqs = results['pfreqs']
+    elif 'freqs' in results:
+        freqs = results['freqs']    
+    if 'xmat' in results:
+        xmat = np.asarray(results['xmat'])
+        if 'afreqs' in results:
+            freqs = results['afreqs']
     inp  = 'AtomDistanceMin[angstrom] 0.6\n'
     inp += 'Temperature(step[K],size)        100.   30\n'
     inp += 'RelativeTemperatureIncrement            0.001\n'
@@ -501,39 +518,29 @@ def get_messpf_input(mol,parameters):
         inp += 'Mass[amu] {}\n'.format(ut.atommasses[formula])
     else:
         inp += 'RRHO\n'
-        inp += 'Geometry[angstrom] {0} !{1}\n'.format(natom,label)
+        inp += '\tGeometry[angstrom] {0} !{1}\n'.format(natom,label)
         inp += ''.join(xyz.splitlines(True)[2:])
-        inp += '\nCore RigidRotor\n'
-        inp += 'SymmetryFactor {0}\n'.format(sym)
-        inp += 'End\n'
-        if 'hindered potential' in results:
-            inp += results['hindered potential' ]
-        if 'pfreqs' in results:
-            freqs = results['pfreqs']
-        elif 'freqs' in results:
-            freqs = results['freqs']    
-        if 'xmat' in results:
-            if 'afreqs' in results:
-                freqs = results['afreqs']
+        inp += '\tZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
+        inp += '\tElectronicLevels[1/cm]  1\n'
+        inp += '\t 0 {0}\n'.format(multiplicity)
+        inp += '\tCore RigidRotor\n'
+        inp += '\t\tZeroPointEnergy[1/cm] {}\n'.format(zpe)
+        inp += '\t\tInterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
+        inp += '\t\tSymmetryFactor {0}\n'.format(sym)
         if len(freqs) > 0:
-            inp += 'Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
-            inp += ' '.join([str(x) for x in freqs]) + '\n'
-        if 'xmat' in results:
-            xmat = np.asarray(results['xmat'])
+            inp += '\t\tFrequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
+            inp += '\t\t' + ' '.join([str(x) for x in freqs]) + '\n'
+        if len(xmat) > 0:
             inp += ' Anharmonicities[1/cm]\n'
             for i in range( len(xmat)):
                 for j in range(i+1):
-                    inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
-            inp += ' End\n'
-        if 'azpve' in results:
-            zpve = results['azpve']
-        elif 'zpve' in results:
-            zpve = results['zpve']
-        else:
-            zpve = 0.
-        inp += 'ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
-    inp += 'ElectronicLevels[1/cm]  1\n'
-    inp += '0 {0}\n'.format(multiplicity)
+                    #inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
+                   # inp += '\t\t' + ' '.join([str(x) for x in freqs]) + '\n'
+                    inp += str(xmat[i,j]) + '\n'
+    inp += '\t End\n' # Core RigidRotor
+    if 'hindered potential' in results:
+        inp += '\t{}'.format(results['hindered potential' ])
+        #inp += '\t End\n' # hindered
     inp += 'End\n'
     return inp
 
@@ -583,10 +590,10 @@ def run_pf(messpf='messpf',inputfile='pf.inp'):
         msg += "{0} mess partitition function executable does not exist.\n".format(messpf)
     return msg
 
-def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.log', thermpexe='thermp'):
+def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.out', thermpexe='thermp'):
     """
     Runs thermp.exe
-    Requires pf.dat and thermp.dat files to be present
+    Requires pffile and thermpfile to be present
     linus
     /tcghome/sjk/gen/aux_me/therm/thermp.exe
     """
@@ -595,7 +602,7 @@ def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.log', thermpexe='t
     io.write_file(thermpinput, thermpfile)
     if not io.check_file(thermpfile,1):
         return "{0} file not found.\n".format(thermpfile)
-    pfdat = pffile.replace('log','dat')
+    pfdat = pffile.replace('out','dat')
     io.mv(pffile,pfdat)
     if io.check_file(pfdat,1):
         msg += io.execute(thermpexe)
@@ -674,7 +681,8 @@ def write_chemkin_polynomial(mol, parameters):
     chemkin format. Assumes quantum chemistry calculation is performed.
     """
     messpfinput = 'pf.inp'
-    messpfoutput = 'pf.log'
+#   messpfoutput = 'pf.log'
+    messpfoutput = 'pf.out'
     formula = mol.formula
     qlabel = parameters['label']
     slabel = parameters['slabel']
