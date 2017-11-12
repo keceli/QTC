@@ -528,18 +528,24 @@ def get_messpf_input(mol,parameters):
         inp += '\t\tInterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
         inp += '\t\tSymmetryFactor {0}\n'.format(sym)
         if len(freqs) > 0:
-            inp += '\t\tFrequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
-            inp += '\t\t' + ' '.join([str(x) for x in freqs]) + '\n'
+            posfreqs = []
+            for freq in freqs:
+                if float(freq) > 0:
+                    posfreqs.append(freq)
+            if len(posfreqs) < len(freqs):
+                logging.warning('Imaginary frequencies are ignored')
+            inp += '\t\tFrequencies[1/cm] {0} !{1}\n'.format(len(posfreqs),label)
+            inp += '\t\t' + ' '.join([str(x) for x in posfreqs]) + '\n'
         if len(xmat) > 0:
             inp += ' Anharmonicities[1/cm]\n'
             for i in range( len(xmat)):
-                for j in range(i+1):
+                #for j in range(i+1):
                     #inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
-                   # inp += '\t\t' + ' '.join([str(x) for x in freqs]) + '\n'
-                    inp += str(xmat[i,j]) + '\n'
-    inp += '\t End\n' # Core RigidRotor
-    if 'hindered potential' in results:
-        inp += '\t{}'.format(results['hindered potential' ])
+                    #inp += str(xmat[i,j]) + '\n'
+                inp += '\t\t' + ' '.join([str(xmat[i,j]) for j in range(i+1)]) + '\n'
+        inp += '\t End\n' # Core RigidRotor
+        if 'hindered potential' in results:
+            inp += '\t{}'.format(results['hindered potential' ])
         #inp += '\t End\n' # hindered
     inp += 'End\n'
     return inp
