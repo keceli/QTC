@@ -1978,7 +1978,7 @@ def get_mess_frequencies(out):
                     logging.error('Non-numeric string in frequency lines of mess input: {0}'.format(item))
         else:
             pass
-    return freqs
+    return sorted(freqs)
 
 
 def print_list(s):

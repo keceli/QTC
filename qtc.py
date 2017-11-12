@@ -425,7 +425,12 @@ def run(s):
             if len(list(val))>0:
                 parameters['all results'][s][label][key] = results[key]
                 if 'freqs' in key:
-                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(float(freq)) for freq in results[key]]))
+                    floatfreqs = sorted([float(freq) for freq in results[key]])
+                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in floatfreqs]))
+                    if any(freq < 0 for freq in floatfreqs) and runthermo:
+                        runthermo = False
+                        logging.error('Cannot run thermo')
+
         else:
             if val:
                 parameters['all results'][s][label].update({key: results[key]})
@@ -606,7 +611,7 @@ def main(arg_update={}):
                 parameters['qcdirectory'] = parameters['database']
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
-                parameters['mol_index'] = mid
+                parameters['mol_index'] = mid + 1
                 parameters['results'] = {}
                 parameters['all results'].update({s:{}}) 
                 mol = ob.get_mol(s,make3D=True)
