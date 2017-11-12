@@ -76,6 +76,8 @@ def get_input(x, template, parameters):
             xyz = results['xyz']
     task    = parameters['qctask']
     nproc   = parameters['qcnproc']
+    totalmem  = int(io.get_total_memory() * 0.8) # in MB
+    coremem   = int(float(totalmem)*0.524/nproc)  # in MegaWords
     inp = template
     if task.startswith('tors'):
         if parameters['optdir']:
@@ -162,6 +164,8 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
     inp = inp.replace("QTC(NPROC)", str(nproc))   
     inp = inp.replace('QTC(ANHARMLOC)', 'false')
+    inp = inp.replace('QTC(NODE_MEMORY_MB)', str(totalmem))
+    inp = inp.replace('QTC(CORE_MEMORY_MW)', str(coremem))
     if "QTC(" in inp:
         logging.info(66*'#')
         logging.info("Error in template file: \n" + inp)

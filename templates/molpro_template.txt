@@ -1,4 +1,4 @@
-memory,         2000 ,m
+memory,  QTC(CORE_MEMORY_MW) ,M
 nosym
 geometry={
 QTC(GEO)

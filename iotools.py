@@ -415,12 +415,13 @@ def get_ppn(includethreads=False):
 
 def get_total_memory():
     """
-    Return totol physical memory in GB as an integer.
+    Return totol physical memory in MB as an integer.
     """
     from psutil import virtual_memory
 
     mem = virtual_memory() # In bytes
-    m = mem.total >> 30 # Using bit shift to get in GB
+    m = mem.total >> 20 # Using bit shift to get in MB
+    #m = mem.total >> 30 # Using bit shift to get in GB
     return m
 
 
