@@ -898,14 +898,17 @@ def run(mol, parameters, mult=None, trial=0):
                 command = parameters['qcexe'] + ' ' + inpfile
                 if package == 'nwchem':
                     io.mkdir('tmp_nwchem')
+                logging.info('Running quantum chemistry calculation with {}'.format(command))
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
                 if package == 'nwchem':
                     io.rmrf('tmp_nwchem')
             elif package in  ['molpro']:
                 command = parameters['qcexe'] + ' ' + inpfile + ' -o ' + outfile
+                logging.info('Running quantum chemistry calculation with {}'.format(command))
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
             else:
                 command = parameters['qcexe'] + ' ' + inpfile + ' ' + outfile
+                logging.info('Running quantum chemistry calculation with {}'.format(command))
                 msg += io.execute(command)
             if io.check_file(outfile, timeout=1):
                 msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
@@ -1183,16 +1186,14 @@ def check_output(s):
         completed = True
     elif "Variable memory released" in s:
         completed = True
-    elif "Task: Submitting EStokTP job..." in s:
-        if check_file('geom.log'):
-            completed = check_output(io.read_file('geom.log'))
-        elif 'completed' in s:
-            completed = True
-        else:
-            completed = False
+    elif io.check_file('me_files/reac1_fr.me'):#TorsScan/ES2KTP
+        completed = True
+    elif io.check_file('geom.log'): #TorsOpt?
+        completed = check_output(io.read_file('geom.log'))
     else:
         completed = False
     return completed
+
 
 def find_xyzfile(xyzpath,smilesdir):
     """
