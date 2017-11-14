@@ -300,7 +300,6 @@ def run(s):
     if runqc:
         io.touch(runfile)
         try:
-            logging.info('Running quantum chemistry calculations')
            # if natom > 1: #uncomment when test_chem can exlude methyl rotors and can be installed on all plaforms
            #     if io.check_exe(parameters('test_chem')):
            #         test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
@@ -313,7 +312,9 @@ def run(s):
                 runstart = timer()
                 qc.run(mol, parameters, mult=mult)
                 runtime = timer() - runstart
-                logging.info("Runtime = {:15.3f} s".format(runtime))
+                logging.debug("Runtime = {:15.3f} s".format(runtime))
+                if runtime > 1.0:
+                    logging.info("Runtime = {:15.3f} s".format(runtime))
             elif task == 'composite':
                 qc.run_composite(parameters)
             elif qcpackage == 'qcscript':
@@ -383,12 +384,14 @@ def run(s):
                     logging.error('Cannot run thermo failed calculation in "{0}"'.format(qcoutput))
                     runthermo = False
                 else:
-                    logging.debug('Parsing error: failed calculation "{0}"'.format(qcoutput))
+                    logging.error('Found failed calculation "{0}"'.format(qcoutput))
             if 'xyz' in results or natom == 1:
                 pass
             else:
-                logging.error('Cannot run thermo, no xyz')
-                runthermo = False
+                parameters['break'] = True
+                if runthermo:
+                    logging.error('Cannot run thermo, no xyz')
+                    runthermo = False
 ############################ BLUES specific
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
                 RPHt, geolines = parameters['results']['RPHt input'].split('geometry')
@@ -663,12 +666,13 @@ def main(arg_update={}):
     end = timer()
     if parameters['all results']:
         logging.info('\n' + 100*'-' + '\n')
-        out   = '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format(   'SMILES', 'Energy', 'ZPVE', 'Path in {}'.format(parameters['database'])
-        out += '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('      ', '[Hartree]', '[Hartree]', '  ')
+        pathtitle = 'Path in {}'.format(parameters['database'])
+        out   = '{0:30s} {1:>15s} {2:>15s}\t   {3}\n'.format(   'SMILES', 'Energy', 'ZPVE', pathtitle)
+        out += '{0:30s} {1:>15s} {2:>15s}\t   {3}\n'.format('      ', '[Hartree]', '[Hartree]', '  ')
         for resultkey,resultval in parameters['all results'].iteritems():
             for qcresultkey, qcresultval in sorted(resultval.iteritems(),key= lambda x: x[0]):
                 runpath = 'database/' + qcresultval['path'].split('/database/')[-1]
-                out += '{0:30s} {1:15.5f} {2:15.5f}\t   {3:50s}\n'.format(
+                out += '{0:30s} {1:15.5f} {2:15.5f}\t   {3}\n'.format(
                     resultkey, qcresultval['energy'],qcresultval['zpve'],runpath)
         logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
