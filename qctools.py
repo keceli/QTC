@@ -1184,8 +1184,12 @@ def check_output(s):
     elif "Variable memory released" in s:
         completed = True
     elif "Task: Submitting EStokTP job..." in s:
-        if 'completed' in s:
+        if check_file('geom.log'):
+            completed = check_output(io.read_file('geom.log'))
+        elif 'completed' in s:
             completed = True
+        else:
+            completed = False
     else:
         completed = False
     return completed
