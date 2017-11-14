@@ -348,6 +348,7 @@ def run(s):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
             else:
+                parameters['break'] = True
                 if runthermo:
                     logging.error('Cannot run thermo, no energy file "{0}".\n'.format(enefile))
                     runthermo = False
@@ -360,6 +361,7 @@ def run(s):
                 try:
                     results = qc.parse_output(out,smilesname,parameters['writefiles'],parameters['storefiles'],parameters['optlevel'])
                 except Exception as e:
+                    parameters['break'] = True
                     if parameters['debug']:
                         raise
                     else:
@@ -376,6 +378,7 @@ def run(s):
                         if val:
                             parameters['results'].update({key: results[key]})
             else:
+                parameters['break'] = True
                 if runthermo:
                     logging.error('Cannot run thermo failed calculation in "{0}"'.format(qcoutput))
                     runthermo = False
@@ -410,6 +413,7 @@ def run(s):
                     logging.warning('{} not found.'.format(RPHtexe))
 #########################
         else:
+            parameters['break'] = True
             logging.error('Output file "{0}" not found in {1}.'.format(qcoutput,io.pwd()))
             if runthermo:
                 logging.error('Cannot run thermo')
@@ -611,16 +615,21 @@ def main(arg_update={}):
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
                 parameters['mol_index'] = mid + 1
+                parameters['break'] = False
                 parameters['results'] = {}
                 parameters['all results'].update({s:{}}) 
                 mol = ob.get_mol(s,make3D=True)
                 parameters['natom'] = ob.get_natom(mol)
                 for i in range(ncalc):
-                    parameters['calcindex'] = i
-                    parameters['qctemplate'] = templatedir
-                    logging.info('\n' + 100*'*' + '\n')
-                    parameters = qc.parse_qckeyword(parameters, calcindex=i)
-                    run(s)
+                    if parameters['break']:
+                        logging.info('Skipping next calculations for {}'.format(s))
+                        break
+                    else:
+                        parameters['calcindex'] = i
+                        parameters['qctemplate'] = templatedir
+                        logging.info('\n' + 100*'*' + '\n')
+                        parameters = qc.parse_qckeyword(parameters, calcindex=i)
+                        run(s)
         else:
             for i in range(ncalc):
                 parameters['calcindex'] = i
