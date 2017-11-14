@@ -338,9 +338,6 @@ def run(s):
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
-                # Cf. #7
-                io.rm(runfile)
-                io.rm(qcoutput)
     if parseqc:
         logging.info('Parsing output...')
         if io.check_file('geom1.xyz'):
@@ -419,6 +416,8 @@ def run(s):
                 runthermo = False
     parameters['all results'][s][label]['energy'] = 0   
     parameters['all results'][s][label]['zpve'] = 0   
+    parameters['all results'][s][label]['path'] = workdirectory   
+    #parameters['all results'][s]['mol_index'] = parameters['mol_index']  
     for key in results.keys():
         val = results[key]
         if hasattr(val, '__iter__'):
@@ -655,12 +654,13 @@ def main(arg_update={}):
     end = timer()
     if parameters['all results']:
         logging.info('\n' + 100*'-' + '\n')
-        out   = '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format(   'SMILES', 'Energy', 'ZPVE', 'Key')
+        out   = '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format(   'SMILES', 'Energy', 'ZPVE', 'Path in {}'.format(parameters['database'])
         out += '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('      ', '[Hartree]', '[Hartree]', '  ')
         for resultkey,resultval in parameters['all results'].iteritems():
             for qcresultkey, qcresultval in sorted(resultval.iteritems(),key= lambda x: x[0]):
+                runpath = 'database/' + qcresultval['path'].split('/database/')[-1]
                 out += '{0:30s} {1:15.5f} {2:15.5f}\t   {3:50s}\n'.format(
-                    resultkey, qcresultval['energy'],qcresultval['zpve'],qcresultkey)
+                    resultkey, qcresultval['energy'],qcresultval['zpve'],runpath)
         logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
