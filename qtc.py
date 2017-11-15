@@ -571,7 +571,7 @@ def main(arg_update={}):
             jlist = db.load_json(inp)
             mylist = qc.get_slabels_from_json(jlist)
         else:
-            mylist = io.read_list(inp)
+            mylist = io.read_list2(inp)
     else:
         mylist = inp.split(',')
     if endindex:
@@ -667,13 +667,14 @@ def main(arg_update={}):
     if parameters['all results']:
         logging.info('\n' + 100*'-' + '\n')
         pathtitle = 'Path in {}'.format(parameters['database'])
-        out   = '{0:30s} {1:>15s} {2:>15s}\t   {3}\n'.format(   'SMILES', 'Energy', 'ZPVE', pathtitle)
-        out += '{0:30s} {1:>15s} {2:>15s}\t   {3}\n'.format('      ', '[Hartree]', '[Hartree]', '  ')
-        for resultkey,resultval in parameters['all results'].iteritems():
-            for qcresultkey, qcresultval in sorted(resultval.iteritems(),key= lambda x: x[0]):
+        out   = '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('IDX','SMILES', 'Energy', 'ZPVE', pathtitle)
+        out  += '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('   ','      ', '[Hartree]', '[Hartree]', '  ')
+        for i,s in enumerate(mylist):
+            sresults = parameters['all results'][s]
+            for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
                 runpath = 'database/' + qcresultval['path'].split('/database/')[-1]
-                out += '{0:30s} {1:15.5f} {2:15.5f}\t   {3}\n'.format(
-                    resultkey, qcresultval['energy'],qcresultval['zpve'],runpath)
+                out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
+                        str(i+1), s, qcresultval['energy'],qcresultval['zpve'],runpath)
         logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
