@@ -317,7 +317,26 @@ def read_list(listfile):
     Skips blank lines.
     """
     with open(listfile, 'r') as f:
-        lines = filter(None, (line.rstrip() for line in f))
+        lines = filter(None, ((line.rstrip()) for line in f))
+    return lines
+
+
+def read_list2(listfile):
+    """
+    Return a list of strings from all lines in a text file.
+    Skips blank lines and lines that start with '#' or '!'.
+    Ignores the portion of lines that contain '!'.
+    """
+    lines = []
+    with open(listfile, 'r') as f:
+        for line in f:
+            aline = line.rstrip()
+            if aline:
+                if aline.startswith('#') or aline.startswith('!'):
+                    pass
+                else:
+                    theline = aline.split('!')[0]
+                    lines.append(theline)
     return lines
 
 
