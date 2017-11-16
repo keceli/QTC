@@ -544,24 +544,28 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
         if energy:
             parsed = True
     elif package.startswith('tors'):
-        optlevel, method, energy = get_torsscan_info(s)
-        if io.check_file('geoms/reac1_l1.xyz'):
-            xyz = io.read_file('geoms/reac1_l1.xyz')
+        #optlevel, method, energy = get_torsscan_info(s)
+        outfile = 'geoms/reac1_l1.log'
+        xyzfile = 'geoms/reac1_l1.xyz'
+        if io.check_file(outfile):
+            try:
+                out = io.read_file(outfile, aslines=False)
+                xyz = pa.gaussian_xyz(out)
+                method, energy = pa.gaussian_energy(out)
+                freqs = pa.gaussian_freqs(out)
+                parsed = True
+            except:
+                logging.error('parse_output: Cannot parse {}'.format(outfile))
+                parsed = False
+        elif io.check_file(xyzfile):
+            xyz = io.read_file(xyzfile)
             energy = float(xyz.splitlines()[1].strip())         
             parsed = True
-        elif io.check_file('geom.log'):
-                try:
-                    out = io.read_file('geom.log', aslines=False)
-                    xyz = pa.gaussian_xyz(out)
-                    method, energy = pa.gaussian_energy(out)
-                    freqs = pa.gaussian_freqs(out)
-                    parsed = True
-                except:
-                    logging.error('Cannot parse geom.log')
-                    parsed = False
         if io.check_dir('me_files', 1):
-            freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
-
+            try:
+                xyz, freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
+            except:
+                logging.error('parse_output: Cannot parse me_files {}'.format(io.get_path('me_files')))
     if parsed:
         if write:
             fname = smilesname + '.ene'
@@ -710,12 +714,16 @@ def parse_me_files(path=None):
         pass
     else:
         path = 'me_files'
-    
-    freqs = []
+    xyz    = ''
+    freqs  = []
     pfreqs = []
-    zpve = None
+    zpve   = None
     messhindered = None
     RPHtinput = None
+    fname = io.join_path(path,'reac1_ge.me')
+    if io.check_file(fname):
+        out = io.read_file(fname, aslines=False)
+        xyz = get_mess_xyz(out)
     fname = io.join_path(path,'reac1_unpfr.me')
     if io.check_file(fname):
         out = io.read_file(fname, aslines=False)
@@ -742,7 +750,7 @@ def parse_me_files(path=None):
 
     if freqs == pfreqs:
         pfreqs = []
-    return freqs, pfreqs, zpve, messhindered, RPHtinput
+    return xyz, freqs, pfreqs, zpve, messhindered, RPHtinput
     
 def getcc_enthalpy(out):
     if type(out) is not cclib.parser.data.ccData_optdone_bool:
@@ -857,7 +865,7 @@ def run(mol, parameters, mult=None, trial=0):
     else:
         runqc = True
     if task.startswith('tors'):
-        package = task
+        package = 'torsscan'
         templatename = task + '_template' + '.txt'
         templatefile = io.join_path(*[tempdir,templatename])
     else:
@@ -1941,6 +1949,49 @@ Rotational Constants:120.49000, 23.49807, 22.51838 GHz
         elif line.startswith('Energy'):
             energy = float(line.replace('A.U.','').split()[-1])
     return optlevel,  '{}/{}/{}'.format('torsscan',method,basis), energy
+
+
+def get_mess_xyz(out):
+    """
+    Return xyz as a string by parsing mess input file.
+    Input follows Geometty line
+    Sample input file:
+    AtomDistanceMin[angstrom] 0.6
+    Temperature(step[K],size)        100.   30
+    RelativeTemperatureIncrement            0.001
+    Species H2O
+    RRHO
+    Geometry[angstrom] 3 !torsscan/b3lyp/sto-3g/gaussian
+     O  0.000000  0.000000  0.000000
+     H  0.000000  0.000000  1.027000
+     H  1.018909  0.000000  -0.128659
+    
+    Core RigidRotor
+    SymmetryFactor 1
+    End
+    Frequencies[1/cm] 3 !torsscan/b3lyp/sto-3g/gaussian
+    2016.9034 3614.5724 3839.1980
+    ZeroEnergy[kcal/mol] 0.0215757824512 ! torsscan/b3lyp/sto-3g/gaussian
+    ElectronicLevels[1/cm]  1
+    0 1
+    End
+    """
+    out = out.lower()
+    lines = out.splitlines()
+    n = io.get_line_number('geometry', lines)
+    natom = int(lines[n].split()[-1])
+    xyz = str(natom) + '\n\n'
+    i = 0
+    for line in lines[n+1:]:
+        if line.strip() and len(line.split()) == 4:
+            xyz += line + '\n'
+            i += 1
+            if i == natom:
+                break
+        else:
+            logging.warning('get_mess_xyz: Invalid xyz format in mess input')
+    return xyz
+
 
 
 def get_mess_frequencies(out):
