@@ -291,7 +291,9 @@ def run(s):
             logging.info('Running composite calculation...')
         else:
             runqc = False
-            logging.info('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+            parseqc = False
+            runthermo = False
+            logging.warning('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     elif ignore and task is not 'composite':
         runqc = False
     if task is 'composite':
