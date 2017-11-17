@@ -30,18 +30,19 @@ def sort_species_list(slist, printinfo=False):
         natom = ob.get_natom(mol)
         nheavy = ob.get_natom_heavy(mol)
         formula = ob.get_formula(mol)
-        mult = ob.get_multiplicity(mol)
-        tmplist[i] = [s,formula,mult,nrotor,nelec,natom,nheavy]
+        smult  = ob.get_multiplicity(s)
+        obmult = ob.get_multiplicity(mol)
+        tmplist[i] = [s,formula,smult,obmult,nrotor,nelec,natom,nheavy]
         i += 1
-    tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[3],x[4],x[5]))
+    tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[4],x[5],x[6]))
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
         logging.info('-'*100)
-        logging.info('{:>8s}\t{:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
+        logging.info('{:>8s}\t{:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'OBMult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
         i = 0
         for tmp in tmplist:
             i += 1
-            logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
+            logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
         logging.info('-'*100)
     return sortedlist
 
