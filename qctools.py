@@ -1076,32 +1076,64 @@ def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
     return msg
 
 
-def run_test_chem(xyz,exe='test_chem'):
+def run_x2z(xyz,exe='x2z',getinfo=False):
     """
-    Runs Yury's test_chem code to get symmetry number and number of rotors
+    Runs Yury's x2z, and returns the output text as a string (default) or 
+    if getinfo is True returns a dictionary with parsed information.
     """
     if io.check_file(xyz):
         inp = xyz
     else:
-        io.write_file(xyz, 'test_chem.xyz')
-        inp = 'test_chem.xyz'
-    out = 'test_chem.out'
-    logging.debug('Running test_chem for {}'.format(inp))
-    io.execute([exe,inp],stdoutfile=out)
-    if io.check_file(out,1):
-        pass
+        io.write_file(xyz, 'x2z.xyz')
+        inp = 'x2z.xyz'
+    outfile = 'x2z.out'
+    logging.debug('Running x2z for {}'.format(inp))
+    msg = io.execute([exe,inp],stdoutfile=outfile)
+    if io.check_file(outfile,1):
+        out = io.read_file(outfile)
+        if getinfo:
+            x2zinfo = get_x2z_info(out)
+            result = x2zinfo
+        else:
+            result = out
     else:
-        logging.error('Failed in running test_chem for {}'.format(inp))
-        out = '' 
-    return out
+        logging.error('Failed in running x2z for {}.STDERR={} '.format(inp,msg))
+        result = ''
+    return result
 
 
-def get_test_chem_nrotor(out):
+def get_x2z_nmethyl(out):
+    """
+    Return the number of methyl rotors based on x2z output
+    """
     if io.check_file(out):
         out = io.read_file(out)
+    out = out.lower()
     lines = out.splitlines()
     nrotor = 0
-    key = 'Rotational bond dihedral angles:'
+    key = 'rotational groups:'
+    n = io.get_line_number(key,lines=lines)
+    nmethyl = 0
+    for line in lines[n+1:]:
+        if line:
+            groups = line[3:].split()
+            if 'c1h3' in groups:
+                nmethyl += 1
+        else:
+            break
+    return nmethyl
+
+
+def get_x2z_nrotor(out):
+    """
+    Return the number of rotors based on x2z output
+    """
+    if io.check_file(out):
+        out = io.read_file(out)
+    out = out.lower()
+    lines = out.splitlines()
+    nrotor = 0
+    key = 'rotational bond dihedral angles:'
     for line in lines:
         if line.startswith(key):
             line = line.replace(key,'').strip()
@@ -1115,8 +1147,9 @@ def get_test_chem_nrotor(out):
     return nrotor
 
 
-def get_test_chem_sym(out):
+def get_x2z_sym(out):
     """
+    Return the rotational symmetry number.
     molecule is nonlinear
 has enantiomer? yes
 
@@ -1171,6 +1204,7 @@ Linear bonds:
     """
     if io.check_file(out):
         out = io.read_file(out)
+    out = out.lower()
     lines = out.splitlines()
     sym = 1
     key = 'rotational symmetry number ='
@@ -1179,10 +1213,99 @@ Linear bonds:
             try:
                 sym = int(line.split()[-1])
             except:
-                logging.error('Failed in parsing sym. number in test_chem output {}'.format(out))
+                logging.error('Failed in parsing sym. number in x2z output {}'.format(out))
     return sym   
 
-             
+
+def get_x2z_info(out):
+    """
+    Returns a dictionary that contains information based on
+    given x2z output string or output filename . 
+    """
+    if io.check_file(out):
+        out = io.read_file(out)
+    out = out.lower()
+    lines = out.splitlines()
+    x2zinfo = {}
+    x2zinfo['moltype'] = 'unknown'
+    x2zinfo['nbeta'] = 0
+    x2zinfo['nlinear'] = 0
+    x2zinfo['nradical'] = 0
+    x2zinfo['nsym'] = -1
+    x2zinfo['nrotor'] = 0
+    x2zinfo['nresonance'] = 0
+    x2zinfo['nmethyl'] = get_x2z_nmethyl(out)
+    for line in lines:
+        if 'molecule is' in line:
+            x2zinfo['moltype'] = line.replace('molecule is', '').strip()
+        elif 'beta-scission' in line:
+            line = line.replace('beta-scission bonds:','')
+            x2zinfo['nbeta'] = len(line.split(','))
+        elif 'linear bonds' in line:
+            line = line.replace('linear bonds:','')
+            x2zinfo['nlinear'] = len(line.split(','))
+        elif 'free radical' in line:
+            if 'free radical site is' in line:
+                x2zinfo['nradical'] = 1
+            elif 'free radical sites are' in line:
+                line = line.replace('free radical sites are','')
+                x2zinfo['nradical'] = len(line.split())
+        elif 'rotational symmetry number =' in line:
+            x2zinfo['nsym'] = int(line.split()[-1])
+        elif 'rotational bond dihedral angles:' in line:
+            line = line.replace('rotational bond dihedral angles:','')
+            if line.strip():
+                x2zinfo['nrotor'] = len(line.split(','))
+        elif 'resonantly stabilized' in line:
+             line = line.replace('molecular structure:','').replace('(',' ').replace(')',' ')
+             for item in line.split():
+                 if item.isdigit():
+                     x2zinfo['nresonance'] = int(item)
+    return x2zinfo                
+
+
+def get_ob_info(s):
+    """
+    Returns a dictionary containing open-babel generated info for
+    a given chemical identifier (smiles, inchi, etc).
+    """
+    mol = ob.get_mol(s)
+    obinfo = {}
+    obinfo['nobrotor'] = ob.get_nrotor(mol)
+    obinfo['nelec'] = ob.get_nelectron(mol)
+    obinfo['natom'] = ob.get_natom(mol)
+    obinfo['nheavy'] = ob.get_natom_heavy(mol)
+    obinfo['formula'] = ob.get_formula(mol)
+    obinfo['smult']  = ob.get_multiplicity(s)
+    obinfo['obmult'] = ob.get_multiplicity(mol)
+    return obinfo
+
+
+def get_list_info(slist,sep=' , '):
+    info = ''
+    header = 'Index' + sep + 'Given' + sep + 'Can.SMILES' + sep + 'XYZ_SMILES' 
+    for i,s in enumerate(slist):
+        obinfo = get_ob_info(s)
+        xyz = ob.get_xyz(s)
+        cansmi = ob.get_smiles(s)
+        xyzsmi = ob.get_smiles(xyz)
+        x2zinfo = run_x2z(xyz,getinfo=True)
+        info += str(i) + sep + s + sep + cansmi + sep + xyzsmi 
+        for key,value in obinfo.iteritems():
+            if i == 0:
+                header += key + sep
+            info += str(value) + sep
+        for key,value in x2zinfo.iteritems():
+            if i == 0:
+                header += key + sep
+            info += str(value) + sep
+        if i == 0:
+            header += '\n'
+        info += '\n'
+    final = header + info
+    return final
+
+
 def check_output(s):
     """
     Returns true/false if quantum chemistry calculation completed/failed.
@@ -1197,8 +1320,6 @@ def check_output(s):
         completed = True
     elif io.check_file('me_files/reac1_fr.me'):#TorsScan/ES2KTP
         completed = True
-    elif io.check_file('geom.log'): #TorsOpt?
-        completed = check_output(io.read_file('geom.log'))
     else:
         completed = False
     return completed
@@ -1247,6 +1368,7 @@ def get_output_package(out,filename=False):
     else:
         p = None
     return p
+
 
 def get_package(templatename):
     """
@@ -1977,9 +2099,8 @@ def get_mess_xyz(out):
     0 1
     End
     """
-    out = out.lower()
     lines = out.splitlines()
-    n = io.get_line_number('geometry', lines)
+    n = io.get_line_number('Geometry[angstrom]', lines)
     natom = int(lines[n].split()[-1])
     xyz = str(natom) + '\n\n'
     i = 0
