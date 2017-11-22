@@ -293,6 +293,7 @@ def run(s):
             runqc = False
             parseqc = False
             runthermo = False
+            parameters['break'] = True
             logging.warning('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     elif ignore and task is not 'composite':
         runqc = False
@@ -691,12 +692,13 @@ def main(arg_update={}):
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
             ckin = ''
-            out   = '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('SMILES', 'deltaH(0)', 'deltaH(298)', 'Key')
-            out += '{0:30s} {1:>15s} {2:>15s}\t   {3:50s}\n'.format('      ', ' [kj/mol]', '[kj/mol]', ' ')
-            for resultkey,resultval in parameters['all results'].iteritems():
-                for qcresultkey, qcresultval in sorted(resultval.iteritems(),key= lambda x: x[0]):
-                    out += '{0:30s} {1:15.5f} {2:15.5f}\t   {3:50s}\n'.format(
-                        resultkey, qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
+            out   = '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('IDX','SMILES', 'DeltaH(0)', 'DeltaH(298)', 'Key')
+            out  += '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('   ','      ', '[kj/mol]', '[kj/mol]', '  ')
+            for i,s in enumerate(mylist):
+                sresults = parameters['all results'][s]
+                for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
+                    out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
+                        str(i+1), s,qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
                     ckin += qcresultval['chemkin']
             logging.info(out)
             ckinfile = 'chemkin_' + get_date_time("%y%m%d_%H%M%S") + '.txt'
