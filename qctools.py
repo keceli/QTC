@@ -824,6 +824,7 @@ def run(mol, parameters, mult=None, trial=0):
     """
     Runs qc, returns a string specifying the status of the calculation.
     """
+    maxtrial = 4
     package = parameters['qcpackage']
     overwrite = parameters['overwrite']
     tempdir = parameters['qctemplate']
@@ -833,6 +834,9 @@ def run(mol, parameters, mult=None, trial=0):
     slabel  = parameters['slabel']
     qcnproc  = parameters['qcnproc']
     msg = ''
+    if trial > maxtrial:
+        logging.error('Maximum number of trials reached')
+        return 'Maximum number of trials reached'
     if mult is None:
         mult = ob.get_multiplicity(mol)
     else:
