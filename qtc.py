@@ -157,9 +157,9 @@ def get_args():
     parser.add_argument('--pac99', type=str,
                         default='pac99',
                         help='Path for pac99 executable')
-    parser.add_argument('--test_chem', type=str,
-                        default='test_chem',
-                        help='Path for test_chem executable')
+    parser.add_argument('--x2z', type=str,
+                        default='x2z',
+                        help='Path for x2z executable')
     parser.add_argument('--suppress_printing', action='store_true')
     parser.add_argument('--qcscript', type=str,
 #                        default='/lcrc/project/PACC/test-awj/builddb/bin/qcscript.pl',
@@ -217,7 +217,7 @@ def run(s):
         runthermo = False      
     if task=='composite':
         parameters['qctemplate'] = ''
-    if parameters['writefiles']:
+    if parameters['writefiles'] or parameters['runthermo']:
         parameters['parseqc'] = True
 
     msg  = 'Mol. index   = {0}\n'.format(parameters['mol_index'])
@@ -302,14 +302,14 @@ def run(s):
     if runqc:
         io.touch(runfile)
         try:
-           # if natom > 1: #uncomment when test_chem can exlude methyl rotors and can be installed on all plaforms
-           #     if io.check_exe(parameters('test_chem')):
-           #         test_out = qc.run_test_chem(ob.get_xyz(mol), parameters['test_chem'])
-           #         nrotor = qc.get_test_chem_nrotor(test_out)
+           # if natom > 1: #uncomment when x2z can exlude methyl rotors and can be installed on all plaforms
+           #     if io.check_exe(parameters('x2z')):
+           #         test_out = qc.run_x2z(ob.get_xyz(mol), parameters['x2z'])
+           #         nrotor = qc.get_x2z_nrotor(test_out)
            #         #parameters['nrotor'] = nrotor # We may want to uncomment in the future
-           #         logging.info("Number of rotors (test_chem) = {0}\n".format(nrotor))
+           #         logging.info("Number of rotors (x2z) = {0}\n".format(nrotor))
            #     else:
-           #         logging.warning("test_chem not found")
+           #         logging.warning("x2z not found")
             if qcpackage in available_packages:
                 runstart = timer()
                 qc.run(mol, parameters, mult=mult)
@@ -423,8 +423,11 @@ def run(s):
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
-    parameters['all results'][s][label]['energy'] = 0   
-    parameters['all results'][s][label]['zpve'] = 0   
+    parameters['all results'][s][label]['energy'] = 0.
+    if 'zpve' in parameters['results']:
+        parameters['all results'][s][label]['zpve'] = parameters['results']['zpve']   
+    else:
+        parameters['all results'][s][label]['zpve'] = 0.
     parameters['all results'][s][label]['path'] = workdirectory   
     #parameters['all results'][s]['mol_index'] = parameters['mol_index']  
     for key in results.keys():
@@ -462,18 +465,23 @@ def run(s):
                 test_inp = (smilesname + '.xyz')
             elif 'xyz' in parameters['results'] and natom > 1:
                 test_inp = parameters['results']['xyz']
-            logging.info('Running test_chem for symmetry number')
+            logging.info('Running x2z for symmetry number')
             if test_inp:
                 try:
-                    out_test_chem = qc.run_test_chem(test_inp, parameters['test_chem'])
-                    sym = qc.get_test_chem_sym(out_test_chem) 
+                    out_x2z = qc.run_x2z(test_inp, parameters['x2z'])
+                    sym = qc.get_x2z_sym(out_x2z) 
                     logging.info('Symmetry number = {}'.format(sym))
                 except:
-                    logging.error('test_chem run failed, sym. number is set to 1. Probably a failed xyz')
+                    logging.error('x2z run failed, sym. number is set to 1. Probably a failed xyz')
             else:
                 logging.error('xyz file cannot be found')
         parameters['results']['sym'] = sym
-        hof, hfset = hf.main_keyword(s,parameters)
+        if formula in ['H2','O2','N2']:
+            hof = 0.
+            hfset = 'Definition'
+            logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
+        else:
+            hof, hfset = hf.main_keyword(s,parameters)
         hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
         hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         parameters['results']['deltaH0'] = hof
@@ -481,21 +489,24 @@ def run(s):
         parameters['all results'][s][label]['deltaH0'] = hof
         parameters['all results'][s][label]['heat of formation basis'] = hfset
         io.write_file(hftxt,smilesname + '.hofk')
-        if not io.check_file('new.groups'):
-            groupstext = tc.get_new_groups()
-            io.write_file(groupstext, 'new.groups')
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
-        try:
-            hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
-        except Exception as e:
-            if parameters['debug']:
-                raise
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            logging.error('Failed in chemkin polynomial generation')
-            logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))         
+        if formula in ['H2','O2','N2']:
+            logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
+        else:
+            if not io.check_file('new.groups'):
+                groupstext = tc.get_new_groups()
+                io.write_file(groupstext, 'new.groups')
+            try:
+                hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
+            except Exception as e:
+                if parameters['debug']:
+                    raise
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error('Failed in chemkin polynomial generation')
+                logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))         
         parameters['results']['deltaH298'] = hof298
         parameters['all results'][s][label]['deltaH298'] = hof298   
         parameters['all results'][s][label]['chemkin'] = chemkintext
@@ -635,16 +646,10 @@ def main(arg_update={}):
                         logging.info('\n' + 100*'*' + '\n')
                         parameters = qc.parse_qckeyword(parameters, calcindex=i)
                         run(s)
-        else:
-            for i in range(ncalc):
-                parameters['calcindex'] = i
-                if parameters['qckeyword']:
-                    qc.parse_qckeyword(parameters, calcindex=i)
-                pool = multiprocessing.Pool(nproc)
         if runthermo:
             logging.info('\n' + 120*'#' + '\n')
             logging.info("Starting thermo calculations")
-            for s in mylist:
+            for mid,s in enumerate(mylist):
                 parameters['runthermo'] = runthermo
                 parameters['runqc'] = False
                 parameters['optdir'] = ''
@@ -653,9 +658,14 @@ def main(arg_update={}):
                 parameters['qcdirectory'] = parameters['database']
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
+                parameters['mol_index'] = mid + 1
+                parameters['break'] = False
                 parameters['results'] = {}
                 parameters['heat'] = None
                 for i in range(ncalc):
+                    if parameters['break']:
+                        logging.info('Skipping next calculations for {}'.format(s))
+                        break
                     mol = ob.get_mol(s,make3D=True)
                     parameters['natom'] = ob.get_natom(mol)
                     parameters['calcindex'] = i
