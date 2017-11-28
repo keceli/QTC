@@ -303,14 +303,15 @@ def run(s):
     if runqc:
         io.touch(runfile)
         try:
-           # if natom > 1: #uncomment when x2z can exlude methyl rotors and can be installed on all plaforms
-           #     if io.check_exe(parameters('x2z')):
-           #         test_out = qc.run_x2z(ob.get_xyz(mol), parameters['x2z'])
-           #         nrotor = qc.get_x2z_nrotor(test_out)
-           #         #parameters['nrotor'] = nrotor # We may want to uncomment in the future
-           #         logging.info("Number of rotors (x2z) = {0}\n".format(nrotor))
-           #     else:
-           #         logging.warning("x2z not found")
+            if natom > 1: 
+                if io.check_exe(parameters['x2z']):
+                    test_out = qc.run_x2z(ob.get_xyz(mol), parameters['x2z'])
+                    nrotor = qc.get_x2z_nrotor(test_out)
+                    nmethyl = qc.get_x2z_nmethyl(test_out)
+                    parameters['nrotor'] = nrotor - nmethyl 
+                    logging.info("Number of rotors (x2z) = {0} - {1} = {2}".format(nrotor,nmethyl,nrotor-nmethyl))
+                else:
+                    logging.warning("x2z not found")
             if qcpackage in available_packages:
                 runstart = timer()
                 qc.run(mol, parameters, mult=mult)
