@@ -897,7 +897,7 @@ def run(mol, parameters, mult=None, trial=0):
         if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
             if package.startswith('nwc'):
                 if parameters['machinefile']:
-                    parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(machinefile)
+                    parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(parameters['machinefile'])
                 else:
                     parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
             elif package.startswith('mol'):
