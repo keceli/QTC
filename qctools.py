@@ -1249,11 +1249,12 @@ def get_x2z_info(out):
             line = line.replace('linear bonds:','')
             x2zinfo['nlinear'] = len(line.split(','))
         elif 'free radical' in line:
-            if 'free radical site is' in line:
-                x2zinfo['nradical'] = 1
-            elif 'free radical sites are' in line:
-                line = line.replace('free radical sites are','')
-                x2zinfo['nradical'] = len(line.split())
+            """
+            Free radical: Radical sites are C2 C4
+            Free radical: Radical site is C2
+            """
+            line = line.split('radical')[-1]
+            x2zinfo['nradical'] = len(line.split()) - 2
         elif 'rotational symmetry number =' in line:
             x2zinfo['nsym'] = int(line.split()[-1])
         elif 'rotational bond dihedral angles:' in line:
@@ -1287,14 +1288,14 @@ def get_ob_info(s):
 
 def get_list_info(slist,sep=' , '):
     info = ''
-    header = 'Index' + sep + 'Given' + sep + 'Can.SMILES' + sep + 'XYZ_SMILES' 
+    header = 'Index' + sep + 'Given' + sep + 'Can.SMILES' + sep + 'XYZ_SMILES'+ sep
     for i,s in enumerate(slist):
         obinfo = get_ob_info(s)
         xyz = ob.get_xyz(s)
         cansmi = ob.get_smiles(s)
         xyzsmi = ob.get_smiles(xyz)
         x2zinfo = run_x2z(xyz,getinfo=True)
-        info += str(i) + sep + s + sep + cansmi + sep + xyzsmi 
+        info += str(i+1) + sep + s     + sep + cansmi       + sep + xyzsmi + sep
         for key,value in obinfo.iteritems():
             if i == 0:
                 header += key + sep
