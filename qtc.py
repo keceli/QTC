@@ -83,8 +83,8 @@ def get_args():
                         default= 'none',
                         help='Log file prefix, use none for logging to STDOUT, include DATE if you want a date stamp')
     parser.add_argument('-s', '--scratch', type=str,
-                        default=io.get_env('TMPDIR'),
-                        help='Scratch directory. Default is obtained from TMPDIR env. variable.')
+                        default=io.get_env('TMPDIR',default='/tmp'),
+                        help='Scratch directory. If not given checks TMPDIR env. variable, if not defined uses /tmp.')
     parser.add_argument('-g', '--logindex', type=str,
                         default= '',
                         help='Log file index')
@@ -294,7 +294,7 @@ def run(s):
             parseqc = False
             runthermo = False
             parameters['break'] = True
-            logging.warning('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+            logging.error('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     elif ignore and task is not 'composite':
         runqc = False
     if task is 'composite':
@@ -431,6 +431,9 @@ def run(s):
     else:
         parameters['all results'][s][label]['zpve'] = 0.
     parameters['all results'][s][label]['path'] = workdirectory   
+    if 'hindered potential' in parameters['results'] and task.startswith('tors'):
+        tc.get_hindered_potential(parameters['results']['hindered potential'],report=parameters['debug'])
+        
     #parameters['all results'][s]['mol_index'] = parameters['mol_index']  
     for key in results.keys():
         val = results[key]
@@ -702,7 +705,7 @@ def main(arg_update={}):
                         str(i+1), s,qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
                     ckin += qcresultval['chemkin']
             logging.info(out)
-            ckinfile = 'chemkin_' + get_date_time("%y%m%d_%H%M%S") + '.txt'
+            ckinfile = 'chemkin_' + parameters['logfile'] + get_date_time("_%y%m%d_%H%M%S") + '.txt'
             ckinfile = io.get_unique_filename(ckinfile)
             io.write_file(ckin,ckinfile)
             logging.info('Written all chemkin polynomials in {}'.format(io.get_path(ckinfile)))

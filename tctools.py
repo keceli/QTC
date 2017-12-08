@@ -896,6 +896,41 @@ def get_enthalpy(rmgpoly,T):
     return H
 
 
+def get_hindered_potential(s,report=False):
+    """
+ Rotor                             Hindered
+ Group    4   5   6   7   8   9  10  11  12  13  14  15  16  17
+ Axis             2           1
+ Symmetry            1
+ Potential[kcal/mol]           12
+    0.00    1.52    2.20    2.14    1.83    1.58    2.03    3.78    6.35    7.46    5.81    1.99
+ End
+ Rotor                             Hindered
+ Group    5   6   7   8   9  10  11  12  13  14  15  16  17
+ Axis             4           2
+ Symmetry            1
+ Potential[kcal/mol]           12
+    0.00    3.72    8.34    7.05    3.27    2.22    4.05    3.24    1.90    3.35    5.10    3.42
+    """
+    s = s.lower()
+    lines = s.splitlines()
+    pot = []
+    for line in lines:
+        if line.islower(): #Check if line has any letter
+            pass
+        elif line.strip():
+            items = line.split()
+            newpot = [float(x) for x in items]
+            pot.append(newpot)
+            if report:
+                logging.info(line)
+            if any(p < 0. for p in newpot):
+                logging.error('Negative hindered potential dedected')
+                if not report:
+                    break
+    return pot
+
+
 def get_new_groups():
     s = """
 H2SO4
