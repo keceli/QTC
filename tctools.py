@@ -209,6 +209,50 @@ def get_coefficients_str(las,has):
     return line2+line3+line4
 
 
+def convert_chemkin2rmg(ckin):
+    """
+! OOCCC(O[O])C_m2      torsscan/m062x/cc-pvtz/gaussian
+! deltaH(0) -32.7035898546 kcal/mol
+! deltaH(298) -39.3632755502 kcal/mol
+C4H9O4                  H   9C   4O   4N   0G   200.00   3000.00  1000.00      1
+ 1.57361381E+01 3.29113185E-02-1.59602886E-05 3.77476959E-09-3.52930905E-13    2
+-2.63226479E+04-4.77325306E+01 4.60561015E-01 9.96060317E-02-1.28949962E-04    3
+ 9.08860280E-08-2.58936516E-11-2.34008733E+04 2.49356355E+01                   4
+ 
+     line2 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    2\n"%(has[0], has[1], has[2], has[3], has[4])
+    line3 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    3\n"%(has[5], has[6], las[0], las[1], las[2])
+    line4 = "% 15.8E% 15.8E% 15.8E% 15.8E                   4\n"%(las[3], las[4], las[5], las[6])
+    """
+    lines = ckin.splitlines()
+    nline = len(lines)
+    has = [0]*7
+    las = [0]*7
+    if nline < 4:
+        print('Bad format')
+    else:
+        lines = lines[-4:]
+        tlow, thigh, tmed = lines[0].split()[6:9]
+        tlow = float(tlow)
+        tmed = float(tmed)
+        thigh = float(thigh)
+        has[0] = float(lines[1][0:15])
+        has[1] = float(lines[1][15:30])
+        has[2] = float(lines[1][30:45])
+        has[3] = float(lines[1][45:60])
+        has[4] = float(lines[1][60:75])
+        has[5] = float(lines[2][0:15])
+        has[6] = float(lines[2][15:30])
+        las[0] = float(lines[2][30:45])
+        las[1] = float(lines[2][45:60])
+        las[2] = float(lines[2][60:75])
+        las[3] = float(lines[2][60:75])
+        las[3] = float(lines[3][0:15])
+        las[4] = float(lines[3][15:30])
+        las[5] = float(lines[3][30:45])
+        las[6] = float(lines[3][45:60])
+    return get_rmg_polynomial(las, has, temps=[tlow,tmed,tmed,thigh])
+
+    
 def get_rmg_polynomial(las, has,temps=[200.,1000.,1000.,3000.]):
     """
     Return NASA polynomial as a dictionary in RMG format:
