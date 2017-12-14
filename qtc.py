@@ -14,7 +14,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-10-27"
+__updated__ = "2017-12-14"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -85,6 +85,9 @@ def get_args():
     parser.add_argument('-s', '--scratch', type=str,
                         default=io.get_env('TMPDIR',default='/tmp'),
                         help='Scratch directory. If not given checks TMPDIR env. variable, if not defined uses /tmp.')
+    parser.add_argument('-x', '--xyzdir', type=str,
+                        default= 'xyz',
+                        help='Path for the xyz directory, where initial geometries will be read and written.')
     parser.add_argument('-g', '--logindex', type=str,
                         default= '',
                         help='Log file index')
@@ -192,15 +195,13 @@ def run(s):
     overwrite=parameters['overwrite']
     scratch = parameters['scratch']
     machinefile=io.get_path(parameters['machinefile'])
-    mol = ob.get_mol(s,make3D=True)
-    mult = ob.get_mult(mol)
-    formula = ob.get_formula(mol)
-    nrotor = ob.get_nrotor(mol)
-    natom = ob.get_natom(mol)
+    mol = ob.get_mol(parameters['xyz'])
+    mult = parameters['mult']
+    formula = parameters['formula']
+    nrotor = parameters['nrotor']
+    natom = parameters['natom']
     label = qc.get_qc_label(natom, qckeyword, calcindex)
     parameters['all results'][s].update({label:{}})
-    parameters['natom'] = natom
-    parameters['nrotor'] = nrotor
     parameters['label'] = label
     parameters['slabel'] = s
     parameters['tmpdir']  = io.join_path(*[scratch,ob.get_smiles_filename(s)])
@@ -303,15 +304,6 @@ def run(s):
     if runqc:
         io.touch(runfile)
         try:
-            if natom > 1: 
-                if io.check_exe(parameters['x2z']):
-                    test_out = qc.run_x2z(ob.get_xyz(mol), parameters['x2z'])
-                    nrotor = qc.get_x2z_nrotor(test_out)
-                    nmethyl = qc.get_x2z_nmethyl(test_out)
-                    parameters['nrotor'] = nrotor - nmethyl 
-                    logging.info("Number of rotors (x2z) = {0} - {1} = {2}".format(nrotor,nmethyl,nrotor-nmethyl))
-                else:
-                    logging.warning("x2z not found")
             if qcpackage in available_packages:
                 runstart = timer()
                 qc.run(mol, parameters, mult=mult)
@@ -323,7 +315,7 @@ def run(s):
                 qc.run_composite(parameters)
             elif qcpackage == 'qcscript':
                 geofile = smilesname + '.geo'
-                geo = ob.get_geo(mol)
+                geo = ''.join(parameters['xyz'][2:natom+2]) 
                 io.write_file(geo, geofile)
                 if io.check_file(geofile, 1):
                     qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
@@ -481,7 +473,7 @@ def run(s):
             else:
                 logging.error('xyz file cannot be found')
         parameters['results']['sym'] = sym
-        if formula in ['H2','O2','N2']:
+        if formula in ['XH2','XO2','XN2']: #Remove X to use the definided values
             hof = 0.
             hfset = 'Definition'
             logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
@@ -497,7 +489,7 @@ def run(s):
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
-        if formula in ['H2','O2','N2']:
+        if formula in ['XH2','XO2','XN2']: #Remove X to use the definided values
             logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
         else:
             if not io.check_file('new.groups'):
@@ -596,8 +588,8 @@ def main(arg_update={}):
         mylist = mylist[beginindex-1:endindex]
     else:
         mylist = mylist[beginindex-1:]
+    # Convert to open-babel canonical smiles and add  _mX for multiplicity if not specified.
     mylist = qc.update_smiles_list(mylist)
-
     init = timer()
     logging.info("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     runthermo = parameters['runthermo']
@@ -626,31 +618,29 @@ def main(arg_update={}):
     elif parameters['qckeyword']:
         logging.info('List of species')
         logging.info(pprint.pformat(mylist))
-        if nproc == 1:
-            for mid,s in enumerate(mylist):
-                parameters['runthermo'] = False
-                parameters['optdir'] = ''
-                parameters['freqdir'] = ''
-                parameters['anharmdir'] = ''
-                parameters['qcdirectory'] = parameters['database']
-                parameters['optlevel'] = ''
-                parameters['freqlevel'] = ''
-                parameters['mol_index'] = mid + 1
-                parameters['break'] = False
-                parameters['results'] = {}
-                parameters['all results'].update({s:{}}) 
-                mol = ob.get_mol(s,make3D=True)
-                parameters['natom'] = ob.get_natom(mol)
-                for i in range(ncalc):
-                    if parameters['break']:
-                        logging.info('Skipping next calculations for {}'.format(s))
-                        break
-                    else:
-                        parameters['calcindex'] = i
-                        parameters['qctemplate'] = templatedir
-                        logging.info('\n' + 100*'*' + '\n')
-                        parameters = qc.parse_qckeyword(parameters, calcindex=i)
-                        run(s)
+        for mid,s in enumerate(mylist):
+            parameters['runthermo'] = False
+            parameters['optdir'] = ''
+            parameters['freqdir'] = ''
+            parameters['anharmdir'] = ''
+            parameters['qcdirectory'] = parameters['database']
+            parameters['optlevel'] = ''
+            parameters['freqlevel'] = ''
+            parameters['mol_index'] = mid + 1
+            parameters['break'] = False
+            parameters['results'] = {}
+            parameters['all results'].update({s:{}}) 
+            parameters = qc.add_species_info(s,parameters)
+            for i in range(ncalc):
+                if parameters['break']:
+                    logging.info('Skipping next calculations for {}'.format(s))
+                    break
+                else:
+                    parameters['calcindex'] = i
+                    parameters['qctemplate'] = templatedir
+                    logging.info('\n' + 100*'*' + '\n')
+                    parameters = qc.parse_qckeyword(parameters, calcindex=i)
+                    run(s)
         if runthermo:
             logging.info('\n' + 120*'#' + '\n')
             logging.info("Starting thermo calculations")
@@ -667,12 +657,11 @@ def main(arg_update={}):
                 parameters['break'] = False
                 parameters['results'] = {}
                 parameters['heat'] = None
+                parameters = qc.add_species_info(s,parameters)
                 for i in range(ncalc):
                     if parameters['break']:
                         logging.info('Skipping next calculations for {}'.format(s))
                         break
-                    mol = ob.get_mol(s,make3D=True)
-                    parameters['natom'] = ob.get_natom(mol)
                     parameters['calcindex'] = i
                     parameters['qctemplate'] = templatedir
                     logging.info('\n' + 50*'-' + '\n')
