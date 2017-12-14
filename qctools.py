@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-11-01"
+__updated__ = "2017-12-14"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -47,6 +47,108 @@ def sort_species_list(slist, printinfo=False):
     return sortedlist
 
 
+def add_species_info(s, parameters):
+    """
+    Add info:
+            nelec
+            natom
+            nheavy
+            formula
+            mult
+            nrotor (from x2z excluding methyl rotors)
+     for a species obtained by openbabel and x2z into a given dictionary that contain 'xyzdir' for
+     the location of xyz file.
+    Note:
+    IO operations
+    pwd
+    mkdir
+    cd
+    file read/write
+    """
+    pwd = io.pwd()
+    if parameters['xyzdir']:
+        io.mkdir(parameters['xyzdir'])
+    else:
+        io.mkdir('xyz')
+    io.cd(parameters['xyzdir'])
+    xyzfile = s + '.xyz'
+    xyzfile = io.fix_path(xyzfile)
+    if io.check_file(xyzfile):
+        xyz = io.read_file(xyzfile)
+        mol = ob.get_mol(xyz)
+    else:
+        mol = ob.get_mol(s,make3D=True)
+        xyz = ob.get_xyz(mol)       
+        io.write_file(xyz, xyzfile)
+    parameters['nelec']   = ob.get_nelectron(mol)
+    parameters['natom']   = ob.get_natom(mol)
+    parameters['nheavy']  = ob.get_natom_heavy(mol)
+    parameters['formula'] = ob.get_formula(mol)
+    parameters['mult']    = ob.get_multiplicity(s) 
+    parameters['xyz'] = xyz
+    if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
+        try:
+            x2z_out = run_x2z(xyzfile, parameters['x2z'])
+            nrotor = get_x2z_nrotor(x2z_out)
+            nmethyl = get_x2z_nmethyl(x2z_out)
+            parameters['nrotor'] = nrotor - nmethyl
+        except:
+            logging.error('x2z failed for {}'.format(s))
+            parameters['nrotor'] = ob.get_nrotor(mol)
+    else:
+        parameters['nrotor'] = ob.get_nrotor(mol)
+    io.cd(pwd)
+    return parameters  
+
+
+def get_species_info_list(slist, parameters):
+    """
+    Return a list of dictionaries for a given species list with info obtained by
+    openbabel and x2z.
+    Note:
+    IO operations
+    pwd
+    mkdir
+    cd
+    file read/write
+    """
+    infolist = []
+    for i,s in enumerate(slist):
+        d = {}
+        pwd = io.pwd()
+        io.mkdir(parameters['xyzdir'])
+        io.cd(parameters['xyzdir'])
+        xyzfile = s + '.xyz'
+        xyzfile = io.fix_path(xyzfile)
+        if io.check_file(xyzfile):
+            xyz = io.read_file(xyzfile)
+            mol = ob.get_mol(xyz)
+        else:
+            mol = ob.get_mol(s,make3D=True)
+            xyz = ob.get_xyz(mol)       
+            io.write_file(xyz, xyzfile)
+        d['mol_id']  = i + 1
+        d['nelec']   = ob.get_nelectron(mol)
+        d['natom']   = ob.get_natom(mol)
+        d['nheavy']  = ob.get_natom_heavy(mol)
+        d['formula'] = ob.get_formula(mol)
+        d['mult']    = ob.get_multiplicity(s) 
+        if d['natom'] > 1 and io.check_exe(parameters['x2z']):
+            try:
+                x2z_out = run_x2z(xyzfile, parameters['x2z'])
+                nrotor = get_x2z_nrotor(x2z_out)
+                nmethyl = get_x2z_nmethyl(x2z_out)
+                d['nrotor'] = nrotor - nmethyl
+            except:
+                logging.error('x2z failed for {}'.format(s))
+                d['nrotor'] = ob.get_nrotor(mol)
+        else:
+            d['nrotor'] = ob.get_nrotor(mol)
+        infolist.append(d)
+        io.cd(pwd)
+    return infolist  
+    
+            
 def get_input(x, template, parameters):
     """
     Returns input file text for a qc calculation based on a given template.
@@ -267,16 +369,23 @@ def parse_qckeyword(parameters, calcindex=0):
     tokens = currentcalc.split('/')
     task = tokens[0]
     if parameters['natom'] == 1:
-        logging.info('Number of atoms =1')
+        logging.info('Number of atoms = 1')
         logging.info('Task = {}'.format(task))
         optdir = ''
         parameters['optdir'] = ''
         if task.startswith('comp') or task.startswith('ene'):
             pass
         else: 
-            logging.info('Setting Task = energy, since {0} cannot be run for 1 atom'.format(task))
+            logging.info('Replacing Task = {} with Task = energy, since there is only a single atom'.format(task))
             task = 'energy'
             parameters['task'] = task
+    if parameters['nrotor'] == 0:
+        if task.startswith('torsopt'):
+            logging.info('Replacing Task = {} with Task = opt, since there are no torsions.'.format(task))
+            task = 'opt'
+        elif task.startswith('torsscan'):
+            logging.info('Replacing Task = {} with Task = freq, since there are no torsions.'.format(task))
+            task = 'freq'
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
         task = 'composite'
         if len(tokens) > 2:
@@ -1262,10 +1371,10 @@ def get_x2z_info(out):
             if line.strip():
                 x2zinfo['nrotor'] = len(line.split(','))
         elif 'resonantly stabilized' in line:
-             line = line.replace('molecular structure:','').replace('(',' ').replace(')',' ')
-             for item in line.split():
-                 if item.isdigit():
-                     x2zinfo['nresonance'] = int(item)
+            line = line.replace('molecular structure:','').replace('(',' ').replace(')',' ')
+            for item in line.split():
+                if item.isdigit():
+                    x2zinfo['nresonance'] = int(item)
     return x2zinfo                
 
 
