@@ -195,7 +195,8 @@ def get_input(x, template, parameters):
                 inp = inp.replace("QTC(OPTDIR)",xyzfile)
                 inp = inp.replace("QTC(XYZFILE)",xyzfile)
             else:
-                inp = inp.replace("QTC(OPTDIR)", 'false') 
+                inp = inp.replace("QTC(OPTDIR)", 'false')
+                inp = inp.replace("QTC(XYZFILE)",xyzfile)
         else:
             inp = inp.replace("QTC(OPTDIR)", 'false')
         if nrotor == 0:
@@ -708,7 +709,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             parsed = True
         elif io.check_file(geofile):
             geo = io.read_file(geofile)
-            natom = len(geofile.splitlines())
+            natom = len(geo.splitlines())
             xyz = '{0}\n{1}\n{2}'.format(str(natom),'TorsOpt geometry',geo)
             if io.check_file(outfile2):
                 out = io.read_file(outfile2,aslines=False)
