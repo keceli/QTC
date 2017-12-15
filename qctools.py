@@ -689,7 +689,9 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     elif package.startswith('tors'):
         #optlevel, method, energy = get_torsscan_info(s)
         outfile = 'geoms/reac1_l1.log'
+        outfile2 = 'geom.log' #  For torsopt
         xyzfile = 'geoms/reac1_l1.xyz'
+        geofile = 'geom.xyz'
         if io.check_file(outfile):
             try:
                 out = io.read_file(outfile, aslines=False)
@@ -704,6 +706,14 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             xyz = io.read_file(xyzfile)
             energy = float(xyz.splitlines()[1].strip())         
             parsed = True
+        elif io.check_file(geofile):
+            geo = io.read_file(geofile)
+            natom = len(geofile.splitlines())
+            xyz = '{0}\n{1}\n{2}'.format(str(natom),'TorsOpt geometry',geo)
+            if io.check_file(outfile2):
+                out = io.read_file(outfile2,aslines=False)
+                energy = pa.gaussian_energy(out)
+                parsed = True
         if io.check_dir('me_files', 1):
             try:
                 xyz, freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
@@ -1473,6 +1483,8 @@ def check_output(s):
     elif "Variable memory released" in s:
         completed = True
     elif io.check_file('me_files/reac1_fr.me'):#TorsScan/ES2KTP
+        completed = True
+    elif io.check_file('geom.xyz'):#Torsopt/ES2KTP
         completed = True
     else:
         completed = False

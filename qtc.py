@@ -337,7 +337,7 @@ def run(s):
                 logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
     if parseqc:
         logging.info('Parsing output...')
-        if io.check_file('geom1.xyz'):
+        if io.check_file('geom.xyz'):
             parameters['optdir'] = io.pwd()
         if parameters['qctask'] == 'composite':
             enefile = smilesname + '.ene'
