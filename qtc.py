@@ -226,7 +226,7 @@ def run(s):
     msg += "SMILES       = {0}\n".format(s)
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "N_atoms      = {0}\n".format(natom)
-    msg += "N_obrotors   = {0}\n".format(nrotor)
+    msg += "N_rotors     = {0}\n".format(nrotor)
     msg += 'Task         = {0}\n'.format(parameters['qctask'])
     msg += 'Method       = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis        = {0}\n'.format(parameters['qcbasis'])
