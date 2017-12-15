@@ -85,6 +85,7 @@ def add_species_info(s, parameters):
     parameters['nheavy']  = ob.get_natom_heavy(mol)
     parameters['formula'] = ob.get_formula(mol)
     parameters['mult']    = ob.get_multiplicity(s) 
+    parameters['charge']  = ob.get_charge(mol)
     parameters['xyz'] = xyz
     if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
         try:
@@ -153,13 +154,17 @@ def get_input(x, template, parameters):
     """
     Returns input file text for a qc calculation based on a given template.
     """
-    mol = ob.get_mol(x)
-    mult = ob.get_multiplicity(mol)
+    if 'xyz' in parameters['results']:
+        xyz = parameters['results']['xyz']
+    else:
+        xyz = parameters['xyz']
+    mol = ob.get_mol(xyz)
+    mult = parameters['mult']
     nopen = mult - 1
-    charge = ob.get_charge(mol)
-    formula = ob.get_formula(mol)
-    geo = ob.get_geo(mol)
-    xyz = ob.get_xyz(mol)
+    charge = parameters['charge']
+    formula = parameters['formula']
+    natom = parameters['natom']
+    geo = ''.join(parameters['xyz'][2:natom+2]) 
     zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
@@ -184,7 +189,7 @@ def get_input(x, template, parameters):
     inp = template
     if task.startswith('tors'):
         if parameters['optdir']:
-            xyzfile =  io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(x).strip() + '.xyz'])
+            xyzfile =  io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(smilesname).strip() + '.xyz'])
             if io.check_file('xyzfile'):
                 inp = inp.replace("QTC(OPTDIR)",xyzfile)
             else:
@@ -218,6 +223,8 @@ def get_input(x, template, parameters):
         elif package == 'gaussian':
             if task == 'opt':
                 task = 'opt=(maxcyc=50,internal)'
+            if task == 'freq':
+                task = 'opt=(maxcyc=50,internal) freq'
             elif task == 'energy':
                 task = ''
             elif task == 'anharm':
@@ -929,7 +936,7 @@ def get_symbol(atomno):
     return syms[atomno]
 
 
-def run(mol, parameters, mult=None, trial=0):
+def run(s, parameters, mult=None, trial=0):
     """
     Runs qc, returns a string specifying the status of the calculation.
     """
@@ -942,14 +949,11 @@ def run(mol, parameters, mult=None, trial=0):
     tmpdir = parameters['tmpdir']
     slabel  = parameters['slabel']
     qcnproc  = parameters['qcnproc']
+    
     msg = ''
     if trial > maxtrial:
         logging.error('Maximum number of trials reached')
-        return 'Maximum number of trials reached'
-    if mult is None:
-        mult = ob.get_multiplicity(mol)
-    else:
-        ob.set_mult(mol, mult)      
+        return 'Maximum number of trials reached'  
     outfile = parameters['qcoutput']
     inpfile = outfile.replace('out','inp')
     runqc   = True
@@ -972,7 +976,7 @@ def run(mol, parameters, mult=None, trial=0):
                     if recover:
                         logging.info('Renaming failed output and trying to recover')
                         io.mv(outfile, 'failed_{}_{}'.format(outfile,trial))
-                        run(mol, parameters, mult=mult, trial=trial+1)
+                        run(s, parameters, mult=mult, trial=trial+1)
                     else:
                         logging.info('Skipping calculation')
                         runqc = False
@@ -996,7 +1000,7 @@ def run(mol, parameters, mult=None, trial=0):
             templatefile =  io.join_path(*[tempdir,templatename])
     if io.check_file(templatefile) and runqc:           
         tmp = io.read_file(templatefile)
-        inptext = get_input(mol, tmp, parameters)
+        inptext = get_input(s, tmp, parameters)
     else:
         runqc = False
         recover = False
@@ -1009,7 +1013,7 @@ def run(mol, parameters, mult=None, trial=0):
                     parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(parameters['machinefile'])
                 else:
                     parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
-            elif package.startswith('mol'):
+            elif package.startswith('molp'):
                 parameters['qcexe'] = '{0} -n {1} -d {2}'.format(parameters['molpro'],qcnproc,parameters['tmpdir'])
             elif task.startswith('tors'):
                 parameters['qcexe'] = parameters['torsscan']
@@ -1041,7 +1045,7 @@ def run(mol, parameters, mult=None, trial=0):
                         logging.info('Attempting to recover, trial {}'.format(trial+1))
                         logging.info('Renamed failed output')
                         io.mv(outfile, 'failed_{}_{}'.format(outfile,trial))
-                        run(mol, parameters, mult=mult, trial=trial+1)
+                        run(s, parameters, mult=mult, trial=trial+1)
                     else:
                         logging.info('Skipping calculation')
                         runqc = False
