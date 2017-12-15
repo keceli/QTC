@@ -478,6 +478,7 @@ def get_slabel(smi,mult=None):
 
 def get_qc_label(natom, qckeyword, calcindex):
     """
+    Depreceated, use get_qlabel.
     Returns a string that can be used as a label for
     a given quantum chemistry calculation with natom, qckeyword
     and calcindex. The string considers dependencies of the
@@ -509,6 +510,29 @@ def get_qc_label(natom, qckeyword, calcindex):
                     labels.append(calcs[i])
             labels.append(calcs[calcindex])
             label = ','.join(labels)
+    return label
+
+
+def get_qlabel(qckeyword, calcindex):
+    """
+    Returns a string that can be used as a label for
+    a given quantum chemistry calculation with qckeyword specified by the user
+    and calculation index. The string is based on the dependencies of the
+    corresponding calculation.
+    """
+    calcs = qckeyword.split(',')
+    calc  = calcs[calcindex]
+    if calc.startswith('compos'):
+        label = ','.join(calcs[0:calcindex+1])
+    else:
+        labels = []
+        for i in range(0,calcindex):
+            if calcs[i].startswith('energy') or calcs[i].startswith('compos'):
+                pass
+            else:
+                labels.append(calcs[i])
+        labels.append(calcs[calcindex])
+        label = ','.join(labels)
     return label
 
 
@@ -1085,7 +1109,7 @@ def run_composite(parameters):
     inpfile = smilesname + '_' + method  + '.inp'  
     for i in range(0,calcindex):
         try:
-            qlabel = get_qc_label(natom, qckeyword, i)
+            qlabel = get_qlabel(qckeyword, i)
             e[i] = allresults[slabel][qlabel]['energy']
         except Exception as err:
             e[i] = 0.
