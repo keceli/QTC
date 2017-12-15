@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 import logging
-__updated__ = "2017-10-20"
+__updated__ = "2017-12-15"
 __author__  = "Murat Keceli"
 
 def get_date():
@@ -508,6 +508,37 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False):
         else:
             msg += 'STDERR:\n{0}\n'.format(err)
     return msg
+
+
+def get_stdout_stderr(command):
+    """
+    Executes a given command, and get stdout and stderr.
+    Parameters
+    ----------
+    command: A string or a list of strings, where a command line is seperated into words.
+    
+    Returns
+    ---------
+    stdout, stderr
+        
+    Doctest
+    ---------    
+    >>> get_stdout_stderr(['echo','this works'])
+    'this works\n'     
+    >>> get_stdout_stderr('echo this also works')
+    'this also works\n'     
+    """
+    from subprocess import Popen, PIPE
+    if type(command) == str:
+        commandstr = command
+        command = command.split()
+    else:
+        commandstr = ' '.join(command)
+    logging.debug('Running Popen with command: {0}'.format(commandstr))
+    process = Popen(command, stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    return out, err
+
 
 def db_head_path(db_location=None):
     """
