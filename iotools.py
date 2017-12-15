@@ -255,7 +255,10 @@ def symlink(source,linkname):
     """
     Create a symbolic link. (works only on unix based systems)
     """
-    os.symlink(source,linkname)
+    if check_file(linkname):
+        logging.debug('Target link {} exists, not creating a new one'.format(linkname))
+    else:
+        os.symlink(source,linkname)
     return
 
 
