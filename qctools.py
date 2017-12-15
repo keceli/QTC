@@ -970,8 +970,8 @@ def run(s, parameters, mult=None, trial=0):
     tempdir = parameters['qctemplate']
     task = parameters['qctask']
     recover = parameters['recover']
-    tmpdir = parameters['tmpdir']
     slabel  = parameters['slabel']
+    tmpdir = io.join_path(*[parameters['tmpdir'],slabel])
     qcnproc  = parameters['qcnproc']
     
     msg = ''
@@ -1031,6 +1031,8 @@ def run(s, parameters, mult=None, trial=0):
     if runqc:
         io.write_file(inptext, inpfile)
         io.mkdir(tmpdir)
+        pwd = io.pwd()
+        io.symlink(tmpdir,'tmp')
         if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
             if package.startswith('nwc'):
                 if parameters['machinefile']:
@@ -1042,7 +1044,7 @@ def run(s, parameters, mult=None, trial=0):
             elif task.startswith('tors'):
                 parameters['qcexe'] = parameters['torsscan']
             else:
-               parameters['qcexe'] = parameters[package]
+                parameters['qcexe'] = parameters[package]
         if io.check_file(inpfile, timeout=1):
             if package in  ['nwchem', 'torsscan','torsopt']:
                 command = parameters['qcexe'] + ' ' + inpfile
@@ -1052,10 +1054,17 @@ def run(s, parameters, mult=None, trial=0):
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
                 if package == 'nwchem':
                     io.rmrf('tmp_nwchem')
-            elif package in  ['molpro']:
+            elif package == 'molpro':
+                inppath = io.get_path(inpfile)
+                if len(inppath) > 255:
+                    io.cp(inpfile,tmpdir)
+                    io.cd(tmpdir)
                 command = parameters['qcexe'] + ' ' + inpfile + ' -o ' + outfile
                 logging.info('Running quantum chemistry calculation with {}'.format(command))
                 msg += io.execute(command,stdoutfile=outfile,merge=True)
+                if len(inppath) > 255:
+                    io.cp(outfile,pwd)
+                    io.cd(pwd)
             else:
                 command = parameters['qcexe'] + ' ' + inpfile + ' ' + outfile
                 logging.info('Running quantum chemistry calculation with {}'.format(command))
@@ -1073,6 +1082,7 @@ def run(s, parameters, mult=None, trial=0):
                     else:
                         logging.info('Skipping calculation')
                         runqc = False
+            io.cd(tmpdir)
             io.rmrf(tmpdir)
         else:
             msg += 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
