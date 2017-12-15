@@ -510,7 +510,7 @@ def zpve(lines):
     if prog == 'molpro':
         return molpro_zpve(lines)
     print 'program not recognized as gaussian or molpro'
-    return 
+    return 0.0
 
 def anzpve(lines):
     prog = get_prog(lines)

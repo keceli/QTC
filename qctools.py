@@ -629,7 +629,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
     d = {}
     [method,calculation,xyz,basis] = ['na']*4
     nbasis = 0
-    energy = 0
+    energy = 0.
     energies = {}
     freqs = []
     pfreqs = []
