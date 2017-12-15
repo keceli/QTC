@@ -1072,6 +1072,7 @@ def run(s, parameters, mult=None, trial=0):
             if io.check_file(outfile, timeout=1):
                 msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
                 out = io.read_file(outfile)
+                io.rmrf('tmp')
                 if not check_output(out):
                     logging.error('Failed calculation "{0}"\n'.format(io.get_path(outfile)))
                     if recover:
@@ -1082,7 +1083,6 @@ def run(s, parameters, mult=None, trial=0):
                     else:
                         logging.info('Skipping calculation')
                         runqc = False
-            io.cd(tmpdir)
             io.rmrf(tmpdir)
         else:
             msg += 'Failed, cannot find input file "{0}"\n'.format(io.get_path(inpfile))
