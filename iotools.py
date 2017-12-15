@@ -251,6 +251,14 @@ def cp(source, target):
     return
 
 
+def symlink(source,linkname):
+    """
+    Create a symbolic link. (works only on unix based systems)
+    """
+    os.symlink(source,linkname)
+    return
+
+
 def get_path(f, executable=False, directory=False):
     """
     Returns absolute path for a file or folder.
