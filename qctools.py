@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-12-14"
+__updated__ = "2017-12-15"
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -1193,7 +1193,7 @@ def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
     return msg
 
 
-def run_x2z(xyz,exe='x2z',getinfo=False):
+def run_x2z(xyz,exe='x2z', getinfo=False, outputfile=None):
     """
     Runs Yury's x2z, and returns the output text as a string (default) or 
     if getinfo is True returns a dictionary with parsed information.
@@ -1203,19 +1203,19 @@ def run_x2z(xyz,exe='x2z',getinfo=False):
     else:
         io.write_file(xyz, 'x2z.xyz')
         inp = 'x2z.xyz'
-    outfile = 'x2z.out'
     logging.debug('Running x2z for {}'.format(inp))
-    msg = io.execute([exe,inp],stdoutfile=outfile)
-    if io.check_file(outfile,1):
-        out = io.read_file(outfile)
+    out, err = io.get_stdout_stderr([exe,inp])
+    if err:
+        logging.info('STDOUT for x2z:\n {}'.format(out))
+        logging.error('STDERR for x2z:\n {}'.format(err))
+    else:
         if getinfo:
             x2zinfo = get_x2z_info(out)
             result = x2zinfo
         else:
             result = out
-    else:
-        logging.error('Failed in running x2z for {}.STDERR={} '.format(inp,msg))
-        result = ''
+        if outputfile:
+            io.write_file(out, outputfile)
     return result
 
 
