@@ -258,7 +258,10 @@ def symlink(source,linkname):
     if check_file(linkname):
         logging.debug('Target link {} exists, not creating a new one'.format(linkname))
     else:
-        os.symlink(source,linkname)
+        try:
+            os.symlink(source,linkname)
+        except Exception as e:
+            logging.warning('Symlink exception caught: {}'.format(e))
     return
 
 
