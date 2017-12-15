@@ -417,7 +417,6 @@ def run(s):
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
-    parameters['all results'][s]['nrotor'] = nrotor
     parameters['all results'][s][qlabel]['energy'] = 0.
     if 'zpve' in parameters['results']:
         parameters['all results'][s][qlabel]['zpve'] = parameters['results']['zpve']   
