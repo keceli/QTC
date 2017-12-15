@@ -21,7 +21,7 @@ MESS partition function code
 PAC99
 thermp
 """
-__updated__ = "2017-09-27"
+__updated__ = "2017-12-15"
 
 
 def get_stoichometry(formula,element):
@@ -528,7 +528,7 @@ def get_messpf_input(mol,parameters):
     """
     import unittools as ut
     natom = parameters['natom']
-    label = parameters['label']
+    label = parameters['qlabel']
     results = parameters['results']
     xyz = results['xyz']
     sym = results['sym']
@@ -734,7 +734,7 @@ def write_chemkin_polynomial(mol, parameters):
 #   messpfoutput = 'pf.log'
     messpfoutput = 'pf.out'
     formula = mol.formula
-    qlabel = parameters['label']
+    qlabel = parameters['qlabel']
     slabel = parameters['slabel']
     hof = parameters['results']['deltaH0']
     inp = get_messpf_input(mol, parameters)

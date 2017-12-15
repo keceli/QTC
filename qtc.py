@@ -14,7 +14,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-12-14"
+__updated__ = "2017-12-15"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -200,9 +200,9 @@ def run(s):
     formula = parameters['formula']
     nrotor = parameters['nrotor']
     natom = parameters['natom']
-    label = qc.get_qc_label(natom, qckeyword, calcindex)
-    parameters['all results'][s].update({label:{}})
-    parameters['label'] = label
+    qlabel = qc.get_qlabel(qckeyword, calcindex)
+    parameters['all results'][s].update({qlabel:{}})
+    parameters['qlabel'] = qlabel
     parameters['slabel'] = s
     parameters['tmpdir']  = io.join_path(*[scratch,ob.get_smiles_filename(s)])
     results = parameters['results']
@@ -231,7 +231,7 @@ def run(s):
     msg += 'Method       = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis        = {0}\n'.format(parameters['qcbasis'])
     msg += 'Package      = {0}\n'.format(parameters['qcpackage'])
-    msg += 'Label        = {0}\n'.format(parameters['label'])
+    msg += 'QLabel       = {0}\n'.format(parameters['qlabel'])
     msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
     logging.info(msg)
     smilesname = ob.get_smiles_filename(s)
@@ -306,7 +306,7 @@ def run(s):
         try:
             if qcpackage in available_packages:
                 runstart = timer()
-                qc.run(mol, parameters, mult=mult)
+                qc.run(s, parameters, mult=mult)
                 runtime = timer() - runstart
                 logging.debug("Runtime = {:15.3f} s".format(runtime))
                 if runtime > 1.0:
@@ -417,12 +417,13 @@ def run(s):
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
-    parameters['all results'][s][label]['energy'] = 0.
+    parameters['all results'][s]['nrotor'] = nrotor
+    parameters['all results'][s][qlabel]['energy'] = 0.
     if 'zpve' in parameters['results']:
-        parameters['all results'][s][label]['zpve'] = parameters['results']['zpve']   
+        parameters['all results'][s][qlabel]['zpve'] = parameters['results']['zpve']   
     else:
-        parameters['all results'][s][label]['zpve'] = 0.
-    parameters['all results'][s][label]['path'] = workdirectory   
+        parameters['all results'][s][qlabel]['zpve'] = 0.
+    parameters['all results'][s][qlabel]['path'] = workdirectory   
     if 'hindered potential' in parameters['results'] and task.startswith('tors'):
         tc.get_hindered_potential(parameters['results']['hindered potential'],report=parameters['debug'])
         
@@ -431,7 +432,7 @@ def run(s):
         val = results[key]
         if hasattr(val, '__iter__'):
             if len(list(val))>0:
-                parameters['all results'][s][label][key] = results[key]
+                parameters['all results'][s][qlabel][key] = results[key]
                 if 'freqs' in key:
                     floatfreqs = sorted([float(freq) for freq in results[key]])
                     logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in floatfreqs]))
@@ -441,16 +442,16 @@ def run(s):
 
         else:
             if val:
-                parameters['all results'][s][label].update({key: results[key]})
+                parameters['all results'][s][qlabel].update({key: results[key]})
                 if key == 'energy' or 'zpve' in key:
                     logging.info('{:10s} = {:10.8f}'.format(key,results[key]))
     parameters['results']['deltaH0'] = 0
-    parameters['all results'][s][label]['deltaH0'] = 0   
+    parameters['all results'][s][qlabel]['deltaH0'] = 0   
     parameters['results']['deltaH298'] = 0
-    parameters['all results'][s][label]['deltaH298'] = 0                                    
-    parameters['all results'][s][label]['chemkin'] = ''
+    parameters['all results'][s][qlabel]['deltaH298'] = 0                                    
+    parameters['all results'][s][qlabel]['chemkin'] = ''
     if runtime > 1:
-        parameters['all results'][s][label]['runtime'] = runtime
+        parameters['all results'][s][qlabel]['runtime'] = runtime
     if runthermo:
         sym = 1
         if natom == 1:
@@ -483,8 +484,8 @@ def run(s):
         hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
-        parameters['all results'][s][label]['deltaH0'] = hof
-        parameters['all results'][s][label]['heat of formation basis'] = hfset
+        parameters['all results'][s][qlabel]['deltaH0'] = hof
+        parameters['all results'][s][qlabel]['heat of formation basis'] = hfset
         io.write_file(hftxt,smilesname + '.hofk')
         hof298 = 0.
         chemkintext = ''
@@ -505,9 +506,9 @@ def run(s):
                 logging.error('Failed in chemkin polynomial generation')
                 logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))         
         parameters['results']['deltaH298'] = hof298
-        parameters['all results'][s][label]['deltaH298'] = hof298   
-        parameters['all results'][s][label]['chemkin'] = chemkintext
-        parameters['all results'][s][label]['NASAPolynomial'] = rmgpoly
+        parameters['all results'][s][qlabel]['deltaH298'] = hof298   
+        parameters['all results'][s][qlabel]['chemkin'] = chemkintext
+        parameters['all results'][s][qlabel]['NASAPolynomial'] = rmgpoly
     io.cd(cwd)
     return
 
@@ -718,7 +719,7 @@ def main(arg_update={}):
                         name = str(d['name'])
                         smi  = str(d['SMILES'])
                         mult = int(d['multiplicity'])
-                        qlabel = qc.get_qc_label(ob.get_natom(smi), parameters['qckeyword'], i)
+                        qlabel = qc.get_qlabel(parameters['qckeyword'], i) 
                         s    = qc.get_slabel(smi,mult)
                         try:
                             thermoresults = parameters['all results'][s][qlabel]
