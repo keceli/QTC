@@ -1,4 +1,4 @@
-Restart at: 0
+Restart at: 1
 (0 - beginning, 1 - estoktp level 0 successfully completed
  2 - estoktp level 1 completed, 3 - estoktp 1D completed, 
  4 - estoktp MD completed, 5 - just run thermo)
@@ -14,13 +14,13 @@ No. of transition states: 0
 ============
 QTC options 
 ============
-Use QTC xyz: False
+Use QTC xyz: QTC(XYZFILE)
              False - make openbabel xyz from smiles
              prog/method/basis - uses xyz in database (recommended)
              logfilename.log - makes torsscan parse out xyz from logfile in cwd
              True - xyz in testchem form in cwd
 
-Use xyz as (start-starting geometry, 0-level0 geometry): start
+Use xyz as (start-starting geometry, 0-level0 geometry): 0
 
 ==============
 BLUES options   
@@ -41,7 +41,7 @@ Multidim scan (2 or 3D): 2
 ------------------------------------------------ 
    Module      :    Program    :      Theory
 ------------------------------------------------
-Opt          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)
+Opt            :               : 
 Opt_1          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)
 1dTau          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)  
 MdTau          :               :
