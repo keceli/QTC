@@ -505,11 +505,13 @@ def freqs(lines):
 
 def zpve(lines):
     prog = get_prog(lines)
+    zpve = 0.
     if prog == 'gaussian':
-        return gaussian_zpve(lines)
-    if prog == 'molpro':
-        return molpro_zpve(lines)
-    print 'program not recognized as gaussian or molpro'
+        zpve = gaussian_zpve(lines)
+    elif prog == 'molpro':
+        zpve = molpro_zpve(lines)
+    else:
+        'program not recognized as gaussian or molpro'
     return 0.0
 
 def anzpve(lines):

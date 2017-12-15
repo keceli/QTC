@@ -713,7 +713,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             xyz = '{0}\n{1}\n{2}'.format(str(natom),'TorsOpt geometry',geo)
             if io.check_file(outfile2):
                 out = io.read_file(outfile2,aslines=False)
-                energy = pa.gaussian_energy(out)
+                method, energy = pa.gaussian_energy(out)
                 parsed = True
         if io.check_dir('me_files', 1):
             try:
