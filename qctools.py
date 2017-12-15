@@ -703,6 +703,11 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             except:
                 logging.error('parse_output: Cannot parse {}'.format(outfile))
                 parsed = False
+            if io.check_dir('me_files', 1):
+                try:
+                    xyz, freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
+                except:
+                    logging.error('parse_output: Cannot parse me_files {}'.format(io.get_path('me_files')))
         elif io.check_file(xyzfile):
             xyz = io.read_file(xyzfile)
             energy = float(xyz.splitlines()[1].strip())         
@@ -715,11 +720,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
                 out = io.read_file(outfile2,aslines=False)
                 method, energy = pa.gaussian_energy(out)
                 parsed = True
-        if io.check_dir('me_files', 1):
-            try:
-                xyz, freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
-            except:
-                logging.error('parse_output: Cannot parse me_files {}'.format(io.get_path('me_files')))
+
     if parsed:
         if write:
             fname = smilesname + '.ene'
