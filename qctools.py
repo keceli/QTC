@@ -13,6 +13,7 @@ except:
     pass
 
 __updated__ = "2017-12-15"
+__authors__ = 'Murat Keceli, Sarah Elliott'
 _hartree2kcalmol = 627.509 #kcal mol-1
 
 
@@ -192,6 +193,7 @@ def get_input(x, template, parameters):
             xyzfile =  io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(smilesname).strip() + '.xyz'])
             if io.check_file('xyzfile'):
                 inp = inp.replace("QTC(OPTDIR)",xyzfile)
+                inp = inp.replace("QTC(XYZFILE)",xyzfile)
             else:
                 inp = inp.replace("QTC(OPTDIR)", 'false') 
         else:
