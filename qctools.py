@@ -807,7 +807,7 @@ def get_zpve(freqs):
 
 def get_listofstrings(array):
     """
-    Return a list of strings from a given array
+    Return a list of strings from a given array of strings
     """
     n = len(array)
     s = ['']*n
