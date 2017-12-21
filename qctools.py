@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-12-15"
+__updated__ = "2017-12-21"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 _hartree2kcalmol = 627.509 #kcal mol-1
 
@@ -285,9 +285,9 @@ def get_input(x, template, parameters):
         logging.info(66*'#')
     return inp
 
-def update_qckeyword(keyword):
+def fix_qckeyword(keyword):
     """
-    Update parameters['qckeyword']  to minimize the differences
+    Fix qckeyword  to minimize the differences
     based on user input.
     """
     keyword = keyword.lower()
@@ -304,7 +304,7 @@ def update_qckeyword(keyword):
     keyword = keyword.replace('/augcc','/aug-cc')
     keyword = keyword.replace('/sto3g','/sto-3g')
     keyword = keyword.replace('631g','6-31g')
-    keyword = keyword.replace('6-31gs','6-31g*')
+    keyword = keyword.replace('6-31g*','6-31gs')
     keyword = keyword.replace('torscan/','torsscan/')
     return keyword
 

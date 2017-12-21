@@ -14,7 +14,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-12-15"
+__updated__ = "2017-12-21"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -562,7 +562,7 @@ def main(arg_update={}):
     for param in parameters:
         logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
     if parameters['qckeyword']:
-        parameters['qckeyword'] = qc.update_qckeyword(parameters['qckeyword'])
+        parameters['qckeyword'] = qc.fix_qckeyword(parameters['qckeyword'])
         ncalc = len(parameters['qckeyword'].split(','))
     else:
         ncalc = 1
@@ -574,7 +574,6 @@ def main(arg_update={}):
     endindex = args.last
     inp = args.input
     jsonfile = args.jsoninput
-    nproc = args.nproc
     jlist = []
     if io.check_file(inp):
         if inp.split('.')[-1] == 'json':
