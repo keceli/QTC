@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-12-21"
+__updated__ = "2017-12-24"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 _hartree2kcalmol = 627.509 #kcal mol-1
 
@@ -400,10 +400,10 @@ def parse_qckeyword(parameters, calcindex=0):
         task = 'composite'
         if len(tokens) > 2:
             method = tokens[1]
-            parameters['formula'] = tokens[2:]
+            parameters['composite formula'] = tokens[2:]
         elif len(tokens) == 2:
             method = 'generic'
-            parameters['formula'] = tokens[1]
+            parameters['composite formula'] = tokens[1]
         else:
             logging.info('ERROR! Invalid qckeyword: {0}'.format(tokens))
             return
@@ -1120,7 +1120,7 @@ def run_composite(parameters):
     """
     qckeyword = parameters['qckeyword'] 
     slabel  = parameters['slabel']
-    formula = parameters['formula'][0]
+    formula = parameters['composite formula'][0]
     method = parameters['qcmethod']
     natom = parameters['natom']
     allresults = parameters['all results']
@@ -1156,7 +1156,7 @@ def run_extrapolation_keyword(parameters):
     'opt/mp2/cc-pvdz/gaussian,freq/mp2/cc-pvtz/molpro,sp/mp2/cc-pvqz,composite/cbs-dtq/energy=0.1 * E[0] + 0.4 * E[1] + 0.5 * E[2]'
     """
     keyword = parameters['qckeyword']
-    formula = parameters['formula'][0]
+    formula = parameters['composite formula'][0]
     method = parameters['qcmethod']
     smilesname = parameters['smilesname']
     calcs = keyword.split(',')
