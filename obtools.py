@@ -16,7 +16,7 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2017-12-14"
+__updated__ = "2017-12-21"
 
 def get_format(s):
     """
@@ -494,10 +494,11 @@ def get_smiles_path(x, mult=0, db= 'database'):
             mult = get_mult(s)
             s = s + '_m' + str(mult)
     formula = get_formula(s)
-    formula_noH = get_formula(s, stoichemetry=True, hydrogens=False)
-    elements_noH = get_formula(s, stoichemetry=False, hydrogens=False)
+#    formula_noH = get_formula(s, stoichemetry=True, hydrogens=False)
+#    elements_noH = get_formula(s, stoichemetry=False, hydrogens=False)
     s = get_smiles_filename(s)    
-    dirs = db, elements_noH, formula_noH, formula, s
+#    dirs = db, elements_noH, formula_noH, formula, s
+    dirs = db, formula, s
     return io.join_path(*dirs)
 
 
