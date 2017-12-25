@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-12-24"
+__updated__ = "2017-12-25"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 _hartree2kcalmol = 627.509 #kcal mol-1
 
@@ -394,8 +394,8 @@ def parse_qckeyword(parameters, calcindex=0):
             logging.info('Replacing Task = {} with Task = opt, since there are no torsions.'.format(task))
             task = 'opt'
         elif task.startswith('torsscan'):
-            logging.info('Replacing Task = {} with Task = freq, since there are no torsions.'.format(task))
-            task = 'freq'
+            logging.info('Replacing Task = {} with Task = optfreq, since there are no torsions.'.format(task))
+            task = 'optfreq'
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
         task = 'composite'
         if len(tokens) > 2:
@@ -537,6 +537,14 @@ def get_qlabel(qckeyword, calcindex):
         labels.append(calcs[calcindex])
         label = ','.join(labels)
     return label
+
+
+def get_qcdirectory(topdir,task,method,basis,package):
+    if task.startswith('opt'):
+        qcdir = io.join_path(*['opt',method,basis,package])
+    else: 
+        qcdir = io.join_path(*[topdir,method,basis,package])
+    return qcdir
 
 
 def parse_results(filename, parameters):
