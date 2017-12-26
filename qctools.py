@@ -226,8 +226,12 @@ def get_input(x, template, parameters):
         elif package == 'gaussian':
             if task == 'opt':
                 task = 'opt=(maxcyc=50,internal)'
-            if task == 'freq':
+            elif task == 'optfreq':
                 task = 'opt=(maxcyc=50,internal) freq'
+            elif task == 'optanharm':
+                task = 'opt=(maxcyc=50,internal) freq=(anharm,vibrot)'
+            elif task == 'freq':
+                task = 'freq'
             elif task == 'energy':
                 task = ''
             elif task == 'anharm':
