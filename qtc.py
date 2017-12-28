@@ -14,7 +14,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-12-21"
+__updated__ = "2017-12-28"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -294,7 +294,8 @@ def run(s):
             runqc = False
             parseqc = False
             runthermo = False
-            parameters['break'] = True
+            if 'opt' in task:
+                parameters['break'] = True
             logging.error('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     elif ignore and task is not 'composite':
         runqc = False
@@ -344,8 +345,6 @@ def run(s):
             if io.check_file(enefile):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
-            else:
-                parameters['break'] = True
                 if runthermo:
                     logging.error('Cannot run thermo, no energy file "{0}".\n'.format(enefile))
                     runthermo = False
@@ -358,7 +357,8 @@ def run(s):
                 try:
                     results = qc.parse_output(out,smilesname,parameters['writefiles'],parameters['storefiles'],parameters['optlevel'])
                 except Exception as e:
-                    parameters['break'] = True
+                    if 'opt' in task:
+                        parameters['break'] = True
                     if parameters['debug']:
                         raise
                     else:
@@ -375,7 +375,8 @@ def run(s):
                         if val:
                             parameters['results'].update({key: results[key]})
             else:
-                parameters['break'] = True
+                if 'opt' in task:
+                    parameters['break'] = True
                 if runthermo:
                     logging.error('Cannot run thermo failed calculation in "{0}"'.format(qcoutput))
                     runthermo = False
@@ -384,7 +385,8 @@ def run(s):
             if 'xyz' in results or natom == 1:
                 pass
             else:
-                parameters['break'] = True
+                if 'opt' in task:
+                    parameters['break'] = True
                 if runthermo:
                     logging.error('Cannot run thermo, no xyz')
                     runthermo = False
@@ -412,7 +414,8 @@ def run(s):
                     logging.warning('{} not found.'.format(RPHtexe))
 #########################
         else:
-            parameters['break'] = True
+            if 'opt' in task:
+                parameters['break'] = True
             logging.error('Output file "{0}" not found in {1}.'.format(qcoutput,io.pwd()))
             if runthermo:
                 logging.error('Cannot run thermo')
@@ -434,6 +437,7 @@ def run(s):
                 parameters['all results'][s][qlabel][key] = results[key]
                 if 'freqs' in key:
                     floatfreqs = sorted([float(freq) for freq in results[key]])
+                    parameters['freqdir'] = parameters['qcdirectory']
                     logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in floatfreqs]))
                     if any(freq < 0 for freq in floatfreqs) and runthermo:
                         runthermo = False
