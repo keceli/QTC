@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-12-25"
+__updated__ = "2017-12-28"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 _hartree2kcalmol = 627.509 #kcal mol-1
 
@@ -393,7 +393,7 @@ def parse_qckeyword(parameters, calcindex=0):
             logging.info('Replacing Task = {} with Task = energy, since there is only a single atom'.format(task))
             task = 'energy'
             parameters['task'] = task
-    if parameters['nrotor'] == 0:
+    elif parameters['nrotor'] == 0:
         if task.startswith('torsopt'):
             logging.info('Replacing Task = {} with Task = opt, since there are no torsions.'.format(task))
             task = 'opt'
@@ -429,22 +429,18 @@ def parse_qckeyword(parameters, calcindex=0):
             package = tokens[1]
         else:
             logging.error('ERROR! Invalid qckeyword: {0}'.format(tokens))
-        if task.startswith('opt') or task.startswith('geo') or task.startswith('min'):
-            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
+        if 'opt' in task:
+            qcdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
             parameters['optdir'] = qcdirectory
-            parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-        elif task.startswith('tors'):
-            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
+        elif task == 'torsopt':
+            qcdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
             parameters['optdir'] = qcdirectory
-            parameters['optlevel'] = '{}/{}/{}'.format(package,method,basis)
-            if task.endswith('scan'):
-                parameters['freqdir'] = qcdirectory
-                parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
+        elif task == 'torsscan':
+            parameters['freqdir'] = qcdirectory
         elif task.startswith('freq') or task.startswith('harm') or task.startswith('hrm'):
             task = 'freq'
             qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
             parameters['freqdir'] = qcdirectory
-            parameters['freqlevel'] = '{}/{}/{}'.format(package,method,basis)
         elif task.startswith('anh') or task.startswith('afre'):
             task = 'anharm'
             qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
@@ -453,7 +449,6 @@ def parse_qckeyword(parameters, calcindex=0):
         elif task.startswith('sp') or task.startswith('single') or task.startswith('ene'):
             task = 'energy'
             qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
-            parameters['energylevel'] = '{}/{}/{}'.format(package,method,basis)
         else:
             logging.info('ERROR! Invalid qckeyword task: {0}'.format(task))
             return      
