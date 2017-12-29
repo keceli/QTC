@@ -444,6 +444,7 @@ def parse_qckeyword(parameters, calcindex=0):
             qcdirectory = io.fix_path(io.join_path(*['opt',method,basis,package]))
             parameters['optdir'] = qcdirectory
         elif task == 'torsscan':
+            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
             parameters['freqdir'] = qcdirectory
         elif task.startswith('freq') or task.startswith('harm') or task.startswith('hrm'):
             task = 'freq'
