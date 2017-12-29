@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-12-28"
+__updated__ = "2017-12-29"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 _hartree2kcalmol = 627.509 #kcal mol-1
 
@@ -429,11 +429,19 @@ def parse_qckeyword(parameters, calcindex=0):
             package = tokens[1]
         else:
             logging.error('ERROR! Invalid qckeyword: {0}'.format(tokens))
-        if 'opt' in task:
+        if task == 'torsopt':
             qcdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
             parameters['optdir'] = qcdirectory
-        elif task == 'torsopt':
-            qcdirectory = io.fix_path(io.join_path(*[task,method,basis,package]))
+        elif task == 'optfreq':
+            qcdirectory = io.fix_path(io.join_path(*['opt',method,basis,package,'freq',method,basis,package]))
+            parameters['optdir'] = io.fix_path(io.join_path(*['opt',method,basis,package]))
+            parameters['freqdir'] = qcdirectory
+        elif task == 'optanharm':
+            qcdirectory = io.fix_path(io.join_path(*['opt',method,basis,package,'anharm',method,basis,package]))
+            parameters['optdir'] = io.fix_path(io.join_path(*['opt',method,basis,package]))
+            parameters['freqdir'] = qcdirectory
+        elif 'opt' in task:
+            qcdirectory = io.fix_path(io.join_path(*['opt',method,basis,package]))
             parameters['optdir'] = qcdirectory
         elif task == 'torsscan':
             parameters['freqdir'] = qcdirectory
