@@ -14,7 +14,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-12-28"
+__updated__ = "2017-12-30"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -184,18 +184,17 @@ def run(s):
     global parameters
     runqc = parameters['runqc']
     parseqc = parameters['parseqc']
-    package = parameters['qcpackage']
     task    = parameters['qctask']
     runthermo = parameters['runthermo']
-    qcnproc = parameters['qcnproc']
     qckeyword = parameters['qckeyword']
     calcindex = parameters['calcindex']
     optdir = parameters['optdir']
     ignore = parameters['ignorerunningjobs']
     overwrite=parameters['overwrite']
     scratch = parameters['scratch']
-    machinefile=io.get_path(parameters['machinefile'])
-    mol = ob.get_mol(parameters['xyz'])
+    xyz = parameters['xyz']
+    mol = ob.get_mol(xyz)
+    inchi = ob.get_inchi(mol)
     mult = parameters['mult']
     formula = parameters['formula']
     nrotor = parameters['nrotor']
@@ -224,6 +223,7 @@ def run(s):
     msg  = 'Mol. index   = {0}\n'.format(parameters['mol_index'])
     msg += "Formula      = {0}\n".format(formula)
     msg += "SMILES       = {0}\n".format(s)
+    msg += "InChI        = {0}\n".format(inchi)
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "N_atoms      = {0}\n".format(natom)
     msg += "N_rotors     = {0}\n".format(nrotor)
@@ -233,6 +233,7 @@ def run(s):
     msg += 'Package      = {0}\n'.format(parameters['qcpackage'])
     msg += 'QLabel       = {0}\n'.format(parameters['qlabel'])
     msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
+    msg += 'XYZ          = {0}\n'.format(parameters['xyz'])
     logging.info(msg)
     smilesname = ob.get_smiles_filename(s)
     parameters['smilesname' ] = smilesname
@@ -247,35 +248,6 @@ def run(s):
     else:
         qcoutput = smilesname + '_' + qcpackage + '.out'
     parameters['qcoutput'] = qcoutput
-    xyzfile = ''
-    if optdir:
-        xyzfilename = smilesname + '.xyz'
-        if io.check_file(io.join_path(*[smilesdir,optdir,xyzfilename])):
-            xyzfile = io.join_path(*[smilesdir,optdir,xyzfilename])
-    if xyzfile and natom > 1:
-        logging.info("XYZ file     = '{0}'".format(xyzfile))
-        try:
-            mol = ob.get_mol(xyzfile)
-        except:
-            logging.error('Not a valid xyz file {0}. Skipping following calculations.'.format(xyzfile))
-            runqc = False
-            parseqc = False
-            runthermo = False
-    elif 'results' in parameters.keys():
-        results = parameters['results']
-        if 'xyz' in results.keys():
-            logging.info('Using a previously calculated xyz:\n {}'.format(results['xyz']))
-            mol = ob.get_mol(results['xyz'])
-    else:
-        if natom == 1:
-            logging.info("XYZ not required, single atom calculation")
-        elif task.startswith('tors') or task.startswith('opt'):
-            logging.info("XYZ file not found in optdir '{0}'".format(optdir))
-        else:
-            logging.error('No optimized geometry found, skipping subsequent calculations')
-            runqc = False
-            parseqc = False
-            runthermo = False
     cwd = io.pwd()
     io.mkdir(workdirectory)
     if io.check_dir(workdirectory, 1):
@@ -302,6 +274,7 @@ def run(s):
     if task is 'composite':
         runqc = True
     runtime = 0
+    io.write_file(xyz,formula+'_initial.xyz')
     if runqc:
         io.touch(runfile)
         try:
@@ -383,7 +356,15 @@ def run(s):
                 else:
                     logging.error('Found failed calculation "{0}"'.format(qcoutput))
             if 'xyz' in results or natom == 1:
-                pass
+                final_xyz  = parameters['results']['xyz']
+                io.write_file(xyz,formula+'_final.xyz')
+                inchifinal = ob.get_inchi(final_xyz)
+                logging.info('Final xyz = \n {}'.format(final_xyz))
+                if inchi is not inchifinal:
+                    logging.error('InChI mismatch: {} --> {}'.format(inchi,inchifinal))
+                else:
+                    parameters['xyz'] = final_xyz
+                    mol = ob.get_mol(final_xyz)
             else:
                 if 'opt' in task:
                     parameters['break'] = True
