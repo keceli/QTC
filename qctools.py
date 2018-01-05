@@ -1060,9 +1060,7 @@ def run(s, parameters, mult=None, trial=0):
         recover = False
     if runqc:
         io.write_file(inptext, inpfile)
-        io.mkdir(tmpdir)
         pwd = io.pwd()
-        io.symlink(tmpdir,'tmp')
         if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
             if package.startswith('nwc'):
                 if parameters['machinefile']:
@@ -1087,6 +1085,8 @@ def run(s, parameters, mult=None, trial=0):
             elif package == 'molpro':
                 inppath = io.get_path(inpfile)
                 if len(inppath) > 255:
+                    io.mkdir(tmpdir)
+                    io.symlink(tmpdir,'tmp')
                     io.cp(inpfile,tmpdir)
                     io.cd(tmpdir)
                 command = parameters['qcexe'] + ' ' + inpfile + ' -o ' + outfile
