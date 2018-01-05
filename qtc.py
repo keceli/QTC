@@ -274,7 +274,9 @@ def run(s):
     if task is 'composite':
         runqc = True
     runtime = 0
-    io.write_file(xyz,formula+'_initial.xyz')
+    xyzfilename = formula+'_initial.xyz'
+    io.write_file(xyz, xyzfilename)
+    parameters['xyzpath']=io.get_path(xyzfilename)
     if runqc:
         io.touch(runfile)
         try:
@@ -357,7 +359,9 @@ def run(s):
                     logging.error('Found failed calculation "{0}"'.format(qcoutput))
             if 'xyz' in results or natom == 1:
                 final_xyz  = parameters['results']['xyz']
-                io.write_file(xyz,formula+'_final.xyz')
+                xyzfilename = formula+'_final.xyz'
+                io.write_file(final_xyz, xyzfilename)
+                parameters['xyzpath']=io.get_path(xyzfilename)
                 inchifinal = ob.get_inchi(final_xyz)
                 logging.info('Final xyz = \n {}'.format(final_xyz))
                 if inchi.strip() == inchifinal.strip():

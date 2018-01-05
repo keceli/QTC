@@ -173,9 +173,10 @@ def get_input(x, template, parameters):
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
-    slabel  = parameters[  'slabel']
-    nrotor  = parameters[  'nrotor']
-    tmpdir  = parameters[  'tmpdir']
+    slabel  = parameters[   'slabel']
+    nrotor  = parameters[   'nrotor']
+    tmpdir  = parameters[   'tmpdir']
+    xyzpath = parameters[  'xyzpath']
     heat    = 0
     if 'results' in parameters.keys():
         results = parameters['results']
@@ -189,16 +190,10 @@ def get_input(x, template, parameters):
     coremem   = int(float(totalmem)*0.524/nproc)  # in MegaWords
     inp = template
     if task.startswith('tors'):
-        if parameters['optdir']:
-            xyzfile =  io.join_path(*[parameters['smilesdir'],parameters['optdir'], str(smilesname).strip() + '.xyz'])
-            if io.check_file('xyzfile'):
-                inp = inp.replace("QTC(OPTDIR)",xyzfile)
-                inp = inp.replace("QTC(XYZFILE)",xyzfile)
-            else:
-                inp = inp.replace("QTC(OPTDIR)", 'false')
-                inp = inp.replace("QTC(XYZFILE)",xyzfile)
+        if io.check_file('xyzpath'):
+            inp = inp.replace("QTC(XYZPATH)",xyzpath)
         else:
-            inp = inp.replace("QTC(OPTDIR)", 'false')
+            inp = inp.replace("QTC(XYZPATH)", 'false')
         if nrotor == 0:
             inp = inp.replace(      "QTC(NMC)", str(1))
         else:
@@ -729,7 +724,7 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
             energy = float(xyz.splitlines()[1].strip())         
             parsed = True
         elif io.check_file(geofile):
-            geo = io.read_file(geofile)
+            geo = io.read_file(geofile).strip()
             natom = len(geo.splitlines())
             xyz = '{0}\n{1}\n{2}'.format(str(natom),'TorsOpt geometry',geo)
             if io.check_file(outfile2):
