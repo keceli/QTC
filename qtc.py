@@ -360,11 +360,11 @@ def run(s):
                 io.write_file(xyz,formula+'_final.xyz')
                 inchifinal = ob.get_inchi(final_xyz)
                 logging.info('Final xyz = \n {}'.format(final_xyz))
-                if inchi is not inchifinal:
-                    logging.error('InChI mismatch: {} --> {}'.format(inchi,inchifinal))
-                else:
+                if inchi.strip() == inchifinal.strip():
                     parameters['xyz'] = final_xyz
                     mol = ob.get_mol(final_xyz)
+                else:
+                    logging.error('InChI mismatch: \n{} --> \n{}'.format(inchi,inchifinal))
             else:
                 if 'opt' in task:
                     parameters['break'] = True
