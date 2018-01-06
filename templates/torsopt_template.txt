@@ -14,7 +14,7 @@ No. of transition states: 0
 ============
 QTC options 
 ============
-Use QTC xyz: False
+Use QTC xyz: QTC(XYZPATH)
              False - make openbabel xyz from smiles
              prog/method/basis - uses xyz in database (recommended)
              logfilename.log - makes torsscan parse out xyz from logfile in cwd
@@ -33,6 +33,7 @@ No. of cores  low: QTC(NPROC)
 ================
 EStoKTP options
 ================
+Calculate no. MC points (A,B,C,D): 6,2,3,100
 No. MC  sampling points: QTC(NMC)
 Scan interval (degrees): 360
 No. of steps on the PES: 12

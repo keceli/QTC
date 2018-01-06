@@ -14,7 +14,7 @@ No. of transition states: 0
 ============
 QTC options 
 ============
-Use QTC xyz: QTC(XYZFILE)
+Use QTC xyz: QTC(XYZPATH)
              False - make openbabel xyz from smiles
              prog/method/basis - uses xyz in database (recommended)
              logfilename.log - makes torsscan parse out xyz from logfile in cwd
