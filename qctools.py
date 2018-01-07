@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2017-12-29"
+__updated__ = "2018-01-07"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 _hartree2kcalmol = 627.509 #kcal mol-1
 
@@ -482,43 +482,6 @@ def get_slabel(smi,mult=None):
     return smi + '_m' + str(mult)
 
 
-def get_qc_label(natom, qckeyword, calcindex):
-    """
-    Depreceated, use get_qlabel.
-    Returns a string that can be used as a label for
-    a given quantum chemistry calculation with natom, qckeyword
-    and calcindex. The string considers dependencies of the
-    corresponding calculation.
-    """
-    calcs = qckeyword.split(',')
-    if natom == 1:
-        qckeyword = qckeyword.replace('opt', 'energy')
-        qckeyword = qckeyword.replace('freq', 'energy')
-        qckeyword = qckeyword.replace('anharm', 'energy')
-        qckeyword = qckeyword.replace('torsscan', 'energy')
-        qckeyword = qckeyword.replace('torsopt', 'energy')
-        calcs = qckeyword.split(',')
-        calc  = calcs[calcindex]
-        if calc.startswith('compos'):
-            label = ','.join(calcs[0:calcindex+1])
-        else:
-            label = calcs[calcindex]
-    else:
-        calc  = calcs[calcindex]
-        if calc.startswith('compos'):
-            label = ','.join(calcs[0:calcindex+1])
-        else:
-            labels = []
-            for i in range(0,calcindex):
-                if calcs[i].startswith('energy') or calcs[i].startswith('compos'):
-                    pass
-                else:
-                    labels.append(calcs[i])
-            labels.append(calcs[calcindex])
-            label = ','.join(labels)
-    return label
-
-
 def get_qlabel(qckeyword, calcindex):
     """
     Returns a string that can be used as a label for
@@ -628,15 +591,19 @@ def get_xyz(out,package=None):
     return xyz
         
         
-def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
+def parse_output(s, formula, write=False):
     package = get_output_package(s)
     if type(s) is list:
         lines = s
         s = ''.join(lines)
     elif type(s) is str:
         lines = s.splitlines()
+        if len(lines) == 1: # Check if s is a filename
+            if io.check_file(s):
+                s = io.read_file(s)
+                lines = s.splitlines()
     else:
-        logging.info("First parameter in parse_output should be a string or list of strings")
+        logging.info("First parameter in parse_output should be a string or a list of strings")
     d = {}
     [method,calculation,xyz,basis] = ['na']*4
     nbasis = 0
@@ -734,26 +701,26 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
 
     if parsed:
         if write:
-            fname = smilesname + '.ene'
+            fname = formula + '.ene'
             io.write_file(str(energy), fname)
             if xyz:
-                fname = smilesname + '.xyz'
+                fname = formula + '.xyz'
                 io.write_file(xyz, fname)
             if zpve:
-                fname = smilesname + '.zpve'
+                fname = formula + '.zpve'
                 io.write_file(str(zpve), fname)
             if azpve:
-                fname = smilesname + '.anzpve'
+                fname = formula + '.anzpve'
                 io.write_file(str(azpve), fname)
             if len(freqs) > 0:
                 if any(freq < 0 for freq in freqs):
                     logging.error('Imaginary frequency dedected: {}'.format(['{:6.1f}'.format(freq) for freq in freqs]))
-                fname = smilesname + '.hrm'
+                fname = formula + '.hrm'
                 io.write_file('\n'.join(str(x) for x in freqs), fname )
             if sum(afreqs) > 0:
                 if any(freq < 0 for freq in afreqs):
                     logging.error('Imaginary frequency dedected: {}'.format(['{:6.1f}'.format(freq) for freq in afreqs]))
-                fname = smilesname + '.anhrm'
+                fname = formula + '.anhrm'
                 io.write_file('\n'.join(str(x) for x in afreqs), fname)
         d = {'nbasis':nbasis,
                'energy':energy,
@@ -777,31 +744,31 @@ def parse_output(s, smilesname, write=False, store=False, optlevel='sp'):
 #                     if write:
 #                         fname = '{0}_{1}.ene'.format(method,smilesname)
 #                         io.write_file(str(energy), fname)
-        if store:
-            if optlevel == 'sp':
-                if energy:
-                    io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
-                if zpve:
-                    io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
-                if len(freqs) > 0:
-                    io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
-            else:
-                opt1, opt2, opt3 = optlevel.split('/')
-                if energy:
-                    io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
-                if zpve:
-                    io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
-                if len(freqs) > 0:
-                    io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
-                if len(xmat) > 0:
-                    io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
-                io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
-            if xyz:
-                io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
-            if geo:
-                io.db_store_opt_prop(geo, smilesname,  'geo', None, package, method, basis)
-            if zmat:
-                io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
+#         if store:
+#             if optlevel == 'sp':
+#                 if energy:
+#                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
+#                 if zpve:
+#                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
+#                 if len(freqs) > 0:
+#                     io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
+#             else:
+#                 opt1, opt2, opt3 = optlevel.split('/')
+#                 if energy:
+#                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
+#                 if zpve:
+#                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
+#                 if len(freqs) > 0:
+#                     io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
+#                 if len(xmat) > 0:
+#                     io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
+#                 io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
+#             if xyz:
+#                 io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
+#             if geo:
+#                 io.db_store_opt_prop(geo, smilesname,  'geo', None, package, method, basis)
+#             if zmat:
+#                 io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
     return d
 
 
@@ -1114,16 +1081,6 @@ def run(s, parameters, mult=None, trial=0):
     return msg
 
 
-def run_extrapolation(mol,parameters):
-    if parameters['qckeyword']:
-        msg = run_extrapolation_keyword(parameters)
-    elif parameters['qctemplate']:
-        msg = run_extrapolation_template(mol, parameters)
-    else:
-        msg = 'Cannot run extrapolation, you need to specify qckeyword with -k or qctemplate with -t. \n'
-    return msg
-
-
 def run_composite(parameters):
     """
     Parses qckeyword for composite method. 
@@ -1131,17 +1088,16 @@ def run_composite(parameters):
     """
     qckeyword = parameters['qckeyword'] 
     slabel  = parameters['slabel']
-    formula = parameters['composite formula'][0]
+    formula = parameters['formula']
+    compositeformula = parameters['composite formula'][0]
     method = parameters['qcmethod']
-    natom = parameters['natom']
     allresults = parameters['all results']
-    smilesname = parameters['smilesname']
-    logging.info('Composite energy formula = {0}'.format(formula))
+    logging.info('Composite energy formula = {0}'.format(compositeformula))
     calcindex = parameters['calcindex']
     e = [0.] * calcindex
     energy = None
-    enefile = smilesname + '.ene'  
-    inpfile = smilesname + '_' + method  + '.inp'  
+    enefile = formula + '.ene'  
+    inpfile = formula + '_' + method  + '.inp'  
     for i in range(0,calcindex):
         try:
             qlabel = get_qlabel(qckeyword, i)
@@ -1149,93 +1105,18 @@ def run_composite(parameters):
         except Exception as err:
             e[i] = 0.
             logging.error('Energy not found for {0} {1}. Exception: {2}'.format(slabel,qlabel,err))
-    exec(formula)
+    exec(compositeformula)
     if energy:
         io.write_file(str(energy),enefile )
-        io.write_file(formula,inpfile )
+        io.write_file(compositeformula,inpfile )
         logging.info('Composite energy = {} Hartree\n'.format(energy))
         logging.debug('Energy file: "{}"\n'.format(io.get_path(enefile)))
     else:
         energy = 0.
-        logging.error('Problem in given composite formula: {}'.format(formula))
+        logging.error('Problem in given composite formula: {}'.format(compositeformula))
     return energy
 
 
-def run_extrapolation_keyword(parameters):
-    """
-    Parses qckeyword for composite method. 
-    'opt/mp2/cc-pvdz/gaussian,freq/mp2/cc-pvtz/molpro,sp/mp2/cc-pvqz,composite/cbs-dtq/energy=0.1 * E[0] + 0.4 * E[1] + 0.5 * E[2]'
-    """
-    keyword = parameters['qckeyword']
-    formula = parameters['composite formula'][0]
-    method = parameters['qcmethod']
-    smilesname = parameters['smilesname']
-    calcs = keyword.split(',')
-    logging.info('Composite energy formula: {0}\n'.format(formula))
-    ncalc = len(calcs) 
-    calcindex = parameters['calcindex']
-    e = [0.] * ncalc
-    energy = None
-    enefile = smilesname + '.ene'  
-    inpfile = smilesname + '_' + method  + '.inp'  
-    for i in range(0,calcindex):
-        parameters = parse_qckeyword(parameters, i)
-        smilesdir = parameters['smilesdir']
-        enedir  = io.join_path(*[smilesdir,parameters['qcdirectory']])
-        enepath = io.join_path(*[enedir, enefile])
-        if io.check_file(enepath):
-            e[i] = float(io.read_file(enepath))
-            logging.info('E({0}) from "{1}"  = {2}\n'.format(i,enepath,e[i]))
-        else:
-            logging.error('E({0}) cannot be found at "{1}" \n'.format(i,enepath))
-    exec(formula)
-    if energy:
-        io.write_file(str(energy),enefile )
-        io.write_file(formula,inpfile )
-        logging.info('Composite energy: {}\n'.format(energy))
-        logging.info('Energy file: "{}"\n'.format(io.get_path(enefile)))
-    parse_qckeyword(parameters, calcindex)
-    return
-
-def run_extrapolation_template(s, parameters):
-    lines = io.read_file(parameters['qctemplate'],aslines=True)
-    smilesname = ob.get_smiles_filename(s)
-    filename = smilesname + '_cbs.ene'
-    qcdir = parameters['qcdirectory']
-    directories = []
-    msg = ''
-    for line in lines:
-        if 'directories=' in line:
-            exec(line)
-            ndir = len(directories)
-            energies=[0.]*ndir
-            for i, edir in enumerate(directories):
-                efile = io.join_path(*[edir,smilesname+'.ene'])
-                if io.check_file(efile,verbose=True):        
-                    energies[i] = float(io.read_file(efile, aslines=False))
-                    logging.info('Reading energy from {0} = {1}'.format(edir,energies[i]))
-    for line in lines:
-        if 'energy=' in line:
-            energy = 0
-            exec(line)
-            logging.info('Extrapolation based on formula: {0}'.format(line))        
-            logging.info('Extrapolated energy = {0}'.format(energy))
-        if 'filename=' in line:
-            exec(line)
-    if len(directories) < 1:
-        logging.info('You have to specifies directories as a list in the template file')         
-    if energy:
-        msg += 'Extrapolation successful'
-        if parameters['writefiles']:
-            if qcdir:
-                filename = io.join_path(*[qcdir,filename])
-            io.write_file(str(energy), filename)
-            msg += 'Extrapolation enegy file {0}'.format(filename)
-    else:
-        msg += 'Extrapolation failed'      
-    return msg
-
-                    
 def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
     """
     Submit jobs using Ahren's script.

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import multiprocessing
 import iotools as io
 import obtools as ob
 import qctools as qc
@@ -14,7 +13,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2017-12-30"
+__updated__ = "2018-01-07"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -236,17 +235,13 @@ def run(s):
     msg += 'XYZ          = {0}\n'.format(parameters['xyz'])
     logging.info(msg)
     smilesname = ob.get_smiles_filename(s)
+    smilesdir = io.join_path(parameters['database'], formula, smilesname)
     parameters['smilesname' ] = smilesname
-    smilesdir =  ob.get_smiles_path(s, mult)
-    smilesdir = io.join_path(parameters['database'], smilesdir)
     parameters['smilesdir'] = smilesdir
     workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
     qcpackage = parameters['qcpackage']
     qcscript = io.get_path(parameters['qcscript'])
-    if task.startswith('tors'):
-        qcoutput = smilesname + '_' + task + '.out'
-    else:
-        qcoutput = smilesname + '_' + qcpackage + '.out'
+    qcoutput = formula + '.out'
     parameters['qcoutput'] = qcoutput
     cwd = io.pwd()
     io.mkdir(workdirectory)
@@ -290,7 +285,7 @@ def run(s):
             elif task == 'composite':
                 qc.run_composite(parameters)
             elif qcpackage == 'qcscript':
-                geofile = smilesname + '.geo'
+                geofile = formula + '.geo'
                 geo = ''.join(parameters['xyz'][2:natom+2]) 
                 io.write_file(geo, geofile)
                 if io.check_file(geofile, 1):
@@ -314,7 +309,7 @@ def run(s):
     if parseqc:
         logging.info('Parsing output...')
         if parameters['qctask'] == 'composite':
-            enefile = smilesname + '.ene'
+            enefile = formula + '.ene'
             if io.check_file(enefile):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
@@ -328,7 +323,7 @@ def run(s):
             out = io.read_file(qcoutput, aslines=False)
             if qc.check_output(out):
                 try:
-                    results = qc.parse_output(out,smilesname,parameters['writefiles'],parameters['storefiles'],parameters['optlevel'])
+                    results = qc.parse_output(out,formula,parameters['writefiles'])
                 except Exception as e:
                     if 'opt' in task:
                         parameters['break'] = True
@@ -444,16 +439,16 @@ def run(s):
             logging.info('Single atom, sym set to 1.')
             pass
         else:
-            test_inp = ''
-            if io.check_file(smilesname + '.xyz') :
-                test_inp = (smilesname + '.xyz')
+            x2zinp = ''
+            if io.check_file(formula + '.xyz') :
+                x2zinp = (formula + '.xyz')
             elif 'xyz' in parameters['results'] and natom > 1:
-                test_inp = parameters['results']['xyz']
+                x2zinp = parameters['results']['xyz']
             logging.info('Running x2z for symmetry number')
-            if test_inp:
+            if x2zinp:
                 try:
-                    out_x2z = qc.run_x2z(test_inp, parameters['x2z'])
-                    sym = qc.get_x2z_sym(out_x2z) 
+                    x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
+                    sym = qc.get_x2z_sym(x2zout) 
                     logging.info('Symmetry number = {}'.format(sym))
                 except:
                     logging.error('x2z run failed, sym. number is set to 1. Probably a failed xyz')
@@ -472,7 +467,7 @@ def run(s):
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][s][qlabel]['deltaH0'] = hof
         parameters['all results'][s][qlabel]['heat of formation basis'] = hfset
-        io.write_file(hftxt,smilesname + '.hofk')
+        io.write_file(hftxt,formula + '.hofk')
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
