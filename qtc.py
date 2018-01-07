@@ -205,7 +205,7 @@ def run(s):
     results = parameters['results']
     smilesname = ob.get_smiles_filename(s)
     smilesdir = io.join_path(parameters['database'], formula, smilesname)
-    workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
+    rundir  = io.join_path(*[smilesdir,parameters['qcdirectory']])
     qcpackage = parameters['qcpackage']
     qcscript = io.get_path(parameters['qcscript'])
     qcoutput = formula + '.out'
@@ -234,21 +234,21 @@ def run(s):
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "N_atoms      = {0}\n".format(natom)
     msg += "N_rotors     = {0}\n".format(nrotor)
-    msg += 'Task         = {0}\n'.format(parameters['qctask'])
+    msg += 'Task         = {0}\n'.format(task)
     msg += 'Method       = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis        = {0}\n'.format(parameters['qcbasis'])
-    msg += 'Package      = {0}\n'.format(parameters['qcpackage'])
-    msg += 'QLabel       = {0}\n'.format(parameters['qlabel'])
+    msg += 'Package      = {0}\n'.format(qcpackage)
+    msg += 'QLabel       = {0}\n'.format(qlabel)
     msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
-    msg += 'WorkDir      = {0}\n'.format(parameters['workdirectory'])
-    msg += 'XYZ          = \n{0}\n'.format(parameters['xyz'])
+    msg += 'RunDir       = {0}\n'.format(rundir)
+    msg += 'XYZ          = \n{0}\n'.format(xyz)
     logging.info(msg)
     cwd = io.pwd()
-    io.mkdir(workdirectory)
-    if io.check_dir(workdirectory, 1):
-        io.cd(workdirectory)
+    io.mkdir(rundir)
+    if io.check_dir(rundir, 1):
+        io.cd(rundir)
     else:
-        logging.error('I/O error, {0} directory not found.\n'.format(workdirectory))
+        logging.error('I/O error, {0} directory not found.\n'.format(rundir))
         return -1
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
     runfile = 'RUNNING.tmp'
@@ -351,8 +351,6 @@ def run(s):
                     logging.error('Found failed calculation "{0}"'.format(qcoutput))
             if 'xyz' in results or natom == 1:
                 final_xyz  = parameters['results']['xyz']
-                xyzfilename = formula+'_final.xyz'
-                io.write_file(final_xyz, xyzfilename)
                 parameters['xyzpath']=io.get_path(xyzfilename)
                 inchifinal = ob.get_inchi(final_xyz)
                 logging.info('Final xyz = \n {}'.format(final_xyz))
@@ -402,7 +400,7 @@ def run(s):
         parameters['all results'][s][qlabel]['zpve'] = parameters['results']['zpve']   
     else:
         parameters['all results'][s][qlabel]['zpve'] = 0.
-    parameters['all results'][s][qlabel]['path'] = workdirectory   
+    parameters['all results'][s][qlabel]['path'] = rundir   
     if 'hindered potential' in parameters['results'] and task.startswith('tors'):
         tc.get_hindered_potential(parameters['results']['hindered potential'],report=parameters['debug'])
         
