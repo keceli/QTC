@@ -55,7 +55,7 @@ THERMO options
 =============
 Perform all thermochemistry? (default true): False
 Precomputed heat of formation (hf0kreac1, hf0kreac2, hf0kTS1, ... in kcal): QTC(HOF)
-Basis for heat of formation: QTC(HFBASIS) 
+Basis for heat of formation: QTC(REFERENCE) 
 Anharmonic (0 for level0 theory, 1 for level1 theory, false for off, or prog/meth/bas): QTC(ANHARMLOC)
 Overwrite anharmonic: false
 Parse all: false

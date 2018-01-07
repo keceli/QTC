@@ -202,7 +202,7 @@ def get_input(x, template, parameters):
             inp = inp.replace(      "QTC(NMC)", str(1))
         else:
             inp = inp.replace(      "QTC(NMC)", str(min(a,b*(c**nrotor)+d)) )
-        inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
+        inp = inp.replace(  "QTC(REFERENCE)", parameters[  'reference'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
             inp = inp.replace(   "QTC(HOF)", str(heat))
