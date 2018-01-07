@@ -14,7 +14,6 @@ except:
 
 __updated__ = "2018-01-07"
 __authors__ = 'Murat Keceli, Sarah Elliott'
-_hartree2kcalmol = 627.509 #kcal mol-1
 
 
 def sort_species_list(slist, printinfo=False):
@@ -177,6 +176,11 @@ def get_input(x, template, parameters):
     nrotor  = parameters[   'nrotor']
     tmpdir  = parameters[   'tmpdir']
     xyzpath = parameters[  'xyzpath']
+    abcd    = parameters[     'abcd'].split(',')
+    if len(abcd) == 4:
+        a,b,c,d = int(abcd[0]), int(abcd[1]), int(abcd[2]), int(abcd[3])
+    else:
+        a,b,c,d = 3,1,3,100
     heat    = 0
     if 'results' in parameters.keys():
         results = parameters['results']
@@ -197,7 +201,7 @@ def get_input(x, template, parameters):
         if nrotor == 0:
             inp = inp.replace(      "QTC(NMC)", str(1))
         else:
-            inp = inp.replace(      "QTC(NMC)", str(min(100,3**nrotor+3)) )
+            inp = inp.replace(      "QTC(NMC)", str(min(a,b*(c**nrotor)+d)) )
         inp = inp.replace(  "QTC(HFBASIS)", parameters[  'hfbasis'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
@@ -592,7 +596,6 @@ def get_xyz(out,package=None):
         
         
 def parse_output(s, formula, write=False):
-    package = get_output_package(s)
     if type(s) is list:
         lines = s
         s = ''.join(lines)
@@ -604,6 +607,7 @@ def parse_output(s, formula, write=False):
                 lines = s.splitlines()
     else:
         logging.info("First parameter in parse_output should be a string or a list of strings")
+    package = get_output_package(s)
     d = {}
     [method,calculation,xyz,basis] = ['na']*4
     nbasis = 0
@@ -1406,7 +1410,7 @@ def find_xyzfile(xyzpath,smilesdir):
   
 def get_output_package(out,filename=False):
     """
-    Returns the name of qc package if the calculations is succesful.
+    Returns the name of qc package if the calculation is successful.
     Returns None if failed or unknown package.
     """
     if filename:
@@ -1419,7 +1423,7 @@ def get_output_package(out,filename=False):
         p = 'nwchem'
     elif "Variable memory released" in out:
         p = 'molpro'
-    elif "Task: Submitting EStokTP job.." in out:
+    elif "Task: Submitting EStokTP job" in out:
         p = 'torsscan'
     else:
         p = None

@@ -101,6 +101,9 @@ def get_args():
                         help='Beginning index of the species list')
     parser.add_argument('-e', '--last', type=int,
                         help='Ending index of the species list')
+    parser.add_argument('-a', '--abcd', type=str,
+                        default= '3,1,3,100',
+                        help='a,b,c,d parameters for the number of MC sampling points based on min(a + b * c**nrotors, d)')
     parser.add_argument('-B', '--hfbasis', type=str,
                         default='auto',
                         help='List of SMILES (seperated by commas) for reference thermo species')
