@@ -564,7 +564,7 @@ def get_messpf_input(mol,parameters):
         inp += 'RRHO\n'
         inp += '\tGeometry[angstrom] {0} !{1}\n'.format(natom,label)
         inp += ''.join(xyz.splitlines(True)[2:])
-        inp += '\tZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
+        inp += '\n\tZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
         inp += '\tElectronicLevels[1/cm]  1\n'
         inp += '\t 0 {0}\n'.format(multiplicity)
         inp += '\tCore RigidRotor\n'
