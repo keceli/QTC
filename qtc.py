@@ -91,7 +91,7 @@ def get_args():
                         default= '',
                         help='Log file index')
     parser.add_argument('-d', '--database', type=str,
-                        default= io.pwd(),
+                        default= 'database',
                         help='Path for database directory')
     parser.add_argument('-o', '--qcoutput', type=str,
                         default='',
@@ -187,7 +187,6 @@ def run(s):
     runthermo = parameters['runthermo']
     qckeyword = parameters['qckeyword']
     calcindex = parameters['calcindex']
-    optdir = parameters['optdir']
     ignore = parameters['ignorerunningjobs']
     overwrite=parameters['overwrite']
     scratch = parameters['scratch']
@@ -204,6 +203,15 @@ def run(s):
     parameters['slabel'] = s
     parameters['tmpdir']  = io.join_path(*[scratch,ob.get_smiles_filename(s)])
     results = parameters['results']
+    smilesname = ob.get_smiles_filename(s)
+    smilesdir = io.join_path(parameters['database'], formula, smilesname)
+    workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
+    qcpackage = parameters['qcpackage']
+    qcscript = io.get_path(parameters['qcscript'])
+    qcoutput = formula + '.out'
+    parameters['smilesname' ] = smilesname
+    parameters['smilesdir'] = smilesdir
+    parameters['qcoutput'] = qcoutput
     if parameters['qctemplate']:
         parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
     if io.check_dir(parameters['qctemplate']):
@@ -232,22 +240,13 @@ def run(s):
     msg += 'Package      = {0}\n'.format(parameters['qcpackage'])
     msg += 'QLabel       = {0}\n'.format(parameters['qlabel'])
     msg += 'TemplateDir  = {0}\n'.format(parameters['qctemplate'])
-    msg += 'XYZ          = {0}\n'.format(parameters['xyz'])
+    msg += 'WorkDir      = {0}\n'.format(parameters['workdirectory'])
+    msg += 'XYZ          = \n{0}\n'.format(parameters['xyz'])
     logging.info(msg)
-    smilesname = ob.get_smiles_filename(s)
-    smilesdir = io.join_path(parameters['database'], formula, smilesname)
-    parameters['smilesname' ] = smilesname
-    parameters['smilesdir'] = smilesdir
-    workdirectory  = io.join_path(*[smilesdir,parameters['qcdirectory']])
-    qcpackage = parameters['qcpackage']
-    qcscript = io.get_path(parameters['qcscript'])
-    qcoutput = formula + '.out'
-    parameters['qcoutput'] = qcoutput
     cwd = io.pwd()
     io.mkdir(workdirectory)
     if io.check_dir(workdirectory, 1):
         io.cd(workdirectory)
-        logging.info("Rundir       = '{0}'".format(workdirectory))
     else:
         logging.error('I/O error, {0} directory not found.\n'.format(workdirectory))
         return -1
@@ -604,7 +603,7 @@ def main(arg_update={}):
             parameters['optdir'] = ''
             parameters['freqdir'] = ''
             parameters['anharmdir'] = ''
-            parameters['qcdirectory'] = parameters['database']
+            parameters['qcdirectory'] = ''
             parameters['optlevel'] = ''
             parameters['freqlevel'] = ''
             parameters['mol_index'] = mid + 1
@@ -631,7 +630,7 @@ def main(arg_update={}):
                 parameters['optdir'] = ''
                 parameters['freqdir'] = ''
                 parameters['anharmdir'] = ''
-                parameters['qcdirectory'] = parameters['database']
+                parameters['qcdirectory'] = ''
                 parameters['optlevel'] = ''
                 parameters['freqlevel'] = ''
                 parameters['mol_index'] = mid + 1
