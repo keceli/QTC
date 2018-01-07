@@ -690,14 +690,10 @@ def parse_output(s, formula, write=False):
             xyz = io.read_file(xyzfile)
             energy = float(xyz.splitlines()[1].strip())         
             parsed = True
-        elif io.check_file(geofile):
-            geo = io.read_file(geofile).strip()
-            natom = len(geo.splitlines())
-            xyz = '{0}\n{1}\n{2}'.format(str(natom),'TorsOpt geometry',geo)
-            if io.check_file(outfile2):
-                out = io.read_file(outfile2,aslines=False)
-                method, energy = pa.gaussian_energy(out)
-                parsed = True
+        elif io.check_file('torsopt.xyz'):
+            xyz = io.read_file(geofile).strip()
+            energy = float(xyz.splitlines()[1].strip())
+            parsed = True
 
     if parsed:
         if write:

@@ -148,7 +148,8 @@ def get_args():
                         default='g09',
                         help='Path for gaussian executable')
     parser.add_argument('--torsscan', type=str,
-                        default='/home/elliott/Packages/TorsScan/torsional_scan.py',
+                        #default='/home/elliott/Packages/TorsScan/torsional_scan.py',
+                        default='/home/keceli/qtc/TorsScan/torsional_scan.py',
                         help='Path for torsscan executable')
     parser.add_argument('--messpf', type=str,
                         default='messpf',
