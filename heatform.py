@@ -848,7 +848,7 @@ def main_keyword(s,parameters):
     
    # mol    = ob.get_mol(s)
    # smi = ob.get_smiles(s)
-    basis  = parameters['hfbasis'].split(',')
+    basis  = parameters['reference'].split(',')
     qckeys = parameters['qckeyword'].split(',')
     anharm = parameters['anharmonic']
     dbdir  = parameters['database']

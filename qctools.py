@@ -675,6 +675,7 @@ def parse_output(s, formula, write=False):
         outfile2 = 'geom.log' #  For torsopt
         xyzfile = 'geoms/reac1_l1.xyz'
         geofile = 'geom.xyz'
+        torsoptfile = 'torsopt.xyz'
         if io.check_file(outfile):
             try:
                 out = io.read_file(outfile, aslines=False)
@@ -694,8 +695,8 @@ def parse_output(s, formula, write=False):
             xyz = io.read_file(xyzfile)
             energy = float(xyz.splitlines()[1].strip())         
             parsed = True
-        elif io.check_file('torsopt.xyz'):
-            xyz = io.read_file(geofile).strip()
+        elif io.check_file(torsoptfile):
+            xyz = io.read_file(torsoptfile).strip()
             energy = float(xyz.splitlines()[1].strip())
             parsed = True
 
