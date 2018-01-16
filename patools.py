@@ -362,6 +362,10 @@ def molpro_method(lines):
     method  = re.findall(method,lines)
     if 'CCSD(T)' in lines:
         method =  ['CCSD(T)']
+    elif 'MP2' in lines:
+        method = ['MP2']
+    elif 'CCSD' in lines:
+        method = ['CCSD']
     if method[-1] == 'DFT':
         method = 'dft=\[([\d,\w]*)\]'
         method  = re.findall(method,lines)
