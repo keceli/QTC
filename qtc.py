@@ -13,7 +13,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2018-01-07"
+__updated__ = "2018-01-12"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -257,9 +257,12 @@ def run(s):
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
     runfile = 'RUNNING.tmp'
     if io.check_file(runfile):
-        if overwrite or task is 'composite' :
+        if overwrite:
             runqc = True
-            logging.info('Running composite calculation...')
+            logging.info('Overwriting the calculation...')
+        elif task is 'composite':
+            runqc = True
+            logging.info('Composite calculation...')            
         else:
             runqc = False
             parseqc = False
