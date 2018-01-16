@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2018-01-07"
+__updated__ = "2018-01-12"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 
 
@@ -21,19 +21,21 @@ def sort_species_list(slist, printinfo=False):
     Sorts a species list of smiles by number of rotors, electrons and atoms. 
     Optionally, prints info on the list
     """
-    i = 0
-    tmplist= ['']*len(slist)
+    tmplist= []
     for s in slist:
-        mol = ob.get_mol(s,make3D=True)
-        nrotor = ob.get_nrotor(mol)
-        nelec = ob.get_nelectron(mol)
-        natom = ob.get_natom(mol)
-        nheavy = ob.get_natom_heavy(mol)
-        formula = ob.get_formula(mol)
-        smult  = ob.get_multiplicity(s)
-        obmult = ob.get_multiplicity(mol)
-        tmplist[i] = [s,formula,smult,obmult,nrotor,nelec,natom,nheavy]
-        i += 1
+        isomers = ob.get_isomers(s)
+        if len(isomers) > 1:
+            logging.info('{} isomers found for {} : {}'.format(len(isomers),s,isomers))
+        for isomer in isomers:     
+            mol = ob.get_mol(isomer,make3D=True)
+            nrotor = ob.get_nrotor(mol)
+            nelec = ob.get_nelectron(mol)
+            natom = ob.get_natom(mol)
+            nheavy = ob.get_natom_heavy(mol)
+            formula = ob.get_formula(mol)
+            smult  = ob.get_multiplicity(isomer)
+            obmult = ob.get_multiplicity(mol)
+            tmplist.append([isomer,formula,smult,obmult,nrotor,nelec,natom,nheavy])
     tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[4],x[5],x[6]))
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
@@ -164,7 +166,7 @@ def get_input(x, template, parameters):
     charge = parameters['charge']
     formula = parameters['formula']
     natom = parameters['natom']
-    geo = ''.join(parameters['xyz'][2:natom+2]) 
+    geo = '\n'.join(xyz.splitlines()[2:natom+2]) 
     zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
@@ -306,8 +308,7 @@ def fix_qckeyword(keyword):
     keyword = keyword.replace('ccpvqz/','cc-pvqz/')
     keyword = keyword.replace('/augcc','/aug-cc')
     keyword = keyword.replace('/sto3g','/sto-3g')
-    keyword = keyword.replace('631g','6-31g')
-    keyword = keyword.replace('6-31g*','6-31gs')
+    keyword = keyword.replace('631','6-31')
     keyword = keyword.replace('torscan/','torsscan/')
     return keyword
 
@@ -940,17 +941,43 @@ def getcc_xyz(out):
     return ccdata.writexyz()
 
 
+def get_periodic_table():
+    """
+    Return the periodic table as a list.
+    Includes elements with atomic number less than 55.
+    >>>pt = get_periodic_table()
+    >>>print(len(pt))
+    >>>55
+    """
+    pt = ['X' ,
+          'H' ,'He',
+          'Li','Be','B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
+          'Na','Mg','Al','Si','P' ,'S' ,'Cl','Ar'
+          'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+          'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe']
+    return pt
+
+
 def get_symbol(atomno):
     """
     Returns the element symbol for a given atomic number.
     Returns 'X' for atomno=0
-    >>>logging.info get_symbol(1)
+    >>>print(get_symbol(1))
     >>>H
     """
-    syms = ['X',
-            'H', 'He'
-            'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne']
-    return syms[atomno]
+    pt = get_periodic_table()
+    return pt[atomno]
+
+
+def get_atomno(symbol):
+    """
+    Return the atomic number for a given element symbol.
+    >>>print(get_atomno('H')
+    >>>1
+    """
+    pt = get_periodic_table()
+    symbol = symbol.capitalize()
+    return pt.index(symbol)
 
 
 def run(s, parameters, mult=None, trial=0):
@@ -1048,14 +1075,16 @@ def run(s, parameters, mult=None, trial=0):
             elif package == 'molpro':
                 inppath = io.get_path(inpfile)
                 if len(inppath) > 255:
+                    logging.info('Creating {} since path length > 255 (molpro problem)'.format(tmpdir))
                     io.mkdir(tmpdir)
                     io.symlink(tmpdir,'tmp')
                     io.cp(inpfile,tmpdir)
                     io.cd(tmpdir)
                 command = parameters['qcexe'] + ' ' + inpfile + ' -o ' + outfile
                 logging.info('Running quantum chemistry calculation with {}'.format(command))
-                msg += io.execute(command,stdoutfile=outfile,merge=True)
+                msg += io.execute(command,stdoutfile='stdouterr.txt',merge=True)
                 if len(inppath) > 255:
+                    logging.info('Copying {} from {}'.format(outfile,tmpdir))
                     io.cp(outfile,pwd)
                     io.cd(pwd)
             else:
