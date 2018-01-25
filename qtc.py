@@ -237,7 +237,9 @@ def run(s):
     msg += "InChI        = {0}\n".format(inchi)
     msg += "Multiplicity = {0}\n".format(mult)
     msg += "N_atoms      = {0}\n".format(natom)
-    msg += "N_rotors     = {0}\n".format(nrotor)
+    msg += "N_rotor      = {0}\n".format(nrotor)
+    msg += "N_allrotor   = {0}\n".format(parameters['nallrotor'])
+    msg += "N_methyl     = {0}\n".format(parameters['nmethyl'])
     msg += 'Task         = {0}\n'.format(task)
     msg += 'Method       = {0}\n'.format(parameters['qcmethod'])
     msg += 'Basis        = {0}\n'.format(parameters['qcbasis'])
@@ -593,14 +595,14 @@ def main(arg_update={}):
     if parameters['generate']:
         mylist = qc.sort_species_list(mylist, printinfo=True)
         myliststr = '\n'.join(mylist)
-        sortedfile = io.join_path(io.get_path(inp, directory=True),'sorted.txt')
+        sortedfile = 'sorted.txt'
         io.write_file(myliststr, sortedfile)
         if io.check_file(sortedfile,1):
             logging.info('Sorted SMILES file = {}'.format(sortedfile))
             logging.info('You can use qtc -b 1 -e 5, to compute species with indices 1,2,3,4,5.')
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
-    elif parameters['qckeyword']:
+    if parameters['qckeyword']:
         logging.info('List of species')
         logging.info(pprint.pformat(mylist))
         for mid,s in enumerate(mylist):
@@ -663,7 +665,7 @@ def main(arg_update={}):
         for i,s in enumerate(mylist):
             sresults = parameters['all results'][s]
             for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
-                runpath = 'database/' + qcresultval['path'].split('/database/')[-1]
+                runpath = qcresultval['path'].split('/database/')[-1]
                 out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
                         str(i+1), s, qcresultval['energy'],qcresultval['zpve'],runpath)
         logging.info(out)
