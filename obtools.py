@@ -109,7 +109,7 @@ def get_mult(s):
             try:
                 mult = int(s.split('_m')[-1])
             except:
-                pass
+                logging.debug('Multiplicity format problem, get_mult failed in s.split for s= {}'.format(s))
     if mult is None:
         mol = get_mol(s,make3D=False)
         mult = mol.spin
@@ -145,19 +145,23 @@ def get_isomers(s):
     xyz = get_xyz(s)
     s2  = get_smiles(xyz)
     ndouble  = s2.count('=')
-    nslashes = s2.count('/') + s2.count('\\')
+    nslash   = s2.count('/') + s2.count('\\')
     nchiral  = s2.count('@')
     mult = None
     if '_m' in s:
         mult = get_mult(s)
         s2 = get_slabel(s2,mult)
+    if s.strip() == s2.strip():
+        pass
+    else:
+        logging.debug("SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s,s2))
     isomers = [s2]
     if ndouble > 1:
         logging.debug('{0} double bonds in {1}'.format(ndouble,s))
         logging.debug('Can only work with one double bond')
-    elif ndouble == 1 and nslashes > 1:
+    elif ndouble == 1 and nslash > 1:
         logging.debug('One double bond and a stereocenter found in {0}'.format(s))
-        if nslashes > 3:
+        if nslash > 3:
             logging.debug('More than 3 slashes {} --> {}'.format(s, s2))
         left,right = s2.split('=')
         newright = ''
@@ -175,7 +179,15 @@ def get_isomers(s):
             news = get_slabel(news,mult)
         isomers.append(news)
     if nchiral > 0:
-        print('{0} chiral centers in {1}'.format(nchiral,s))
+        logging.debug('{0} chiral centers in {1}'.format(nchiral,s))
+    if len[isomers]==1:
+        if '_m' in s:
+            isomers = [s]
+        else:
+            mult = get_mult(s)
+            slabel = get_slabel(s,mult)
+            logging.debug("Multiplicity {} assigned by open babel for {}".format(mult,s))
+            isomers = [slabel]
     return isomers
 
 
