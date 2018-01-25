@@ -73,7 +73,8 @@ def add_species_info(s, parameters):
     else:
         io.mkdir('xyz')
     io.cd(parameters['xyzdir'])
-    xyzfile = s + '.xyz'
+    s = get_slabel(s)
+    xyzfile = ob.get_smiles_filename(s) + '.xyz'
     xyzfile = io.fix_path(xyzfile)
     if io.check_file(xyzfile):
         xyz = io.read_file(xyzfile)
@@ -89,16 +90,22 @@ def add_species_info(s, parameters):
     parameters['mult']    = ob.get_multiplicity(s) 
     parameters['charge']  = ob.get_charge(mol)
     parameters['xyz'] = xyz
-    if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
+    if parameters['natom'] == 1:
+        parameters['nrotor'] = 0
+    elif io.check_exe(parameters['x2z']):
         try:
             x2z_out = run_x2z(xyzfile, parameters['x2z'])
             nrotor = get_x2z_nrotor(x2z_out)
             nmethyl = get_x2z_nmethyl(x2z_out)
-            parameters['nrotor'] = nrotor - nmethyl
+            parameters['nallrotor']  = nrotor 
+            parameters['nrotor']  = nrotor - nmethyl
+            parameters['nmethyl'] = nmethyl
         except:
             logging.error('x2z failed for {}'.format(s))
             parameters['nrotor'] = ob.get_nrotor(mol)
+    
     else:
+        logging.info('x2z not found, using number of rotors computed by open babel') 
         parameters['nrotor'] = ob.get_nrotor(mol)
     io.cd(pwd)
     return parameters  
@@ -141,7 +148,8 @@ def get_species_info_list(slist, parameters):
                 x2z_out = run_x2z(xyzfile, parameters['x2z'])
                 nrotor = get_x2z_nrotor(x2z_out)
                 nmethyl = get_x2z_nmethyl(x2z_out)
-                d['nrotor'] = nrotor - nmethyl
+                d['nrotor']  = nrotor - nmethyl
+                d['nmethyl'] = nmethyl
             except:
                 logging.error('x2z failed for {}'.format(s))
                 d['nrotor'] = ob.get_nrotor(mol)
@@ -182,7 +190,7 @@ def get_input(x, template, parameters):
     if len(abcd) == 4:
         a,b,c,d = int(abcd[0]), int(abcd[1]), int(abcd[2]), int(abcd[3])
     else:
-        a,b,c,d = 3,1,3,100
+        a,b,c,d = 6,2,3,100
     heat    = 0
     if 'results' in parameters.keys():
         results = parameters['results']
@@ -194,16 +202,22 @@ def get_input(x, template, parameters):
     nproc   = parameters['qcnproc']
     totalmem  = int(io.get_total_memory() * 0.8) # in MB
     coremem   = int(float(totalmem)*0.524/nproc)  # in MegaWords
-    inp = template
+    lines = template.splitlines()
+    inp = ''
+    for line in lines:
+        if line.strip().startswith('##'):
+            pass # Ignore comments
+        else:
+            inp += line + '\n'
     if task.startswith('tors'):
-        if io.check_file('xyzpath'):
+        if io.check_file(xyzpath):
             inp = inp.replace("QTC(XYZPATH)",xyzpath)
         else:
             inp = inp.replace("QTC(XYZPATH)", 'false')
         if nrotor == 0:
             inp = inp.replace(      "QTC(NMC)", str(1))
         else:
-            inp = inp.replace(      "QTC(NMC)", str(min(a,b*(c**nrotor)+d)) )
+            inp = inp.replace(      "QTC(NMC)", str(min(a+b*(c**nrotor),d)) )
         inp = inp.replace(  "QTC(REFERENCE)", parameters[  'reference'])
         inp = inp.replace(   "QTC(THERMO)", str(parameters['runthermo']))
         if heat:
@@ -284,6 +298,8 @@ def get_input(x, template, parameters):
     inp = inp.replace('QTC(ANHARMLOC)', 'false')
     inp = inp.replace('QTC(NODE_MEMORY_MB)', str(totalmem))
     inp = inp.replace('QTC(CORE_MEMORY_MW)', str(coremem))
+    lines = inp.splitlines()
+
     if "QTC(" in inp:
         logging.info(66*'#')
         logging.info("Error in template file: \n" + inp)
@@ -343,12 +359,17 @@ def update_smiles_list(slist):
         else:
             if '_m' in s:
                 smi, mult = s.split('_m')
-                smi = ob.get_smiles(smi)
             else:
-                smi = ob.get_smiles(s)
+                smi = s
                 mult = ob.get_mult(s)
-            s = smi + '_m' + str(mult)
-            newlist.append(s)
+                logging.debug("Multiplicity is set by open babel. {} : {}".format(smi,mult))
+            canonical = ob.get_smiles(s)
+            if canonical.strip() == smi:
+                pass
+            else:
+                logging.debug('SMILES changed after open babel canonicalization {} --> {}'.format(smi,canonical)) 
+            slabel = canonical + '_m' + str(mult)
+            newlist.append(slabel)
     return newlist
 
 
@@ -1226,7 +1247,7 @@ def get_x2z_nrotor(out):
             line = line.replace(key,'').strip()
             if line:
                 if ',' in line:
-                    nrotor = len(line.split(',')) + 1
+                    nrotor = len(line.split(','))
                 else:
                     nrotor = 1
             else:
