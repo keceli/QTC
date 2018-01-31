@@ -723,7 +723,10 @@ def parse_output(s, formula, write=False):
             xyz = io.read_file(torsoptfile).strip()
             energy = float(xyz.splitlines()[1].strip())
             parsed = True
-
+        elif io.check_file(geofile):
+            xyz = io.read_file(geofile).strip()
+            energy = float(xyz.splitlines()[1].strip())
+            parsed = True
     if parsed:
         if write:
             fname = formula + '.ene'
