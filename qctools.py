@@ -92,6 +92,8 @@ def add_species_info(s, parameters):
     parameters['xyz'] = xyz
     if parameters['natom'] == 1:
         parameters['nrotor'] = 0
+        parameters['nallrotor']  = 0
+        parameters['nmethyl'] = 0
     elif io.check_exe(parameters['x2z']):
         try:
             x2z_out = run_x2z(xyzfile, parameters['x2z'])
@@ -414,7 +416,7 @@ def parse_qckeyword(parameters, calcindex=0):
             logging.info('Replacing Task = {} with Task = energy, since there is only a single atom'.format(task))
             task = 'energy'
             parameters['task'] = task
-    elif parameters['nrotor'] == 0:
+    elif parameters['nallrotor'] == 0:
         if task.startswith('torsopt'):
             logging.info('Replacing Task = {} with Task = opt, since there are no torsions.'.format(task))
             task = 'opt'
