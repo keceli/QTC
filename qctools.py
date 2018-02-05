@@ -90,11 +90,10 @@ def add_species_info(s, parameters):
     parameters['mult']    = ob.get_multiplicity(s) 
     parameters['charge']  = ob.get_charge(mol)
     parameters['xyz'] = xyz
-    if parameters['natom'] == 1:
-        parameters['nrotor'] = 0
-        parameters['nallrotor']  = 0
-        parameters['nmethyl'] = 0
-    elif io.check_exe(parameters['x2z']):
+    parameters['nallrotor']  = 0
+    parameters['nmethyl'] = 0
+    parameters['nrotor'] = 0
+    if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
         try:
             x2z_out = run_x2z(xyzfile, parameters['x2z'])
             nrotor = get_x2z_nrotor(x2z_out)
@@ -356,7 +355,8 @@ def update_smiles_list(slist):
     """
     newlist = []
     for s in slist:
-        if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
+       # if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
+        if 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
             if '_m' in s:
@@ -723,7 +723,14 @@ def parse_output(s, formula, write=False):
             xyz = io.read_file(torsoptfile).strip()
             energy = float(xyz.splitlines()[1].strip())
             parsed = True
-
+        elif io.check_file(geofile):
+            geo = io.read_file(geofile).strip()
+            natom = len(geo.splitlines())
+            energy = 0
+            xyz = '{}\n{}\n{}'.format(natom,energy,geo)
+            parsed = True
+        else:
+            logging.debug('Error in parsing {}'.format(package))
     if parsed:
         if write:
             fname = formula + '.ene'
