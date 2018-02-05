@@ -318,9 +318,10 @@ def run(s):
         logging.info('Parsing output...')
         if parameters['qctask'] == 'composite':
             enefile = formula + '.ene'
-            if io.check_file(enefile):
+            if io.check_file(enefile,0,True):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
+            else:
                 if runthermo:
                     logging.error('Cannot run thermo, no energy file "{0}".\n'.format(enefile))
                     runthermo = False
