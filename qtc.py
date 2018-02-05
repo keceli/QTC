@@ -358,7 +358,7 @@ def run(s):
                     runthermo = False
                 else:
                     logging.error('Found failed calculation "{0}"'.format(qcoutput))
-            if 'xyz' in results or natom == 1:
+            if 'xyz' in results and natom > 1:
                 final_xyz  = parameters['results']['xyz']
                 parameters['xyzpath']=io.get_path(xyzfilename)
                 inchifinal = ob.get_inchi(final_xyz)
@@ -370,9 +370,8 @@ def run(s):
                     logging.error('InChI mismatch: \n{} --> \n{}'.format(inchi,inchifinal))
             else:
                 if 'opt' in task:
+                    logging.error('Cannot find xyz, optimization failed')
                     parameters['break'] = True
-                if runthermo:
-                    logging.error('Cannot run thermo, no xyz')
                     runthermo = False
 ############################ BLUES specific
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
