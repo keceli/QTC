@@ -653,7 +653,8 @@ def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.out', thermpexe='t
     if not io.check_file(thermpfile,1):
         return "{0} file not found.\n".format(thermpfile)
     pfdat = pffile.replace('out','dat')
-    io.mv(pffile,pfdat)
+    if io.checkfile(pffile):
+        io.mv(pffile,pfdat)
     if io.check_file(pfdat,1):
         msg += io.execute(thermpexe)
     else:
