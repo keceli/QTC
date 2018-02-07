@@ -564,13 +564,19 @@ def get_messpf_input(mol,parameters):
         inp += 'RRHO\n'
         inp += '\tGeometry[angstrom] {0} !{1}\n'.format(natom,label)
         inp += ''.join(xyz.splitlines(True)[2:])
-        inp += '\n\tZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
-        inp += '\tElectronicLevels[1/cm]  1\n'
+        inp += '\nZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
+        inp += 'ElectronicLevels[1/cm]  1\n'
         inp += '\t 0 {0}\n'.format(multiplicity)
-        inp += '\tCore RigidRotor\n'
-        inp += '\t\tZeroPointEnergy[1/cm] {}\n'.format(zpe)
-        inp += '\t\tInterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
-        inp += '\t\tSymmetryFactor {0}\n'.format(sym)
+        if 'hindered potential' in results and  'Core' in results['hindered potential']:
+                inp += '\t{}'.format(results['hindered potential' ]).rstrip("End")
+        else:
+            inp += 'Core RigidRotor\n'
+            inp += '\tZeroPointEnergy[1/cm] {}\n'.format(zpe)
+            inp += '\tInterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
+            inp += '\tSymmetryFactor {0}\n'.format(sym)
+            inp += 'End\n'
+            if 'hindered potential' in results:
+                inp += '{}'.format(results['hindered potential' ])
         if len(freqs) > 0:
             posfreqs = []
             for freq in freqs:
@@ -588,10 +594,7 @@ def get_messpf_input(mol,parameters):
                     #inp += str(xmat[i,j]) + '\n'
                 inp += '\t\t' + ' '.join([str(xmat[i,j]) for j in range(i+1)]) + '\n'
         inp += '\t End\n' # Core RigidRotor
-        if 'hindered potential' in results:
-            inp += '\t{}'.format(results['hindered potential' ])
         #inp += '\t End\n' # hindered
-    inp += 'End\n'
     return inp
 
 def run_pf(messpf='messpf',inputfile='pf.inp'):
