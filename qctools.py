@@ -313,6 +313,7 @@ def fix_qckeyword(keyword):
     based on user input.
     """
     keyword = keyword.lower()
+    keyword = keyword.replace('g(d,p)','_gdp_')
     keyword = keyword.replace(' ','')
     keyword = keyword.replace('/adz','/aug-cc-pvdz')
     keyword = keyword.replace('/atz','/aug-cc-pvtz')
@@ -401,7 +402,7 @@ def parse_qckeyword(parameters, calcindex=0):
     keyword = parameters['qckeyword']
     optdir  = parameters['optdir']
     package = 'nwchem'
-    calcs   = keyword.split(',')
+    calcs   = keyword.split(parameters['task_seperator'])
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
     task = tokens[0]
@@ -487,7 +488,7 @@ def parse_qckeyword(parameters, calcindex=0):
     parameters['qcdirectory'] = qcdirectory
     parameters['qcpackage'] = package
     parameters['qcmethod'] = method
-    parameters['qcbasis'] = basis
+    parameters['qcbasis'] = basis.replace('_gdp_','g(d,p)')
     parameters['qctask'] = task
     parameters['parseqc'] = True
     parameters['writefiles'] = True

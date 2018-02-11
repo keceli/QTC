@@ -44,8 +44,8 @@ def get_args():
     Returns args object that contains command line options.
     """
     import argparse
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     #formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    parser = argparse.ArgumentParser(#formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                      description=
     """
     September 11, 2017
@@ -107,6 +107,9 @@ def get_args():
     parser.add_argument('-r', '--reference', type=str,
                         default='auto',
                         help='List of SMILES (seperated by commas) for reference thermo species')
+    parser.add_argument('-z', '--task_seperator', type=str,
+                        default=',',
+                        help='The characther used for seperating different tasks in a qckeyword.')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
     parser.add_argument('-Q', '--runqc', action='store_true',
@@ -551,7 +554,7 @@ def main(arg_update={}):
         logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
     if parameters['qckeyword']:
         parameters['qckeyword'] = qc.fix_qckeyword(parameters['qckeyword'])
-        ncalc = len(parameters['qckeyword'].split(','))
+        ncalc = len(parameters['qckeyword'].split(parameters['task_seperator']))
     else:
         ncalc = 1
     parameters['qtcdirectory'] = os.path.dirname(os.path.realpath(__file__))
