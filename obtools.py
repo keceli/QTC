@@ -180,7 +180,7 @@ def get_isomers(s):
         isomers.append(news)
     if nchiral > 0:
         logging.debug('{0} chiral centers in {1}'.format(nchiral,s))
-    if len[isomers]==1:
+    if len(isomers)==1:
         if '_m' in s:
             isomers = [s]
         else:
