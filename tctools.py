@@ -527,6 +527,7 @@ def get_messpf_input(mol,parameters):
        End
     """
     import unittools as ut
+    import anharm
     natom = parameters['natom']
     label = parameters['qlabel']
     results = parameters['results']
@@ -551,8 +552,14 @@ def get_messpf_input(mol,parameters):
         freqs = results['freqs']    
     if 'xmat' in results:
         xmat = np.asarray(results['xmat'])
-        if 'afreqs' in results:
+        if 'pfreqs' in results:
+            freqs, fill, xmat, fill2, fill3 = anharm.main(results)
+        elif 'afreqs' in results:
             freqs = results['afreqs']
+        #xmat = anharm.mess_x(xmat)
+    coreIsMd = False
+    if  'Core' in results['hindered potential']:
+        coreIsMd = True
     inp  = 'AtomDistanceMin[angstrom] 0.6\n'
     inp += 'Temperature(step[K],size)        100.   30\n'
     inp += 'RelativeTemperatureIncrement            0.001\n'
@@ -567,16 +574,14 @@ def get_messpf_input(mol,parameters):
         inp += '\nZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
         inp += 'ElectronicLevels[1/cm]  1\n'
         inp += '\t 0 {0}\n'.format(multiplicity)
-        if 'hindered potential' in results and  'Core' in results['hindered potential']:
+        if 'hindered potential' in results and coreIsMd:
                 inp += '\t{}'.format(results['hindered potential' ]).rstrip("End")
         else:
             inp += 'Core RigidRotor\n'
             inp += '\tZeroPointEnergy[1/cm] {}\n'.format(zpe)
             inp += '\tInterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
             inp += '\tSymmetryFactor {0}\n'.format(sym)
-            inp += 'End\n'
-            if 'hindered potential' in results:
-                inp += '{}'.format(results['hindered potential' ])
+            #inp += 'End\n'
         if len(freqs) > 0:
             posfreqs = []
             for freq in freqs:
@@ -588,13 +593,18 @@ def get_messpf_input(mol,parameters):
             inp += '\t\t' + ' '.join([str(x) for x in posfreqs]) + '\n'
         if len(xmat) > 0:
             inp += ' Anharmonicities[1/cm]\n'
+            #inp += xmat
             for i in range( len(xmat)):
                 #for j in range(i+1):
                     #inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
                     #inp += str(xmat[i,j]) + '\n'
+                 
                 inp += '\t\t' + ' '.join([str(xmat[i,j]) for j in range(i+1)]) + '\n'
         inp += '\t End\n' # Core RigidRotor
-        #inp += '\t End\n' # hindered
+        if not coreIsMd:
+            if 'hindered potential' in results:
+                inp += '{}'.format(results['hindered potential' ])
+            inp += '\t End\n' # hindered
     return inp
 
 def run_pf(messpf='messpf',inputfile='pf.inp'):

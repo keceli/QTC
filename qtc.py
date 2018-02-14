@@ -390,9 +390,13 @@ def run(s):
                 if io.check_file(RPHtexe):
                     io.write_file(RPHt,RPHtfile)
                     io.execute(RPHtexe  + ' ' + RPHtfile)
-                    if io.check_file( 'hrproj_freq.dat'):
-                        pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
+                    #if io.check_file( 'hrproj_freq.dat'):
+                    if io.check_file( 'me_files/reac1_fr.me'):
+                        out = io.read_file('me_files/reac1_fr.me', aslines=False)
+                        pfreqs = qc.get_mess_frequencies(out)
                         parameters['results']['pfreqs'] = pfreqs
+                    elif io.check_file( 'hrproj_freq.dat'):
+                        pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
                     else:
                         logging.warning('hrproj_freq.dat file not found')
                 else:
