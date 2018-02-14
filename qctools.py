@@ -90,11 +90,10 @@ def add_species_info(s, parameters):
     parameters['mult']    = ob.get_multiplicity(s) 
     parameters['charge']  = ob.get_charge(mol)
     parameters['xyz'] = xyz
-    if parameters['natom'] == 1:
-        parameters['nrotor'] = 0
-        parameters['nallrotor']  = 0
-        parameters['nmethyl'] = 0
-    elif io.check_exe(parameters['x2z']):
+    parameters['nallrotor']  = 0
+    parameters['nmethyl'] = 0
+    parameters['nrotor'] = 0
+    if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
         try:
             x2z_out = run_x2z(xyzfile, parameters['x2z'])
             nrotor = get_x2z_nrotor(x2z_out)
@@ -314,6 +313,7 @@ def fix_qckeyword(keyword):
     based on user input.
     """
     keyword = keyword.lower()
+    keyword = keyword.replace('g(d,p)','_gdp_')
     keyword = keyword.replace(' ','')
     keyword = keyword.replace('/adz','/aug-cc-pvdz')
     keyword = keyword.replace('/atz','/aug-cc-pvtz')
@@ -356,7 +356,8 @@ def update_smiles_list(slist):
     """
     newlist = []
     for s in slist:
-        if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
+       # if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
+        if 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
             if '_m' in s:
@@ -401,7 +402,7 @@ def parse_qckeyword(parameters, calcindex=0):
     keyword = parameters['qckeyword']
     optdir  = parameters['optdir']
     package = 'nwchem'
-    calcs   = keyword.split(',')
+    calcs   = keyword.split(parameters['task_seperator'])
     currentcalc = calcs[calcindex]
     tokens = currentcalc.split('/')
     task = tokens[0]
@@ -487,7 +488,7 @@ def parse_qckeyword(parameters, calcindex=0):
     parameters['qcdirectory'] = qcdirectory
     parameters['qcpackage'] = package
     parameters['qcmethod'] = method
-    parameters['qcbasis'] = basis
+    parameters['qcbasis'] = basis.replace('_gdp_','g(d,p)')
     parameters['qctask'] = task
     parameters['parseqc'] = True
     parameters['writefiles'] = True
@@ -724,9 +725,13 @@ def parse_output(s, formula, write=False):
             energy = float(xyz.splitlines()[1].strip())
             parsed = True
         elif io.check_file(geofile):
-            xyz = io.read_file(geofile).strip()
-            energy = float(xyz.splitlines()[1].strip())
+            geo = io.read_file(geofile).strip()
+            natom = len(geo.splitlines())
+            energy = 0
+            xyz = '{}\n{}\n{}'.format(natom,energy,geo)
             parsed = True
+        else:
+            logging.debug('Error in parsing {}'.format(package))
     if parsed:
         if write:
             fname = formula + '.ene'
