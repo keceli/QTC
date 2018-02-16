@@ -568,6 +568,7 @@ def get_messpf_input(mol,parameters):
     if natom == 1:
         inp += 'Atom\n'
         inp += 'Mass[amu] {}\n'.format(ut.atommasses[formula])
+        inp += 'End'
     else:
         inp += 'RRHO\n'
         inp += '\tGeometry[angstrom] {0} !{1}\n'.format(natom,label)
