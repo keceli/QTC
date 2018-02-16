@@ -558,8 +558,9 @@ def get_messpf_input(mol,parameters):
             freqs = results['afreqs']
         #xmat = anharm.mess_x(xmat)
     coreIsMd = False
-    if  'Core' in results['hindered potential']:
-        coreIsMd = True
+    if  'hindered potential' in results:
+        if  'Core' in results['hindered potential']:
+            coreIsMd = True
     inp  = 'AtomDistanceMin[angstrom] 0.6\n'
     inp += 'Temperature(step[K],size)        100.   30\n'
     inp += 'RelativeTemperatureIncrement            0.001\n'
@@ -666,7 +667,7 @@ def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.out', thermpexe='t
     if not io.check_file(thermpfile,1):
         return "{0} file not found.\n".format(thermpfile)
     pfdat = pffile.replace('out','dat')
-    if io.checkfile(pffile):
+    if io.check_file(pffile):
         io.mv(pffile,pfdat)
     if io.check_file(pfdat,1):
         msg += io.execute(thermpexe)
@@ -746,6 +747,7 @@ def write_chemkin_polynomial(mol, parameters):
     """
     messpfinput = 'pf.inp'
 #   messpfoutput = 'pf.log'
+#    messpfoutput = 'pf.out'
     messpfoutput = 'pf.out'
     formula = mol.formula
     qlabel = parameters['qlabel']
