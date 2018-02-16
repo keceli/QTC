@@ -568,7 +568,7 @@ def get_messpf_input(mol,parameters):
     if natom == 1:
         inp += 'Atom\n'
         inp += 'Mass[amu] {}\n'.format(ut.atommasses[formula])
-        inp += 'End'
+        inp += 'End\n'
     else:
         inp += 'RRHO\n'
         inp += '\tGeometry[angstrom] {0} !{1}\n'.format(natom,label)
@@ -577,7 +577,7 @@ def get_messpf_input(mol,parameters):
         inp += 'ElectronicLevels[1/cm]  1\n'
         inp += '\t 0 {0}\n'.format(multiplicity)
         if 'hindered potential' in results and coreIsMd:
-                inp += '\t{}'.format(results['hindered potential' ]).rstrip("End")
+                inp += '\t{}'.format(results['hindered potential' ])
         else:
             inp += 'Core RigidRotor\n'
             inp += '\tZeroPointEnergy[1/cm] {}\n'.format(zpe)
