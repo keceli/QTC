@@ -684,9 +684,12 @@ def main(arg_update={}):
             for i,s in enumerate(mylist):
                 sresults = parameters['all results'][s]
                 for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
-                    out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
-                        str(i+1), s,qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
-                    ckin += qcresultval['chemkin']
+                    if qcresultval['deltaH298']:
+                        out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
+                            str(i+1), s,qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
+                        ckin += qcresultval['chemkin']
+                    else:
+                        out += s + '  not included in ckin because there is no pf output for ' + qcresultkey  + '\n'
             logging.info(out)
             ckinfile = 'chemkin_' + parameters['logfile'] + get_date_time("_%y%m%d_%H%M%S") + '.txt'
             ckinfile = io.get_unique_filename(ckinfile)
