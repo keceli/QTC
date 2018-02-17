@@ -747,12 +747,12 @@ def parse_output(s, formula, write=False):
                 io.write_file(str(azpve), fname)
             if len(freqs) > 0:
                 if any(freq < 0 for freq in freqs):
-                    logging.error('Imaginary frequency dedected: {}'.format(['{:6.1f}'.format(freq) for freq in freqs]))
+                    logging.error('Imaginary frequency detected: {}'.format(['{:6.1f}'.format(freq) for freq in freqs]))
                 fname = formula + '.hrm'
                 io.write_file('\n'.join(str(x) for x in freqs), fname )
             if sum(afreqs) > 0:
                 if any(freq < 0 for freq in afreqs):
-                    logging.error('Imaginary frequency dedected: {}'.format(['{:6.1f}'.format(freq) for freq in afreqs]))
+                    logging.error('Imaginary frequency detected: {}'.format(['{:6.1f}'.format(freq) for freq in afreqs]))
                 fname = formula + '.anhrm'
                 io.write_file('\n'.join(str(x) for x in afreqs), fname)
         d = {'nbasis':nbasis,
