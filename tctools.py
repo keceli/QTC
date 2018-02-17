@@ -986,7 +986,7 @@ def get_hindered_potential(s,report=False):
             if report:
                 logging.info(line)
             if any(p < 0. for p in newpot):
-                logging.error('Negative hindered potential dedected')
+                logging.error('Negative hindered potential detected')
                 if not report:
                     break
     return pot
