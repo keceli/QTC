@@ -106,6 +106,10 @@ def gaussian_energy(lines,method=''):
     #    return (method,float(energ[-1].replace('D','E').replace('\n','').replace(' ','')))
         return (method,float(energ[-1].replace('\n','').replace(' ','')))
     else:
+        if 'anharm' in lines:
+            energ = 'HF=\s*([\d,\-,\.,D,\+]*)'
+            energ = re.findall(energ,lines)
+            return (method, float(energ[-1].replace('D','E')))
        # energ = '(\S+)\s*A\.U\.'
         energ = 'E\([u,U,r,R]*' + method + '\)\s*=\s*([\d,\-,\.,D,\+]*)'
         energ = re.findall(energ,lines)
