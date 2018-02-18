@@ -255,6 +255,19 @@ def get_input(x, template, parameters):
             elif task == 'anharm':
                 task = 'freq=(anharm,vibrot)'
         elif package == 'molpro':
+            if "QTC(EXTRA)" in inp:
+                if nopen == 0:
+                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int(nelectron/2),int(nelectron/2),nelectron,nopen)
+                elif nopen == 1:
+                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-1)/2),int((nelectron+1)/2),nelectron,nopen)
+                elif nopen == 2:
+                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-2)/2),int((nelectron+2)/2),nelectron,nopen)
+                elif nopen == 3:
+                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-3)/2),int((nelectron+3)/2),nelectron,nopen)
+                elif nopen == 4:
+                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-4)/2),int((nelectron+4)/2),nelectron,nopen)
+                else:
+                    logging.warning('{} input not implemented for multiplicity {}'.format(method,mult))    
             if method.lower().startswith('ccsd'):
                 if nopen > 0:
                     method = 'u'+method
@@ -269,19 +282,6 @@ def get_input(x, template, parameters):
                 task = ''
             elif task.lower().startswith('freq'):
                 task = '{frequencies;print,hessian}'
-            if method.lower().startswith('casscf'):
-                if nopen == 0:
-                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int(nelectron/2),int(nelectron/2),nelectron,nopen)
-                elif nopen == 1:
-                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-1)/2),int((nelectron+1)/2),nelectron,nopen)
-                elif nopen == 2:
-                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-2)/2),int((nelectron+2)/2),nelectron,nopen)
-                elif nopen == 3:
-                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-3)/2),int((nelectron+3)/2),nelectron,nopen)
-                elif nopen == 4:
-                    extraline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-4)/2),int((nelectron+4)/2),nelectron,nopen)
-                else:
-                    logging.warning('{} input not implemented for multiplicity {}'.format(method,mult))    
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'
