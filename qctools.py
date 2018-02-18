@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2018-01-12"
+__updated__ = "2018-02-18"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 
 
@@ -180,6 +180,7 @@ def get_input(x, template, parameters):
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     smiles = ob.get_smiles(mol)
+    nelectron = ob.get_nelectron(mol)
     package = parameters['qcpackage'] 
     method  = parameters[ 'qcmethod'] 
     basis   = parameters[  'qcbasis']
@@ -188,6 +189,7 @@ def get_input(x, template, parameters):
     tmpdir  = parameters[   'tmpdir']
     xyzpath = parameters[  'xyzpath']
     abcd    = parameters[     'abcd'].split(',')
+    casscfline = ''
     if len(abcd) == 4:
         a,b,c,d = int(abcd[0]), int(abcd[1]), int(abcd[2]), int(abcd[3])
     else:
@@ -267,7 +269,19 @@ def get_input(x, template, parameters):
                 task = ''
             elif task.lower().startswith('freq'):
                 task = '{frequencies;print,hessian}'
-    
+            if method.lower().startswith('casscf'):
+                if nopen == 0:
+                    casscfline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int(nelectron/2),int(nelectron/2),nelectron,nopen)
+                elif nopen == 1:
+                    casscfline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-1)/2),int((nelectron+1)/2),nelectron,nopen)
+                elif nopen == 2:
+                    casscfline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-2)/2),int((nelectron+2)/2),nelectron,nopen)
+                elif nopen == 3:
+                    casscfline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-3)/2),int((nelectron+3)/2),nelectron,nopen)
+                elif nopen == 4:
+                    casscfline = '{{multi;closed,{0};occ,{1};wf,{2},1,{3};canonical}}'.format(int((nelectron-4)/2),int((nelectron+4)/2),nelectron,nopen)
+                else:
+                    logging.warning('{} implut line not implemented for multiplicity {}'.format(method,mult))    
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'
@@ -297,6 +311,7 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(RHF_OR_ROHF)", rhftype)
     inp = inp.replace("QTC(NPROC)", str(nproc))   
     inp = inp.replace('QTC(ANHARMLOC)', 'false')
+    inp = inp.replace('QTC(CASSCF)',casscfline)
     inp = inp.replace('QTC(NODE_MEMORY_MB)', str(totalmem))
     inp = inp.replace('QTC(CORE_MEMORY_MW)', str(coremem))
     lines = inp.splitlines()
