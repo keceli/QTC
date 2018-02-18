@@ -11,4 +11,6 @@ rhf
 QTC(METHOD)
 QTC(TASK)
 put,xyz
+QTC(EXTRA)
 ENERGY=energy
+
