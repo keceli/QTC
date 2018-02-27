@@ -53,7 +53,7 @@ def rmrf(dname):
     import shutil
     try:
         shutil.rmtree(dname,ignore_errors=True)
-    except OSError, e:
+    except OSError as e:
         logging.error("Error in deleting {}: {}" % (dname,e.strerror))
     return
 
