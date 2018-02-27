@@ -228,7 +228,7 @@ C4H9O4                  H   9C   4O   4N   0G   200.00   3000.00  1000.00      1
     has = [0]*7
     las = [0]*7
     if nline < 4:
-        print('Bad format')
+        logging.error('Bad format for chemkin file at convert_chemkin2rmg')
     else:
         lines = lines[-4:]
         tlow, thigh, tmed = lines[0].split()[6:9]

@@ -75,7 +75,7 @@ def get_mol(s, make3D=False, mult=None):
             frm = get_format(s)
             mol = pybel.readstring(frm, s)
     else:
-        print 'Incompetible type for ob.get_mol', type(s)
+        logging.error('Incompetible type {} for ob.get_mol'.format(type(s)))
         return None
     if make3D and mol.dim < 3:
         mol.make3D()
