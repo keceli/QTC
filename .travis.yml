@@ -5,8 +5,9 @@ sudo: false
 python:
   - 2.7
 
-
 before_install:
+- git clone --depth=50 --branch=master https://github.com/keceli/QTC.git qtc
+- cd qtc/
 - export MINICONDA=$HOME/miniconda
 - export PATH="$MINICONDA/bin:$PATH"
 - hash -r
@@ -20,7 +21,6 @@ before_install:
 - conda install numpy psutil
 - conda install -c openbabel openbabel
 - conda install -c mcs07 cirpy
-
 
 script:
 - python openbabel.py
