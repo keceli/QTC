@@ -23,4 +23,4 @@ before_install:
 - conda install -c mcs07 cirpy
 
 script:
-- python openbabel.py
+- python obtools.py
