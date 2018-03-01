@@ -1,5 +1,6 @@
 # Quantum Thermo Chemistry (QTC) 
 [![Build Status](https://travis-ci.org/keceli/QTC.svg?branch=master)](https://travis-ci.org/keceli/QTC)
+
 QTC includes modules that integrates open babel with quantum chemistry calculations and generates NASA polynomials in different formats.
 
 It depends on:
