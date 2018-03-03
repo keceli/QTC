@@ -13,7 +13,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2018-01-12"
+__updated__ = "2018-03-01"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -76,8 +76,8 @@ def get_args():
                         default='',
                         help='Path for the templates directory. Templates have a specific format for filenames. See qtc/templates.')
     parser.add_argument('-l', '--loglevel', type=int,
-                        default=2,
-                        help='Verbosity level of logging, 0 for only errors, 3 for debugging')
+                        default=-1,
+                        help='Verbosity level of logging, -1: qtc decides,  0: errors, 1: 0 + warnings, 2: 1 + info, 3: 2 + debug')
     parser.add_argument('-f', '--logfile', type=str,
                         default= 'none',
                         help='Log file prefix, use none for logging to STDOUT, include DATE if you want a date stamp')
@@ -116,8 +116,8 @@ def get_args():
                         help='Run quantum chemistry calculation')
     parser.add_argument('-P', '--parseqc', action='store_true',
                         help='Parses quantum chemistry output')
-    parser.add_argument('-S', '--subqc', action='store_true',
-                        help='Submit quantum chemistry calculations')
+    parser.add_argument('-S', '--swift', action='store_true',
+                        help='Required to run with swift')
     parser.add_argument('-T', '--runthermo', action='store_true',
                         help='Run thermochemistry calculations')
     parser.add_argument('-W', '--writefiles', action='store_true',
@@ -514,16 +514,41 @@ def main(arg_update={}):
     from time import strftime as get_date_time
     global parameters
     mpirank = io.get_mpi_rank()
-    if mpirank:
-        sys.exit()
+    mpisize = io.get_mpi_size(default=1)
     start  = timer()
     args = get_args()
     parameters = vars(args)
+    qcnproc = parameters['qcnproc']
+    beginindex = parameters['first']
+    if parameters['swift']:
+        qtcruninfo = 'Running QTC with Swift...'
+        if mpirank:
+            sys.exit()
+    else:
+        if mpisize > 1:
+            qtcruninfo = 'Running QTC in parallel...'
+            if (mpirank % qcnproc) == 0:
+                qcrank = mpirank // qcnproc
+                qtcruninfo += 'Using {} MPI ranks in total'.format(mpisize)
+                qtcruninfo += 'Using {} cores for a single quantum chemistry calculation'.format(qcnproc)
+                beginindex = parameters['first'] + qcrank
+                qtcruninfo += 'Begin index shifted to {} for qcrank {} mpirank {}'.format(beginindex,qcrank, mpirank)
+            else:
+                sys.exit()
+        else:
+            qtcruninfo = 'Running QTC...'
+    
+    endindex = parameters['last']   
     parameters['all results'] = {}
     logfile = parameters['logfile']
     logindex = parameters['logindex']
     hostname = gethostname()
-    if parameters['loglevel'] == 0:
+    if parameters['loglevel'] == -1:
+        if mpisize > 1:
+            loglevel = logging.ERROR
+        else:
+            loglevel = logging.INFO
+    elif parameters['loglevel'] == 0:
         loglevel = logging.ERROR
     elif parameters['loglevel'] == 1:
         loglevel = logging.WARNING
@@ -537,6 +562,8 @@ def main(arg_update={}):
     logging.addLevelName(logging.DEBUG, 'Debug:')
     logging.addLevelName(logging.ERROR, 'ERROR:')
     logging.addLevelName(logging.WARNING, 'WARNING:')
+    if not logindex and mpisize > 1:
+        logindex = str(mpirank)
     if logfile is 'none':
         if logindex:
             logfile = 'qtc_' + logindex + '_' + hostname + '.log'
@@ -549,10 +576,12 @@ def main(arg_update={}):
         logging.basicConfig(format='%(levelname)s%(message)s', filename=logfile, level=loglevel)
     for key in arg_update:
         parameters[key] = arg_update[key]
+
     logging.info(__logo__)
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
     logging.info("QTC: Last update             = {0}".format(__updated__))
     logging.info("QTC: Hostname                = {0}".format(hostname))
+    logging.info(qtcruninfo)
     logging.info('QTC: Given arguments         =')
     for param in parameters:
         logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
@@ -565,8 +594,7 @@ def main(arg_update={}):
     parameters['number_of_calculations'] = ncalc
     parameters['optlevel'] = 'sp' #TODO
     templatedir = parameters['qctemplate']
-    beginindex = args.first
-    endindex = args.last
+
     inp = args.input
     jsonfile = args.jsoninput
     jlist = []
