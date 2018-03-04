@@ -13,7 +13,7 @@ import os
 import logging
 from patools import energy
 from timeit import default_timer as timer
-__updated__ = "2018-03-01"
+__updated__ = "2018-03-03"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 __logo__ = """
 ***************************************
@@ -590,7 +590,7 @@ def main(arg_update={}):
         ncalc = len(parameters['qckeyword'].split(parameters['task_seperator']))
     else:
         ncalc = 1
-    parameters['qtcdirectory'] = os.path.dirname(os.path.realpath(__file__))
+    parameters['qtcdirectory'] = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     parameters['number_of_calculations'] = ncalc
     parameters['optlevel'] = 'sp' #TODO
     templatedir = parameters['qctemplate']
