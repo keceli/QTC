@@ -12,7 +12,7 @@ try:
 except:
     pass
 
-__updated__ = "2018-02-18"
+__updated__ = "2018-03-03"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 
 
@@ -557,68 +557,6 @@ def get_qcdirectory(topdir,task,method,basis,package):
     return qcdir
 
 
-def parse_results(filename, parameters):
-    """
-    Returns a dictionary containing results for the given quantum chemistry output.
-    package: <str>
-    method : <str>
-    file: <str>
-    hostname: <str>
-    xyz: <str>
-    xmat: <str>  anharmonicity X matrix from VPT2
-    hindered rotor potential: <str> messpf input section for rotors 
-    number of basis functions: <int>
-    nuclear repulsion energy: <float>
-    energy: <float> in atomic units (Hartree)
-    zpve: <float> in cm^-1
-    anharmonic zpve: <float> in cm^-1
-    harmonic frequencies: <[float]> in cm^-1
-    anharmonic frequencies: <[float]> in cm^-1
-    projected frequencies: <[float]> in cm^-1
-    """
-    import iotools
-    r = {}
-    r['file'] = ''
-    r['package'] = ''
-    r['method'] = ' '
-    r['hostname'] = ' '
-    r['xyz'] = ' '
-    r['xmat'] = ' '
-    r['hindered rotor potential'] = ' ' 
-    r['nbasis'] = 0
-    r['nuclear repulsion energy:' ]= 0.
-    r['energy' ]= 0.
-    r['zpve'] = 0.
-    r['azpve'] = 0.
-    r['freqs']= []
-    r['afreqs'] = []
-    r['pfreqs']= []
-    if io.check_file(filename,timeout=1):
-        r['file'] = io.get_path(filename)
-        out = io.read_file(filename,asline=False)
-        package = get_output_package(out)
-        if package:
-            r['package'] = package
-        else:
-            logging.info('"{0}" cannot be parsed.'.format(r['file']))
-            return r
-    else:
-        logging.info('"{0}" cannot be found at {1}'.format(filename,io.pwd()))
-        return r
-#     r['xyz'] = get_xyz(out, package)
-#     r['xmat'] = get_xyz(out, package)
-#     r['hindered rotor potential'] = get_xyz(out, package) 
-#     r['nbasis'] = get_xyz(out, package)
-#     r['nuclear repulsion energy:' ]= get_xyz(out, package)
-#     r['energy' ]= get_xyz(out, package)
-#     r['zpve'] = get_xyz(out, package)
-#     r[''azpve'] = get_xyz(out, package)
-#     r['freqs']= get_xyz(out, package)
-#     r['anharmonic frequencies'] = get_xyz(out, package)
-#     r['pfreqs']= get_xyz(out, package)
-    return r
-
-
 def get_xyz(out,package=None):
     """
     Return xyz as a string from a qc output.
@@ -709,6 +647,16 @@ def parse_output(s, formula, write=False):
             afreqs = []
         if energy:
             parsed = True
+    elif package == 'mopac':
+        method = 'SEMO'
+        energy = get_mopac_energy(s)
+        deltaH0 = get_mopac_deltaH0(s)
+        deltaH298 = get_mopac_deltaH298(s)
+        xyz = get_mopac_xyz(s)
+        freqs = get_mopac_freq(s)
+        zpve = get_mopac_zpe(s)
+        if energy:
+            parsed = True
     elif package.startswith('tors'):
         #optlevel, method, energy = get_torsscan_info(s)
         outfile = 'geoms/reac1_l1.log'
@@ -784,39 +732,7 @@ def parse_output(s, formula, write=False):
                'Hessian'   : hessian,
                'deltaH0': hof0,
                'deltaH298': hof298}
-#         if calculation == 'geometry optimization':
-#             for key,value in energies.iteritems():
-#                 if key is not method:
-#                     d[optlevel][package][calculation][method][basis]['geometry'].update({
-#                         'single point':{key:{basis:{'nbasis':nbasis,'energy':value}}}})
-#                     if write:
-#                         fname = '{0}_{1}.ene'.format(method,smilesname)
-#                         io.write_file(str(energy), fname)
-#         if store:
-#             if optlevel == 'sp':
-#                 if energy:
-#                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis)
-#                 if zpve:
-#                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis)
-#                 if len(freqs) > 0:
-#                     io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis)
-#             else:
-#                 opt1, opt2, opt3 = optlevel.split('/')
-#                 if energy:
-#                     io.db_store_sp_prop(str(energy), smilesname,  'ene', None, package, method, basis, opt1, opt2, opt3)
-#                 if zpve:
-#                     io.db_store_sp_prop(str(  zpve), smilesname, 'zpve', None, package, method, basis, opt1, opt2, opt3)
-#                 if len(freqs) > 0:
-#                     io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
-#                 if len(xmat) > 0:
-#                     io.db_store_sp_prop('\n'.join([','.join(['{:4}'.format(x) for x in xma]) for xma in xmat]) , smilesname, 'xmat', None, package, method, basis, opt1, opt2, opt3)
-#                 io.db_store_sp_prop(', '.join(freq for freq in freqs[::-1]) , smilesname,  'hrm', None, package, method, basis, opt1, opt2, opt3)
-#             if xyz:
-#                 io.db_store_opt_prop(xyz, smilesname,  'xyz', None, package, method, basis)
-#             if geo:
-#                 io.db_store_opt_prop(geo, smilesname,  'geo', None, package, method, basis)
-#             if zmat:
-#                 io.db_store_opt_prop(zmat, smilesname, 'zmat', None, package, method, basis)
+
     return d
 
 
@@ -1092,7 +1008,9 @@ def run(s, parameters, mult=None, trial=0):
         tmp = io.read_file(templatefile)
         inptext = get_input(s, tmp, parameters)
     else:
-        runqc = False
+        if runqc:
+            logging.warning('Set runqc False. Cannot locate template file {}'.format(templatefile))
+            runqc = False
         recover = False
     if runqc:
         io.write_file(inptext, inpfile)
@@ -1105,6 +1023,8 @@ def run(s, parameters, mult=None, trial=0):
                     parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
             elif package.startswith('molp'):
                 parameters['qcexe'] = '{0} -n {1} -d {2}'.format(parameters['molpro'],qcnproc,parameters['tmpdir'])
+            elif package.startswith('mopac'):
+                parameters['qcexe'] = parameters['mopac']
             elif task.startswith('tors'):
                 parameters['qcexe'] = parameters['torsscan']
             else:
@@ -1932,21 +1852,32 @@ def get_mopac_zpe(lines):
     """
     Return zero point energy in kcal/mol from mopac output.
     >>> s = io.read_file('test/input.out')
-    >>> logging.info get_mopac_zpe(s)
-    28.481
     """
+    from unittools import au2kcal
     if type(lines) == str:
         lines = lines.splitlines()
     keyword = 'ZERO POINT ENERGY'
     n = io.get_line_number(keyword, lines=lines)
-    return float(lines[n].split()[3])
+    return float(lines[n].split()[3]) / au2kcal
+
+def get_mopac_energy(lines):
+    """
+    Return electronic energy in hartree from mopac output.
+    >>> s = io.read_file('../test/input.out')
+    """
+    from unittools import ev2au
+    if type(lines) == str:
+        lines = lines.splitlines()
+    keyword = 'ELECTRONIC ENERGY       ='
+    n = io.get_line_number(keyword, lines=lines, getlastone=True)
+    return float(lines[n].split()[3]) * ev2au
 
 
-def get_mopac_deltaH(lines):
+def get_mopac_deltaH0(lines):
     """
     Return delta H in kcal/mol from mopac output.
     >>> s = io.read_file('test/input.out')
-    >>> logging.info get_mopac_deltaH(s)
+    >>> print(get_mopac_deltaH(s))
     -13.02534
     """
     if type(lines) == str:
@@ -1956,12 +1887,23 @@ def get_mopac_deltaH(lines):
     return float(lines[n].split()[5])
 
 
+def get_mopac_deltaH298(lines):
+    """
+    Return delta H in kcal/mol from mopac output.
+    >>> s = io.read_file('test/input.out')
+    >>> print(get_mopac_deltaH(s))
+    -13.02534
+    """
+    if type(lines) == str:
+        lines = lines.splitlines()
+    keyword = 'CALCULATED THERMODYNAMIC PROPERTIES'
+    n = io.get_line_number(keyword, lines=lines,getlastone=True)
+    return float(lines[n+10].split()[1])
+
+
 def get_nwchem_xyz(inp,filename=False):
     """
     Returns geometry in xyz format by parsing NWChem output file.
-    
-    
-    
     Sample NWChem output:
  Output coordinates in angstroms (scale by  1.889725989 to convert to a.u.)
 
