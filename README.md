@@ -19,9 +19,19 @@ bash Miniconda2-latest-Linux-x86_64.sh
 ```
 After the installation is completed you can install the dependencies with:
 ```
+conda env create -f environment.yml
+```
+Run qtc after activating qtc-env environment, i.e.
+```
+source activate qtc-env
+```
+Alternatively, you can install them with conda:
+```
 conda install numpy psutil
 conda install -c openbabel openbabel
 conda install -c mcs07 cirpy 
-
 ```
-You may prefer to create a virtual environment first to avoid conflicts with other modules
+## Run QTC
+```
+python src/qtc.py -i O -k 'opt/mp2/dz/nwchem' -Q
+```
