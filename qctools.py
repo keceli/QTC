@@ -593,6 +593,9 @@ def parse_results(filename, parameters):
     r['freqs']= []
     r['afreqs'] = []
     r['pfreqs']= []
+    r['vibrots']= ''
+    r['rotconsts'] = []
+    r['rotdists'] = []
     if io.check_file(filename,timeout=1):
         r['file'] = io.get_path(filename)
         out = io.read_file(filename,asline=False)
@@ -657,6 +660,9 @@ def parse_output(s, formula, write=False):
     pfreqs = []
     afreqs = []
     xmat= []
+    rotconsts = []
+    vibrots  = ''
+    rotdists = ''
     hessian= ''
     zpve= 0.0
     azpve = 0.0
@@ -699,6 +705,9 @@ def parse_output(s, formula, write=False):
         xyz            = pa.gaussian_xyz(s)
         geo            = pa.gaussian_geo(s)
         hessian        = pa.gaussian_hessian(s)
+        rotconsts      = pa.gaussian_rotconstscent(s) 
+        vibrots        = pa.gaussian_vibrot(s) 
+        rotdists       = pa.gaussian_rotdists(s) 
         freqs          = list(pa.gaussian_freqs(s))
         afreqs         = list(get_gaussian_fundamentals(s)[:,1])
         if sum(afreqs) > 0:
@@ -778,6 +787,9 @@ def parse_output(s, formula, write=False):
                'pfreqs': pfreqs,
                'zpve': zpve,
                'azpve': azpve,
+               'vibrots': vibrots,
+               'rotdists':rotdists,
+               'rotconsts':rotconsts,
                'xmat': xmat,
                'hindered potential': messhindered,
                'RPHt input': RPHtinput,
