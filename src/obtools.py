@@ -2,7 +2,7 @@
 import pybel
 import openbabel
 import os
-
+import logging
 """
 Module for simplifying and enhancing the usage of Open Babel.
 Open Babel is a tool-box mainly used for cheminformatics.
@@ -65,7 +65,7 @@ def get_mol(s, make3D=False, mult=None):
     import pybel
     if type(s) is pybel.Molecule:
         mol = s
-    elif type(s) is str:
+    elif type(s) is str or 'unicode' in str(type(s)):
         if s.endswith('.xyz'):
             mol = pybel.readfile('xyz', s).next()
         elif '_m' in s and len(s.splitlines()) == 1:
