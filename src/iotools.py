@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 import logging
-__updated__ = "2017-12-15"
+__updated__ = "2018-03-15"
 __author__  = "Murat Keceli"
 
 def get_date():
@@ -383,7 +383,7 @@ def execute_old(exe,inp=None,out=None):
     return msg
 
 
-def get_mpi_rank(default=None):
+def get_mpi_rank(default=0):
     """
     Return mpi rank (int) if defined as an environment variable
     """
@@ -396,7 +396,7 @@ def get_mpi_rank(default=None):
     return rank
 
 
-def get_mpi_size(default=None):
+def get_mpi_size(default=1):
     """
     Return mpi size (int) if defined as an environment variable
     """
@@ -409,7 +409,7 @@ def get_mpi_size(default=None):
     return size
 
 
-def get_mpi_local_rank(default=None):
+def get_mpi_local_rank(default=0):
     """
     Return mpi local rank as an integer if defined as an environment variable
     https://www.open-mpi.org/faq/?category=running#mpi-environmental-variables
@@ -423,7 +423,7 @@ def get_mpi_local_rank(default=None):
     return rank
 
 
-def get_mpi_local_size(default=None):
+def get_mpi_local_size(default=1):
     """
     Return mpi local size as an integer if defined as an environment variable
     https://www.open-mpi.org/faq/?category=running#mpi-environmental-variables
