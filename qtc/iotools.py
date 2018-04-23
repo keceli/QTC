@@ -10,7 +10,7 @@ import time
 import os
 from os.path import isfile
 import logging
-__updated__ = "2018-03-15"
+__updated__ = "2018-04-12"
 __author__  = "Murat Keceli"
 
 def get_date():
@@ -119,7 +119,30 @@ def find_files(directory,pattern):
     import glob
     files = glob.glob(directory + '/' + pattern)
     return files
-                
+
+
+def get_file_attributes(path):
+    """
+    Return a dictionary with:
+    'path'  : absoulute_path,
+    'owner' : file owner
+    'group' : owner unix group name
+    'size'  : file size in bytes
+    'date'  : last modified date
+    """
+    from os import stat
+    from pwd import getpwuid
+    from grp import getgrgid
+    from datetime import datetime
+    path = get_path(path)
+    filestat = stat(path)
+    owner = getpwuid(filestat.st_uid).pw_name
+    group = getgrgid(filestat.st_gid).gr_name
+    size  = filestat.st_size
+    date = str(datetime.fromtimestamp(filestat.st_mtime))
+    return {'path':path, 'owner': owner,'group':group,'size_byte':size,'modified':date}
+
+      
 def join_path(*paths):
     """
     Concatenes strings into a portable path using correct seperators.
