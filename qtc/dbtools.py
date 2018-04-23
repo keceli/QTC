@@ -6,7 +6,7 @@ pymongo
 You need to start a mongo session first with:
 mongod --logpath /Volumes/s/G/database_mongo/log --fork --dbpath /Volumes/s/G/database_mongo/
 """
-__updated__ = "2017-06-23"
+__updated__ = "2018-04-13"
 try:
     from pymongo import MongoClient
 except:
@@ -19,25 +19,26 @@ import os
 def start_mongo(dbpath,logpath,mongoexe='mongod'):
     """
     Starts a mongo session.
-    
     """
     import subprocess
     subprocess.call([mongoexe,'--logpath', logpath, '--fork', '--dbpath', dbpath])
     return
 
 
-def get_collection(c='mycollection'):
+def get_database(db='mydatabase'):
     from pymongo import MongoClient
     client = MongoClient()
-    return client[c]
+    return client[db]
 
 
-def get_database(collection,db='mydatabase'):
-    return collection[db]
+def get_collection(db='mydatabase',collection='mycollection'):
+    return db[collection]
 
 
-def insert_entry(entry,db,efilter={}):
-    return db.replace_one(efilter,entry,upsert=True)
+def insert_entry(db,entry,efilter=None,upsert=True):
+    if efilter is None:
+        efilter = entry
+    return db.replace_one(efilter,entry,upsert=upsert)
 
 
 def load_json(jsonfile):
