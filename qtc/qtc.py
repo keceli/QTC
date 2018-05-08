@@ -615,7 +615,7 @@ def main(arg_update={}):
     init = timer()
     logging.info("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     runthermo = parameters['runthermo']
-    if runthermo:
+    if runthermo: 
         logging.info("QTC: Number of species       = {0}".format(len(mylist)))
         for s in mylist:
             formula = ob.get_formula(s)

@@ -203,8 +203,9 @@ def get_input(x, template, parameters):
             xyz = results['xyz']
     task    = parameters['qctask']
     nproc   = parameters['qcnproc']
-    totalmem  = int(io.get_total_memory() * 0.8) # in MB
-    coremem   = int(float(totalmem)*0.524/nproc)  # in MegaWords
+    totalmem  = int(io.get_total_memory() * 0.4) # in MB
+    coremem   = int(float(totalmem)/nproc)  #in MB
+    corememmw   = int(float(totalmem)/8./nproc)  # in MegaWords
     lines = template.splitlines()
     inp = ''
     for line in lines:
@@ -313,7 +314,8 @@ def get_input(x, template, parameters):
     inp = inp.replace('QTC(ANHARMLOC)', 'false')
     inp = inp.replace('QTC(EXTRA)',extraline)
     inp = inp.replace('QTC(NODE_MEMORY_MB)', str(totalmem))
-    inp = inp.replace('QTC(CORE_MEMORY_MW)', str(coremem))
+    inp = inp.replace('QTC(CORE_MEMORY_MB)', str(coremem))
+    inp = inp.replace('QTC(CORE_MEMORY_MW)', str(corememmw))
     lines = inp.splitlines()
 
     if "QTC(" in inp:
@@ -953,7 +955,7 @@ def run(s, parameters, mult=None, trial=0):
     task = parameters['qctask']
     recover = parameters['recover']
     slabel  = parameters['slabel']
-    tmpdir = io.join_path(*[parameters['tmpdir'],slabel])
+    tmpdir = io.fix_path(io.join_path(*[parameters['tmpdir'],slabel]))
     qcnproc  = parameters['qcnproc']
     
     msg = ''
@@ -1017,6 +1019,7 @@ def run(s, parameters, mult=None, trial=0):
         pwd = io.pwd()
         if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
             if package.startswith('nwc'):
+                io.mkdir(tmpdir)
                 if parameters['machinefile']:
                     parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(parameters['machinefile'])
                 else:
