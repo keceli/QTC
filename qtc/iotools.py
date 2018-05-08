@@ -208,7 +208,7 @@ def fix_path(s):
     s = s.replace('(','_p_')
     s = s.replace(')','_q_')
     s = s.replace('*','_s_')
-    #s = s.replace('#','_x_')
+    s = s.replace('#','_t_')
     s = s.replace('<','_v_')
     s = s.replace('>','_y_')
     s = s.replace('?','_z_')
