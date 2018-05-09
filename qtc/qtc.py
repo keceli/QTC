@@ -274,7 +274,7 @@ def run(s):
             runthermo = False
             if 'opt' in task:
                 parameters['break'] = True
-            logging.error('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+            logging.warning('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     elif ignore and task is not 'composite':
         runqc = False
     if task is 'composite':
