@@ -258,12 +258,56 @@ def gaussian_xyz(lines):
         xyz = ''
     return xyz
 
+def gaussian_rotconstscent(lines):
+    startkey = 'Effective Rotational Constants'
+    lines = lines.splitlines()
+    sline = io.get_line_number(startkey,lines=lines)
+    if sline < 0:
+        return ''
+    rotlines   =  lines[sline+4:sline+7]
+    constants = []
+    for line in rotlines:
+        constants.append(line.split()[1])
+    return constants
+
 def gaussian_rotconsts(lines):
     rot = 'Rotational constants\s*\(GHZ\):\s*([\s,\d,\.,\-]*)'     
     rot = re.findall(rot,lines)
-    rot = rot[-1].split()
-    return rot 
+    if len(rot) > 1: 
+        rot = rot[-1].split()
+    return rot
+ 
+def gaussian_rotdists (lines):
+    startkey = 'Quartic Centrifugal Distortion Constants Tau Prime'
+    endkey   = 'Asymmetric Top Reduction'
+    lines = lines.splitlines()
+    sline = io.get_line_number(startkey,lines=lines)
+    if sline < 0:
+        return ''
+    lines  = lines[sline+3:sline+9]
+    distlines = []
+    for line in lines:
+        splitline = line.split()
+        if splitline[0] == 'TauP': 
+           distlines.append('\t'.join(splitline[1:3]))
+        else:
+           break
+    constants   = '\n'.join(distlines).replace('D','e')
+    return constants
 
+def gaussian_vibrot(lines):
+    startkey = 'Vibro-Rot alpha Matrix (in cm^-1)'
+    ndof  = gaussian_nfreq(lines)
+    lines = lines.splitlines()
+    sline = io.get_line_number(startkey,lines=lines)
+    if sline < 0:
+        return ''
+    lines =  lines[sline+3:sline+3+ndof]
+    for i in range(len(lines)):
+       lines[i] = '\t'.join(lines[i].split()[2:])
+    mat   = '\n'.join(lines)
+    return mat
+    
 ##############################################
 ############      MOLPRO PARSER    ###########
 ##############################################

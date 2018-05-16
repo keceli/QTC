@@ -565,28 +565,28 @@ def get_xyz(out,package=None):
     """
     xyz = ''
     if package is None:
-        package = get_output_package(out)
+	package = get_output_package(out)
     if package == 'nwchem':
-        xyz = get_nwchem_xyz(out)
+	xyz = get_nwchem_xyz(out)
     elif package == 'gaussian':
-        xyz = pa.gaussian_xyz(out)
+	xyz = pa.gaussian_xyz(out)
     elif package == 'molpro':
-        xyz = pa.molpro_xyz(out)
+	xyz = pa.molpro_xyz(out)
     return xyz
-        
-        
+	
+	
 def parse_output(s, formula, write=False):
     if type(s) is list:
-        lines = s
-        s = ''.join(lines)
+	lines = s
+	s = ''.join(lines)
     elif type(s) is str:
-        lines = s.splitlines()
-        if len(lines) == 1: # Check if s is a filename
-            if io.check_file(s):
-                s = io.read_file(s)
-                lines = s.splitlines()
+	lines = s.splitlines()
+	if len(lines) == 1: # Check if s is a filename
+	    if io.check_file(s):
+		s = io.read_file(s)
+		lines = s.splitlines()
     else:
-        logging.info("First parameter in parse_output should be a string or a list of strings")
+	logging.info("First parameter in parse_output should be a string or a list of strings")
     package = get_output_package(s)
     d = {}
     [method,calculation,xyz,basis] = ['na']*4
@@ -597,6 +597,9 @@ def parse_output(s, formula, write=False):
     pfreqs = []
     afreqs = []
     xmat= []
+    rotconsts = []
+    vibrots  = ''
+    rotdists = ''
     hessian= ''
     zpve= 0.0
     azpve = 0.0
@@ -606,134 +609,140 @@ def parse_output(s, formula, write=False):
     messhindered = None
     RPHtinput = None
     if package == 'nwchem':
-        method = get_nwchem_method(s)
-        calculation = get_nwchem_calculation(s)
-        xyz = get_nwchem_xyz(lines)
-        nbasis = get_nwchem_nbasis(s)
-        energies = get_nwchem_energies(lines)
-        energy = energies[method]
-        freqs = get_nwchem_frequencies(lines)
-        zpve = get_zpve(freqs)
-        if energy:
-            parsed = True
+	method = get_nwchem_method(s)
+	calculation = get_nwchem_calculation(s)
+	xyz = get_nwchem_xyz(lines)
+	nbasis = get_nwchem_nbasis(s)
+	energies = get_nwchem_energies(lines)
+	energy = energies[method]
+	freqs = get_nwchem_frequencies(lines)
+	zpve = get_zpve(freqs)
+	if energy:
+	    parsed = True
     elif package == 'molpro':
-        method, energy = pa.molpro_energy(s)
-        method = method.replace('\(','(').replace('\)',')')  #will figureout source of this later
-        zpve           = pa.molpro_zpve(s)
-        xyz            = pa.molpro_xyz(s)
-        geo            = pa.molpro_geo(s)
-        calculation    = pa.molpro_calc(s)
-        basis          = pa.molpro_basisset(s)
-        zmat           = pa.molpro_zmat(s)
-        hessian        = pa.molpro_hessian(s)
-        freqs          = list(pa.molpro_freqs(s))
-        if energy:
-            parsed = True
+	method, energy = pa.molpro_energy(s)
+	method = method.replace('\(','(').replace('\)',')')  #will figureout source of this later
+	zpve           = pa.molpro_zpve(s)
+	xyz            = pa.molpro_xyz(s)
+	geo            = pa.molpro_geo(s)
+	calculation    = pa.molpro_calc(s)
+	basis          = pa.molpro_basisset(s)
+	zmat           = pa.molpro_zmat(s)
+	hessian        = pa.molpro_hessian(s)
+	freqs          = list(pa.molpro_freqs(s))
+	if energy:
+	    parsed = True
     elif package == 'gaussian':
-        method, energy = pa.gaussian_energy(s)
-        zpve           = pa.gaussian_zpve(s)
-        azpve          = pa.gaussian_anzpve(s)
-        calculation    = pa.gaussian_calc(s)
-        basis          = pa.gaussian_basisset(s)
-        zmat           = pa.gaussian_zmat(s)
-        xyz            = pa.gaussian_xyz(s)
-        geo            = pa.gaussian_geo(s)
-        hessian        = pa.gaussian_hessian(s)
-        freqs          = list(pa.gaussian_freqs(s))
-        afreqs         = list(get_gaussian_fundamentals(s)[:,1])
-        if sum(afreqs) > 0:
-            xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
-            if type(xmat) == str:
-                xmat = []
-        else:
-            afreqs = []
-        if energy:
-            parsed = True
+	method, energy = pa.gaussian_energy(s)
+	zpve           = pa.gaussian_zpve(s)
+	azpve          = pa.gaussian_anzpve(s)
+	calculation    = pa.gaussian_calc(s)
+	basis          = pa.gaussian_basisset(s)
+	zmat           = pa.gaussian_zmat(s)
+	xyz            = pa.gaussian_xyz(s)
+	geo            = pa.gaussian_geo(s)
+	hessian        = pa.gaussian_hessian(s)
+	rotconsts      = pa.gaussian_rotconstscent(s) 
+	vibrots        = pa.gaussian_vibrot(s) 
+	rotdists       = pa.gaussian_rotdists(s) 
+	freqs          = list(pa.gaussian_freqs(s))
+	afreqs         = list(get_gaussian_fundamentals(s)[:,1])
+	if sum(afreqs) > 0:
+	    xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
+	    if type(xmat) == str:
+		xmat = []
+	else:
+	    afreqs = []
+	if energy:
+	    parsed = True
     elif package == 'mopac':
-        method = 'SEMO'
-        energy = get_mopac_energy(s)
-        deltaH0 = get_mopac_deltaH0(s)
-        deltaH298 = get_mopac_deltaH298(s)
-        xyz = get_mopac_xyz(s)
-        freqs = get_mopac_freq(s)
-        zpve = get_mopac_zpe(s)
-        if energy:
-            parsed = True
+	method = 'SEMO'
+	energy = get_mopac_energy(s)
+	deltaH0 = get_mopac_deltaH0(s)
+	deltaH298 = get_mopac_deltaH298(s)
+	xyz = get_mopac_xyz(s)
+	freqs = get_mopac_freq(s)
+	zpve = get_mopac_zpe(s)
+	if energy:
+	    parsed = True
     elif package.startswith('tors'):
-        #optlevel, method, energy = get_torsscan_info(s)
-        outfile = 'geoms/reac1_l1.log'
-        outfile2 = 'geom.log' #  For torsopt
-        xyzfile = 'geoms/reac1_l1.xyz'
-        geofile = 'geom.xyz'
-        torsoptfile = 'torsopt.xyz'
-        if io.check_file(outfile):
-            try:
-                out = io.read_file(outfile, aslines=False)
-                xyz = pa.gaussian_xyz(out)
-                method, energy = pa.gaussian_energy(out)
-                freqs = pa.gaussian_freqs(out)
-                parsed = True
-            except:
-                logging.error('parse_output: Cannot parse {}'.format(outfile))
-                parsed = False
-            if io.check_dir('me_files', 1):
-                try:
-                    xyz, freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
-                except:
-                    logging.error('parse_output: Cannot parse me_files {}'.format(io.get_path('me_files')))
-        elif io.check_file(xyzfile):
-            xyz = io.read_file(xyzfile)
-            energy = float(xyz.splitlines()[1].strip())         
-            parsed = True
-        elif io.check_file(torsoptfile):
-            xyz = io.read_file(torsoptfile).strip()
-            energy = float(xyz.splitlines()[1].strip())
-            parsed = True
-        elif io.check_file(geofile):
-            geo = io.read_file(geofile).strip()
-            natom = len(geo.splitlines())
-            energy = 0
-            xyz = '{}\n{}\n{}'.format(natom,energy,geo)
-            parsed = True
-        else:
-            logging.debug('Error in parsing {}'.format(package))
+	#optlevel, method, energy = get_torsscan_info(s)
+	outfile = 'geoms/reac1_l1.log'
+	outfile2 = 'geom.log' #  For torsopt
+	xyzfile = 'geoms/reac1_l1.xyz'
+	geofile = 'geom.xyz'
+	torsoptfile = 'torsopt.xyz'
+	if io.check_file(outfile):
+	    try:
+		out = io.read_file(outfile, aslines=False)
+		xyz = pa.gaussian_xyz(out)
+		method, energy = pa.gaussian_energy(out)
+		freqs = pa.gaussian_freqs(out)
+		parsed = True
+	    except:
+		logging.error('parse_output: Cannot parse {}'.format(outfile))
+		parsed = False
+	    if io.check_dir('me_files', 1):
+		try:
+		    xyz, freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
+		except:
+		    logging.error('parse_output: Cannot parse me_files {}'.format(io.get_path('me_files')))
+	elif io.check_file(xyzfile):
+	    xyz = io.read_file(xyzfile)
+	    energy = float(xyz.splitlines()[1].strip())         
+	    parsed = True
+	elif io.check_file(torsoptfile):
+	    xyz = io.read_file(torsoptfile).strip()
+	    energy = float(xyz.splitlines()[1].strip())
+	    parsed = True
+	elif io.check_file(geofile):
+	    geo = io.read_file(geofile).strip()
+	    natom = len(geo.splitlines())
+	    energy = 0
+	    xyz = '{}\n{}\n{}'.format(natom,energy,geo)
+	    parsed = True
+	else:
+	    logging.debug('Error in parsing {}'.format(package))
     if parsed:
-        if write:
-            fname = formula + '.ene'
-            io.write_file(str(energy), fname)
-            if xyz:
-                fname = formula + '.xyz'
-                io.write_file(xyz, fname)
-            if zpve:
-                fname = formula + '.zpve'
-                io.write_file(str(zpve), fname)
-            if azpve:
-                fname = formula + '.anzpve'
-                io.write_file(str(azpve), fname)
-            if len(freqs) > 0:
-                if any(freq < 0 for freq in freqs):
-                    logging.error('Imaginary frequency detected: {}'.format(['{:6.1f}'.format(freq) for freq in freqs]))
-                fname = formula + '.hrm'
-                io.write_file('\n'.join(str(x) for x in freqs), fname )
-            if sum(afreqs) > 0:
-                if any(freq < 0 for freq in afreqs):
-                    logging.error('Imaginary frequency detected: {}'.format(['{:6.1f}'.format(freq) for freq in afreqs]))
-                fname = formula + '.anhrm'
-                io.write_file('\n'.join(str(x) for x in afreqs), fname)
-        d = {'nbasis':nbasis,
-               'energy':energy,
-               'xyz':xyz,
-               'freqs': [float(x) for x in freqs],
-               'afreqs': afreqs,
-               'pfreqs': pfreqs,
-               'zpve': zpve,
-               'azpve': azpve,
-               'xmat': xmat,
-               'hindered potential': messhindered,
-               'RPHt input': RPHtinput,
-               'Hessian'   : hessian,
-               'deltaH0': hof0,
-               'deltaH298': hof298}
+	if write:
+	    fname = formula + '.ene'
+	    io.write_file(str(energy), fname)
+	    if xyz:
+		fname = formula + '.xyz'
+		io.write_file(xyz, fname)
+	    if zpve:
+		fname = formula + '.zpve'
+		io.write_file(str(zpve), fname)
+	    if azpve:
+		fname = formula + '.anzpve'
+		io.write_file(str(azpve), fname)
+	    if len(freqs) > 0:
+		if any(freq < 0 for freq in freqs):
+		    logging.error('Imaginary frequency detected: {}'.format(['{:6.1f}'.format(freq) for freq in freqs]))
+		fname = formula + '.hrm'
+		io.write_file('\n'.join(str(x) for x in freqs), fname )
+	    if sum(afreqs) > 0:
+		if any(freq < 0 for freq in afreqs):
+		    logging.error('Imaginary frequency detected: {}'.format(['{:6.1f}'.format(freq) for freq in afreqs]))
+		fname = formula + '.anhrm'
+		io.write_file('\n'.join(str(x) for x in afreqs), fname)
+	d = {'nbasis':nbasis,
+	       'energy':energy,
+	       'xyz':xyz,
+	       'freqs': [float(x) for x in freqs],
+	       'afreqs': afreqs,
+	       'pfreqs': pfreqs,
+	       'zpve': zpve,
+	       'azpve': azpve,
+	       'vibrots': vibrots,
+	       'rotdists':rotdists,
+	       'rotconsts':rotconsts,
+	       'xmat': xmat,
+	       'hindered potential': messhindered,
+	       'RPHt input': RPHtinput,
+	       'Hessian'   : hessian,
+	       'deltaH0': hof0,
+	       'deltaH298': hof298}
 
     return d
 
@@ -744,8 +753,8 @@ def get_zpve(freqs):
     """
     zpve = 0.0
     for freq in freqs:
-        freq = float(freq)
-        zpve += freq
+	freq = float(freq)
+	zpve += freq
     return zpve * 0.5 / 219474.63
 
 
@@ -756,7 +765,7 @@ def get_listofstrings(array):
     n = len(array)
     s = ['']*n
     for i in range(n):
-        s[i] = '{0}\n'.format(array[i])
+	s[i] = '{0}\n'.format(array[i])
     return s
 
 
@@ -769,30 +778,30 @@ def parse_qclog_cclib(qclog,anharmonic=False):
     afreqs = None
     msg =''
     if io.check_file(qclog, 1):
-        s = io.read_file(qclog, aslines=False)
+	s = io.read_file(qclog, aslines=False)
     else:
-        msg = 'File not found: "{0}"\n'.format(io.get_path(qclog))
-        return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
+	msg = 'File not found: "{0}"\n'.format(io.get_path(qclog))
+	return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
     if check_output(s):
-        if cclib:
-            ccdata = parse_cclib(qclog)
-            xyz = ccdata.writexyz()
-            try:
-                freqs = ccdata.vibfreqs
-                freqs = get_listofstrings(freqs)
-                nfreq = len(freqs)
-            except AttributeError:
-                pass
-            try:
-                deltaH = ccdata.enthalpy
-            except AttributeError:
-                pass
-            if anharmonic:
-                xmat = ccdata.vibanharms
-                afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
-                afreqs = get_listofstrings(afreqs)
+	if cclib:
+	    ccdata = parse_cclib(qclog)
+	    xyz = ccdata.writexyz()
+	    try:
+		freqs = ccdata.vibfreqs
+		freqs = get_listofstrings(freqs)
+		nfreq = len(freqs)
+	    except AttributeError:
+		pass
+	    try:
+		deltaH = ccdata.enthalpy
+	    except AttributeError:
+		pass
+	    if anharmonic:
+		xmat = ccdata.vibanharms
+		afreqs = get_gaussian_fundamentals(s, nfreq)[:,1]
+		afreqs = get_listofstrings(afreqs)
     else:
-        msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
+	msg = 'Failed job: "{0}"\n'.format(io.get_path(qclog))
 
     return msg,xyz,freqs,zpe,deltaH,afreqs,xmat
 
@@ -810,9 +819,9 @@ def parse_me_files(path=None):
     Parses files in me_files directory that TorsScan (EStoKTP) generates.
     """
     if path:
-        pass
+	pass
     else:
-        path = 'me_files'
+	path = 'me_files'
     xyz    = ''
     freqs  = []
     pfreqs = []
@@ -821,123 +830,123 @@ def parse_me_files(path=None):
     RPHtinput = None
     fname = io.join_path(path,'reac1_ge.me')
     if io.check_file(fname):
-        out = io.read_file(fname, aslines=False)
-        xyz = get_mess_xyz(out)
+	out = io.read_file(fname, aslines=False)
+	xyz = get_mess_xyz(out)
     fname = io.join_path(path,'reac1_unpfr.me')
     if io.check_file(fname):
-        out = io.read_file(fname, aslines=False)
-        freqs = get_mess_frequencies(out)
-        
+	out = io.read_file(fname, aslines=False)
+	freqs = get_mess_frequencies(out)
+	
     fname = io.join_path(path,'reac1_fr.me')
     if io.check_file(fname):
-        out = io.read_file(fname, aslines=False)
-        pfreqs = get_mess_frequencies(out)
-        
+	out = io.read_file(fname, aslines=False)
+	pfreqs = get_mess_frequencies(out)
+	
     fname = io.join_path(path,'reac1_zpe.me')
     if io.check_file(fname):
-        out = io.read_file(fname, aslines=False)
-        try:
-            zpve = float(out)  
-        except:
-            logging.error('cannot parse zpve for file {0}'.format(fname))             
+	out = io.read_file(fname, aslines=False)
+	try:
+	    zpve = float(out)  
+	except:
+	    logging.error('cannot parse zpve for file {0}'.format(fname))             
     fname = io.join_path(path,'reac1_hr.me')
     if io.check_file(fname):
-        messhindered = io.read_file(fname, aslines=False)   
+	messhindered = io.read_file(fname, aslines=False)   
     fname = 'RPHt_input_data.dat'
     if io.check_file(fname):
-        RPHtinput = io.read_file(fname, aslines=False)
+	RPHtinput = io.read_file(fname, aslines=False)
 
     if freqs == pfreqs:
-        pfreqs = []
+	pfreqs = []
     return xyz, freqs, pfreqs, zpve, messhindered, RPHtinput
-    
-def getcc_enthalpy(out):
-    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-        if io.check_file(out, 1):
-            ccdata = parse_cclib(out)
-        else:
-            return '{0} not found'.format(out)
-    else:
-        ccdata = out
-    return ccdata.enthalpy
+	    
+	def getcc_enthalpy(out):
+	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+		if io.check_file(out, 1):
+		    ccdata = parse_cclib(out)
+		else:
+		    return '{0} not found'.format(out)
+	    else:
+		ccdata = out
+	    return ccdata.enthalpy
 
-def getcc_entropy(out):
-    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-        if io.check_file(out, 1):
-            ccdata = parse_cclib(out)
-        else:
-            return '{0} not found'.format(out)
-    else:
-        ccdata = out
-    return ccdata.entropy
-
-
-def getcc_freeenergy(out):
-    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-        if io.check_file(out, 1):
-            ccdata = parse_cclib(out)
-        else:
-            return '{0} not found'.format(out)
-    else:
-        ccdata = out
-    return ccdata.freeenergy
+	def getcc_entropy(out):
+	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+		if io.check_file(out, 1):
+		    ccdata = parse_cclib(out)
+		else:
+		    return '{0} not found'.format(out)
+	    else:
+		ccdata = out
+	    return ccdata.entropy
 
 
-def getcc_frequencies(out):
-    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-        if io.check_file(out, 1):
-            ccdata = parse_cclib(out)
-        else:
-            return '{0} not found'.format(out)
-    else:
-        ccdata = out
-    return ccdata.vibfreqs
+	def getcc_freeenergy(out):
+	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+		if io.check_file(out, 1):
+		    ccdata = parse_cclib(out)
+		else:
+		    return '{0} not found'.format(out)
+	    else:
+		ccdata = out
+	    return ccdata.freeenergy
 
 
-def getcc_xyz(out):
-    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-        if io.check_file(out, 1):
-            ccdata = parse_cclib(out)
-        else:
-            return '{0} not found'.format(out)
-    else:
-        ccdata = out
-    return ccdata.writexyz()
+	def getcc_frequencies(out):
+	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+		if io.check_file(out, 1):
+		    ccdata = parse_cclib(out)
+		else:
+		    return '{0} not found'.format(out)
+	    else:
+		ccdata = out
+	    return ccdata.vibfreqs
 
 
-def get_periodic_table():
-    """
-    Return the periodic table as a list.
-    Includes elements with atomic number less than 55.
-    >>>pt = get_periodic_table()
-    >>>print(len(pt))
-    >>>55
-    """
-    pt = ['X' ,
-          'H' ,'He',
-          'Li','Be','B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
-          'Na','Mg','Al','Si','P' ,'S' ,'Cl','Ar'
-          'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
-          'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe']
-    return pt
+	def getcc_xyz(out):
+	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+		if io.check_file(out, 1):
+		    ccdata = parse_cclib(out)
+		else:
+		    return '{0} not found'.format(out)
+	    else:
+		ccdata = out
+	    return ccdata.writexyz()
 
 
-def get_symbol(atomno):
-    """
-    Returns the element symbol for a given atomic number.
-    Returns 'X' for atomno=0
-    >>>print(get_symbol(1))
-    >>>H
-    """
-    pt = get_periodic_table()
-    return pt[atomno]
+	def get_periodic_table():
+	    """
+	    Return the periodic table as a list.
+	    Includes elements with atomic number less than 55.
+	    >>>pt = get_periodic_table()
+	    >>>print(len(pt))
+	    >>>55
+	    """
+	    pt = ['X' ,
+		  'H' ,'He',
+		  'Li','Be','B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
+		  'Na','Mg','Al','Si','P' ,'S' ,'Cl','Ar'
+		  'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+		  'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe']
+	    return pt
 
 
-def get_atomno(symbol):
-    """
-    Return the atomic number for a given element symbol.
-    >>>print(get_atomno('H')
-    >>>1
+	def get_symbol(atomno):
+	    """
+	    Returns the element symbol for a given atomic number.
+	    Returns 'X' for atomno=0
+	    >>>print(get_symbol(1))
+	    >>>H
+	    """
+	    pt = get_periodic_table()
+	    return pt[atomno]
+
+
+	def get_atomno(symbol):
+	    """
+	    Return the atomic number for a given element symbol.
+	    >>>print(get_atomno('H')
+	    >>>1
     """
     pt = get_periodic_table()
     symbol = symbol.capitalize()

@@ -853,7 +853,7 @@ def main_keyword(s,parameters):
     anharm = parameters['anharmonic']
     dbdir  = parameters['database']
     index  = parameters['calcindex']
-    natom = ob.get_natom(s)
+    natom =  parameters['natom']
     optlevel  = 'sp'
     extrap    = False
     enlevel   = None
@@ -870,16 +870,16 @@ def main_keyword(s,parameters):
 #     lines +=  '\n\nCoefficients are: '
 #     lines += ', '.join(['{}'.format(co) for co in clist])
 #     logging.debug(lines)
-
-    parameters['runthermo']=False
-    parameters['xyzpath']=''
-    parameters['suppress_printing']=True
-    parameters['qckeyword'] = ','.join(qckeys[:index+1])
-    E =  E_QTC(s, optlevel, enlevel, freqlevel, parameters)
-    E =  E_hfbasis_QTC(molform, basis, clist, E, optlevel, enlevel, freqlevel, parameters)
+    params = parameters.copy()
+    params['runthermo']=False
+    params['xyzpath']=''
+    params['suppress_printing']=True
+    params['qckeyword'] = ','.join(qckeys[:index+1])
+    E =  E_QTC(s, optlevel, enlevel, freqlevel, params)
+    E =  E_hfbasis_QTC(molform, basis, clist, E, optlevel, enlevel, freqlevel, params)
     hf0k = AU_to_kcal(E)
-    parameters['runthermo']=True
-    parameters['suppress_printing']=False
+    #parameters['runthermo']=True
+    #parameters['suppress_printing']=False
     parameters['input']=s
     parameters['qckeyword'] = ','.join(qckeys)
     return hf0k, basis
