@@ -374,7 +374,7 @@ def update_smiles_list(slist):
     newlist = []
     for s in slist:
        # if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
-        if 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
+        if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
             if '_m' in s:
@@ -591,7 +591,7 @@ def parse_output(s, formula, write=False):
     d = {}
     [method,calculation,xyz,basis] = ['na']*4
     nbasis = 0
-    energy = 0.
+    energy = float('nan')
     energies = {}
     freqs = []
     pfreqs = []
@@ -600,8 +600,8 @@ def parse_output(s, formula, write=False):
     hessian= ''
     zpve= 0.0
     azpve = 0.0
-    hof0 = 0.
-    hof298 = 0.
+    hof0 = float('nan')
+    hof298 = float('nan')
     parsed = False
     messhindered = None
     RPHtinput = None
@@ -692,7 +692,7 @@ def parse_output(s, formula, write=False):
         elif io.check_file(geofile):
             geo = io.read_file(geofile).strip()
             natom = len(geo.splitlines())
-            energy = 0
+            energy = float('nan')
             xyz = '{}\n{}\n{}'.format(natom,energy,geo)
             parsed = True
         else:
