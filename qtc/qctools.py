@@ -860,93 +860,93 @@ def parse_me_files(path=None):
 	pfreqs = []
     return xyz, freqs, pfreqs, zpve, messhindered, RPHtinput
 	    
-	def getcc_enthalpy(out):
-	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-		if io.check_file(out, 1):
-		    ccdata = parse_cclib(out)
-		else:
-		    return '{0} not found'.format(out)
-	    else:
-		ccdata = out
-	    return ccdata.enthalpy
+def getcc_enthalpy(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+	if io.check_file(out, 1):
+	    ccdata = parse_cclib(out)
+	else:
+	    return '{0} not found'.format(out)
+    else:
+	ccdata = out
+    return ccdata.enthalpy
 
-	def getcc_entropy(out):
-	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-		if io.check_file(out, 1):
-		    ccdata = parse_cclib(out)
-		else:
-		    return '{0} not found'.format(out)
-	    else:
-		ccdata = out
-	    return ccdata.entropy
-
-
-	def getcc_freeenergy(out):
-	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-		if io.check_file(out, 1):
-		    ccdata = parse_cclib(out)
-		else:
-		    return '{0} not found'.format(out)
-	    else:
-		ccdata = out
-	    return ccdata.freeenergy
+def getcc_entropy(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+	if io.check_file(out, 1):
+	    ccdata = parse_cclib(out)
+	else:
+	    return '{0} not found'.format(out)
+    else:
+	ccdata = out
+    return ccdata.entropy
 
 
-	def getcc_frequencies(out):
-	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-		if io.check_file(out, 1):
-		    ccdata = parse_cclib(out)
-		else:
-		    return '{0} not found'.format(out)
-	    else:
-		ccdata = out
-	    return ccdata.vibfreqs
+def getcc_freeenergy(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+	if io.check_file(out, 1):
+	    ccdata = parse_cclib(out)
+	else:
+	    return '{0} not found'.format(out)
+    else:
+	ccdata = out
+    return ccdata.freeenergy
 
 
-	def getcc_xyz(out):
-	    if type(out) is not cclib.parser.data.ccData_optdone_bool:
-		if io.check_file(out, 1):
-		    ccdata = parse_cclib(out)
-		else:
-		    return '{0} not found'.format(out)
-	    else:
-		ccdata = out
-	    return ccdata.writexyz()
+def getcc_frequencies(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+	if io.check_file(out, 1):
+	    ccdata = parse_cclib(out)
+	else:
+	    return '{0} not found'.format(out)
+    else:
+	ccdata = out
+    return ccdata.vibfreqs
 
 
-	def get_periodic_table():
-	    """
-	    Return the periodic table as a list.
-	    Includes elements with atomic number less than 55.
-	    >>>pt = get_periodic_table()
-	    >>>print(len(pt))
-	    >>>55
-	    """
-	    pt = ['X' ,
-		  'H' ,'He',
-		  'Li','Be','B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
-		  'Na','Mg','Al','Si','P' ,'S' ,'Cl','Ar'
-		  'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
-		  'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe']
-	    return pt
+def getcc_xyz(out):
+    if type(out) is not cclib.parser.data.ccData_optdone_bool:
+	if io.check_file(out, 1):
+	    ccdata = parse_cclib(out)
+	else:
+	    return '{0} not found'.format(out)
+    else:
+	ccdata = out
+    return ccdata.writexyz()
 
 
-	def get_symbol(atomno):
-	    """
-	    Returns the element symbol for a given atomic number.
-	    Returns 'X' for atomno=0
-	    >>>print(get_symbol(1))
-	    >>>H
-	    """
-	    pt = get_periodic_table()
-	    return pt[atomno]
+def get_periodic_table():
+    """
+    Return the periodic table as a list.
+    Includes elements with atomic number less than 55.
+    >>>pt = get_periodic_table()
+    >>>print(len(pt))
+    >>>55
+    """
+    pt = ['X' ,
+	  'H' ,'He',
+	  'Li','Be','B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
+	  'Na','Mg','Al','Si','P' ,'S' ,'Cl','Ar'
+	  'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+	  'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe']
+    return pt
 
 
-	def get_atomno(symbol):
-	    """
-	    Return the atomic number for a given element symbol.
-	    >>>print(get_atomno('H')
-	    >>>1
+def get_symbol(atomno):
+    """
+    Returns the element symbol for a given atomic number.
+    Returns 'X' for atomno=0
+    >>>print(get_symbol(1))
+    >>>H
+    """
+    pt = get_periodic_table()
+    return pt[atomno]
+
+
+def get_atomno(symbol):
+    """
+    Return the atomic number for a given element symbol.
+    >>>print(get_atomno('H')
+    >>>1
     """
     pt = get_periodic_table()
     symbol = symbol.capitalize()
@@ -1272,14 +1272,19 @@ Linear bonds:
     out = out.lower()
     lines = out.splitlines()
     sym = 1
+    ent = 1.
     key = 'rotational symmetry number ='
+    entkey = 'has enantiomer'
     for line in lines:
         if line.startswith(key):
             try:
                 sym = int(line.split()[-1])
             except:
                 logging.error('Failed in parsing sym. number in x2z output {}'.format(out))
-    return sym   
+        if line.startswith(entkey):
+            if 'yes' in line:
+                ent = 2.
+    return sym / ent  
 
 
 def get_x2z_info(out):
