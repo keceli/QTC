@@ -538,7 +538,10 @@ def get_messpf_input(mol,parameters):
     multiplicity = mol.spin
     freqs = []
     xmat = []
+    rotconsts = []
     zpe = 0
+    rotdists = ''
+    vibrots = ''
     emax = 500 #kcal/mol, not sure
     if 'azpve' in results:
         zpve = results['azpve']
@@ -550,6 +553,12 @@ def get_messpf_input(mol,parameters):
         freqs = results['pfreqs']
     elif 'freqs' in results:
         freqs = results['freqs']    
+    if 'rotconsts' in results:
+        rotconsts = results['rotconsts']  
+    if 'vibrots' in results:
+        vibrots = results['vibrots']    
+    if 'rotdists' in results:
+        rotdists = results['rotdists']   
     if 'xmat' in results:
         xmat = np.asarray(results['xmat'])
         if 'pfreqs' in results:
@@ -602,6 +611,16 @@ def get_messpf_input(mol,parameters):
                     #inp += str(xmat[i,j]) + '\n'
                  
                 inp += '\t\t' + ' '.join([str(xmat[i,j]) for j in range(i+1)]) + '\n'
+        if len(rotconsts) > 0:
+            inp += ' RotationalConstants[1/cm] '
+            inp += ' '.join(rotconsts) + '\n'
+        if len(vibrots) > 0:
+            inp += ' RovibrationalCouplings[1/cm]\n'
+            inp += vibrots + '\n'
+        if len(rotdists) > 0:
+            inp += ' RotationalDistortion[1/cm]\n'
+            inp += rotdists + '\n'
+            inp += '\t End\n'
         inp += '\t End\n' # Core RigidRotor
         if not coreIsMd:
             if 'hindered potential' in results:
