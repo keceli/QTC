@@ -1352,14 +1352,19 @@ Linear bonds:
     out = out.lower()
     lines = out.splitlines()
     sym = 1
+    ent = 1.
     key = 'rotational symmetry number ='
+    entkey = 'has enantiomer'
     for line in lines:
         if line.startswith(key):
             try:
                 sym = int(line.split()[-1])
             except:
                 logging.error('Failed in parsing sym. number in x2z output {}'.format(out))
-    return sym   
+        if line.startswith(entkey):
+            if 'yes' in line:
+                ent = 2.
+    return sym / ent  
 
 
 def get_x2z_info(out):
