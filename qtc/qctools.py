@@ -38,18 +38,21 @@ def sort_species_list(slist, printinfo=False, byMass=False):
             mass   = ob.get_mass(mol)
             tmplist.append([isomer,formula,smult,obmult,nrotor,nelec,natom,nheavy,mass])
     if byMass:
-        tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[7],x[4],x[5],x[6]))
+        tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[8],x[4],x[5],x[6]))
     else:
         tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[4],x[5],x[6]))
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
         logging.info('-'*100)
-        logging.info('{:>8s}\t{:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'OBMult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
+        if byMass:
+            logging.info('{:>8s}\t{:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}   {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'OBMult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy','Mass'))
+        else:
+            logging.info('{:>8s}\t{:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'OBMult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
         i = 0
         for tmp in tmplist:
             i += 1
             if byMass:
-                logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:-1]))
+                logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}   {:6f}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
             else:
                 logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
         logging.info('-'*100)
