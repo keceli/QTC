@@ -73,6 +73,7 @@ def add_species_info(s, parameters):
     else:
         io.mkdir('xyz')
     io.cd(parameters['xyzdir'])
+    parameters['symm'] = ob.get_symm(s) 
     s = get_slabel(s)
     xyzfile = ob.get_smiles_filename(s) + '.xyz'
     xyzfile = io.fix_path(xyzfile)
@@ -171,7 +172,7 @@ def get_input(x, template, parameters):
         xyz = parameters['xyz']
     mol = ob.get_mol(xyz)
     mult = parameters['mult']
-    nopen = mult - 1
+    nopen = int(mult) - 1
     charge = parameters['charge']
     formula = parameters['formula']
     natom = parameters['natom']
@@ -372,11 +373,14 @@ def update_smiles_list(slist):
     ['C', 'OO', 'O[O]', 'O[O]']
     """
     newlist = []
+    symm =  None
     for s in slist:
        # if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
         if 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
+            if '_s' in s:
+                s, symm = s.split('_s')
             if '_m' in s:
                 smi, mult = s.split('_m')
             else:
@@ -389,6 +393,9 @@ def update_smiles_list(slist):
             else:
                 logging.debug('SMILES changed after open babel canonicalization {} --> {}'.format(smi,canonical)) 
             slabel = canonical + '_m' + str(mult)
+            if symm:
+                slabel += '_s' + symm
+            
             newlist.append(slabel)
     return newlist
 
@@ -520,6 +527,8 @@ def get_slabel(smi,mult=None):
     QTC uses open babel.
     slabel = smi + '_m' + str(mult)
     """
+    if '_s' in smi:
+        smi, symm = smi.split('_s')
     if '_m' in smi:
         smi, mult = smi.split('_m')
     smi = ob.get_smiles(smi)
@@ -642,7 +651,7 @@ def parse_output(s, formula, write=False):
 	xyz            = pa.gaussian_xyz(s)
 	geo            = pa.gaussian_geo(s)
 	hessian        = pa.gaussian_hessian(s)
-	rotconsts      = pa.gaussian_rotconstscent(s) 
+	rotconsts      = pa.gaussian_rotconsts(s) 
 	vibrots        = pa.gaussian_vibrot(s) 
 	rotdists       = pa.gaussian_rotdists(s) 
 	freqs          = list(pa.gaussian_freqs(s))
@@ -966,7 +975,6 @@ def run(s, parameters, mult=None, trial=0):
     slabel  = parameters['slabel']
     tmpdir = io.fix_path(io.join_path(*[parameters['tmpdir'],slabel]))
     qcnproc  = parameters['qcnproc']
-    
     msg = ''
     if trial > maxtrial:
         logging.error('Maximum number of trials reached')
