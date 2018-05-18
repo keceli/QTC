@@ -411,11 +411,11 @@ def run(s):
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
-    parameters['all results'][s][qlabel]['energy'] = 0.
+    parameters['all results'][s][qlabel]['energy'] = float('nan')
     if 'zpve' in parameters['results']:
         parameters['all results'][s][qlabel]['zpve'] = parameters['results']['zpve']   
     else:
-        parameters['all results'][s][qlabel]['zpve'] = 0.
+        parameters['all results'][s][qlabel]['zpve'] = 0.0
     parameters['all results'][s][qlabel]['path'] = rundir   
     if 'hindered potential' in parameters['results'] and task.startswith('tors'):
         tc.get_hindered_potential(parameters['results']['hindered potential'],report=parameters['debug'])
@@ -439,10 +439,10 @@ def run(s):
                 parameters['all results'][s][qlabel].update({key: results[key]})
                 if key == 'energy' or 'zpve' in key:
                     logging.info('{:10s} = {:10.8f}'.format(key,results[key]))
-    parameters['results']['deltaH0'] = 0
-    parameters['all results'][s][qlabel]['deltaH0'] = 0   
-    parameters['results']['deltaH298'] = 0
-    parameters['all results'][s][qlabel]['deltaH298'] = 0                                    
+    parameters['results']['deltaH0'] = float('nan')
+    parameters['all results'][s][qlabel]['deltaH0'] = float('nan')   
+    parameters['results']['deltaH298'] = float('nan')
+    parameters['all results'][s][qlabel]['deltaH298'] = float('nan')                   
     parameters['all results'][s][qlabel]['chemkin'] = ''
     if runtime > 1:
         parameters['all results'][s][qlabel]['runtime'] = runtime
