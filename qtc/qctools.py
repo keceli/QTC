@@ -16,7 +16,7 @@ __updated__ = "2018-03-03"
 __authors__ = 'Murat Keceli, Sarah Elliott'
 
 
-def sort_species_list(slist, printinfo=False):
+def sort_species_list(slist, printinfo=False, byMass=False):
     """
     Sorts a species list of smiles by number of rotors, electrons and atoms. 
     Optionally, prints info on the list
@@ -35,8 +35,12 @@ def sort_species_list(slist, printinfo=False):
             formula = ob.get_formula(mol)
             smult  = ob.get_multiplicity(isomer)
             obmult = ob.get_multiplicity(mol)
-            tmplist.append([isomer,formula,smult,obmult,nrotor,nelec,natom,nheavy])
-    tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[4],x[5],x[6]))
+            mass   = ob.get_mass(mol)
+            tmplist.append([isomer,formula,smult,obmult,nrotor,nelec,natom,nheavy,mass])
+    if byMass:
+        tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[7],x[4],x[5],x[6]))
+    else:
+        tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[4],x[5],x[6]))
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
         logging.info('-'*100)
@@ -44,7 +48,10 @@ def sort_species_list(slist, printinfo=False):
         i = 0
         for tmp in tmplist:
             i += 1
-            logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
+            if byMass:
+                logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:-1]))
+            else:
+                logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
         logging.info('-'*100)
     return sortedlist
 

@@ -112,6 +112,8 @@ def get_args():
                         help='The characther used for seperating different tasks in a qckeyword.')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
+    parser.add_argument('-M', '--sortbymass', action='store_true',
+                        help='Generates a sorted list of species')
     parser.add_argument('-Q', '--runqc', action='store_true',
                         help='Run quantum chemistry calculation')
     parser.add_argument('-P', '--parseqc', action='store_true',
@@ -640,6 +642,15 @@ def main(arg_update={}):
         if io.check_file(sortedfile,1):
             logging.info('Sorted SMILES file = {}'.format(sortedfile))
             logging.info('You can use qtc -b 1 -e 5, to compute species with indices 1,2,3,4,5.')
+        else:
+            logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
+    if parameters['sortbymass']:
+        mylist = qc.sort_species_list(mylist, printinfo=True,byMass=True)
+        myliststr = '\n'.join(mylist)
+        sortedfile = 'sortedbymass.txt'
+        io.write_file(myliststr, sortedfile)
+        if io.check_file(sortedfile,1):
+            logging.info('Sorted SMILES file = {}'.format(sortedfile))
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     if parameters['qckeyword']:

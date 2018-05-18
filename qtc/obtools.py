@@ -117,7 +117,7 @@ def get_mult(s):
     if mult is None:
         mol = get_mol(s,make3D=False)
         mult = mol.spin
-    return mult
+    return int(mult)
 
 def get_symm(s):
     """
@@ -1529,6 +1529,25 @@ def get_charge(x):
     mol = get_mol(x, make3D=True)
     return mol.OBMol.GetTotalCharge()
 
+def get_mass(x):
+    """
+    Return exact mass of mol.
+    >>> mol = get_mol('CC')
+    >>> get_exactmass(mol)
+    30.046950191999997
+    """
+    mol = get_mol(x, make3D=True)
+    return mol.exactmass
+
+def get_weight(x):
+    """
+    Return molecular weight  of mol.
+    >>> mol = get_mol('CC')
+    >>> get_molwt(mol)
+    30.069040000000008
+    """
+    mol = get_mol(x, make3D=True)
+    return mol.molwt
 
 def get_xyz(x):
     """
