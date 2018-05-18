@@ -275,7 +275,7 @@ def run(s):
             runthermo = False
             if 'opt' in task:
                 parameters['break'] = True
-            logging.error('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+            logging.warning('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
     elif ignore and task is not 'composite':
         runqc = False
     if task is 'composite':
@@ -412,11 +412,11 @@ def run(s):
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
-    parameters['all results'][slabel][qlabel]['energy'] = 0.
+    parameters['all results'][slabel][qlabel]['energy'] = float('nan')
     if 'zpve' in parameters['results']:
         parameters['all results'][slabel][qlabel]['zpve'] = parameters['results']['zpve']   
     else:
-        parameters['all results'][slabel][qlabel]['zpve'] = 0.
+        parameters['all results'][slabel][qlabel]['zpve'] = 0.0
     parameters['all results'][slabel][qlabel]['path'] = rundir   
     if 'hindered potential' in parameters['results'] and task.startswith('tors'):
         tc.get_hindered_potential(parameters['results']['hindered potential'],report=parameters['debug'])
@@ -440,10 +440,10 @@ def run(s):
                 parameters['all results'][slabel][qlabel].update({key: results[key]})
                 if key == 'energy' or 'zpve' in key:
                     logging.info('{:10s} = {:10.8f}'.format(key,results[key]))
-    parameters['results']['deltaH0'] = 0
-    parameters['all results'][slabel][qlabel]['deltaH0'] = 0   
-    parameters['results']['deltaH298'] = 0
-    parameters['all results'][slabel][qlabel]['deltaH298'] = 0                                    
+    parameters['results']['deltaH0'] = float('nan')
+    parameters['all results'][slabel][qlabel]['deltaH0'] = float('nan')   
+    parameters['results']['deltaH298'] = float('nan')
+    parameters['all results'][slabel][qlabel]['deltaH298'] = float('nan')                   
     parameters['all results'][slabel][qlabel]['chemkin'] = ''
     if runtime > 1:
         parameters['all results'][slabel][qlabel]['runtime'] = runtime
