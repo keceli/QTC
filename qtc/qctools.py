@@ -23,6 +23,7 @@ def sort_species_list(slist, printinfo=False, byMass=False):
     """
     tmplist= []
     for s in slist:
+    #    s = get_slabel(s)
         isomers = ob.get_isomers(s)
         if len(isomers) > 1:
             logging.info('{} isomers found for {} : {}'.format(len(isomers),s,isomers))
@@ -38,9 +39,10 @@ def sort_species_list(slist, printinfo=False, byMass=False):
             mass   = ob.get_mass(mol)
             tmplist.append([isomer,formula,smult,obmult,nrotor,nelec,natom,nheavy,mass])
     if byMass:
-        tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[8],x[4],x[5],x[6]))
+        tmplist = sorted(tmplist,reverse=False,key=lambda x: (x[8],x[4],x[5],x[6]))
     else:
         tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[4],x[5],x[6]))
+
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
         logging.info('-'*100)
@@ -49,13 +51,24 @@ def sort_species_list(slist, printinfo=False, byMass=False):
         else:
             logging.info('{:>8s}\t{:30s} {:20s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s} {:>8s}'.format('Index', 'SMILES', 'Formula', 'Mult', 'OBMult', 'N_rot', 'N_elec', 'N_atom', 'N_heavy'))
         i = 0
-        for tmp in tmplist:
-            i += 1
-            if byMass:
-                logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}   {:6f}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
+        for j,tmp in enumerate(tmplist):
+            i +=1
+            if j > 0:
+                if tmp[0] == tmplist[j-1][0]:
+                    i -= 1
+                    pass
+                else:
+                    if byMass:
+                        logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}   {:6f}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
+                    else:
+                        logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
             else:
-                logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
+                if byMass:
+                    logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}   {:6f}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
+                else:
+                    logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
         logging.info('-'*100)
+    sortedlist = remove_dups(sortedlist)
     return sortedlist
 
 
@@ -389,6 +402,7 @@ def update_smiles_list(slist):
         if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
+            symm = None
             if '_s' in s:
                 s, symm = s.split('_s')
             if '_m' in s:
@@ -2275,6 +2289,14 @@ def get_mess_frequencies(out):
 
 def print_list(s):
     return s
+
+def remove_dups(seq):
+    """
+    https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-whilst-preserving-order
+    """
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
 if __name__ == "__main__":
     import doctest

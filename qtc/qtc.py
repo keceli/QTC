@@ -645,7 +645,7 @@ def main(arg_update={}):
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     if parameters['sortbymass']:
-        mylist = qc.sort_species_list(mylist, printinfo=False,byMass=True)
+        mylist = qc.sort_species_list(mylist, printinfo=True,byMass=True)
         myliststr = '\n'.join(mylist)
         sortedfile = 'sortedbymass.txt'
         io.write_file(myliststr, sortedfile)
