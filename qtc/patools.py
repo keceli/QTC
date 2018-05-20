@@ -275,6 +275,9 @@ def gaussian_rotconsts(lines):
     rot = re.findall(rot,lines)
     if len(rot) > 1: 
         rot = rot[-1].split()
+    ndof  = gaussian_nfreq(lines)
+    if ndof < 2:
+        rot = rot[1:]
     return rot
  
 def gaussian_rotdists (lines):
@@ -304,7 +307,10 @@ def gaussian_vibrot(lines):
         return ''
     lines =  lines[sline+3:sline+3+ndof]
     for i in range(len(lines)):
-       lines[i] = '\t'.join(lines[i].split()[2:])
+       if ndof < 2:
+          lines[i] = '\t'.join(lines[i].split()[2:-1])
+       else:
+          lines[i] = '\t'.join(lines[i].split()[2:])
     mat   = '\n'.join(lines)
     return mat
     

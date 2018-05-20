@@ -66,6 +66,8 @@ def get_mol(s, make3D=False, mult=None):
     if type(s) is pybel.Molecule:
         mol = s
     elif type(s) is str or 'unicode' in str(type(s)):
+        if '_s' in s:
+            s, symm = s.split('_s')
         if s.endswith('.xyz'):
             mol = pybel.readfile('xyz', s).next()
         elif '_m' in s and len(s.splitlines()) == 1:
@@ -107,14 +109,28 @@ def get_mult(s):
     if type(s) is str:
         if '_m' in s:
             try:
-                mult = int(s.split('_m')[-1])
+                mult = s.split('_m')[-1]
+                if '_s' in mult:
+                    mult = int(mult.split('_s')[0])
             except:
                 logging.debug('Multiplicity format problem, get_mult failed in s.split for s= {}'.format(s))
     if mult is None:
         mol = get_mol(s,make3D=False)
         mult = mol.spin
-    return mult
+    return int(mult)
 
+def get_symm(s):
+    """
+    Returns spin multiplicity as an integer for a given smiles or inchi string
+    """
+    sym = None
+    if type(s) is str:
+        if '_s' in s:
+            try:
+                sym = float(s.split('_s')[-1])
+            except:
+                logging.debug('Symmetry format problem, get_symm failed in s.split for s= {}'.format(s))
+    return sym
 
 def get_slabel(s,mult=None):
     """
@@ -124,6 +140,9 @@ def get_slabel(s,mult=None):
     QTC uses open babel.
     slabel = s + '_m' + str(mult)
     """
+    symm = 0.
+    if '_s' in s:
+        s, symm = s.split('_s')
     if '_m' in s:
         s, mult = s.split('_m')
     s = get_smiles(s)
@@ -1510,6 +1529,25 @@ def get_charge(x):
     mol = get_mol(x, make3D=True)
     return mol.OBMol.GetTotalCharge()
 
+def get_mass(x):
+    """
+    Return exact mass of mol.
+    >>> mol = get_mol('CC')
+    >>> get_exactmass(mol)
+    30.046950191999997
+    """
+    mol = get_mol(x, make3D=True)
+    return mol.exactmass
+
+def get_weight(x):
+    """
+    Return molecular weight  of mol.
+    >>> mol = get_mol('CC')
+    >>> get_molwt(mol)
+    30.069040000000008
+    """
+    mol = get_mol(x, make3D=True)
+    return mol.molwt
 
 def get_xyz(x):
     """
@@ -1673,6 +1711,9 @@ def get_smiles_mult(slabel):
     """
     smi = slabel
     mult = 0
+    symm = 0.
+    if '_s' in smi:
+        smi, symm = slabel.split('_s')
     if '_m' in smi:
         smi, mult = slabel.split('_m')
     if not mult:
@@ -1694,6 +1735,8 @@ def get_smiles_path(x, mult=0, db= 'database'):
         s = x.write(format='can').strip().split()[0]
         s = s + '_m' + str(mult)
     elif type(x) is str:
+        if '_s' in x:
+            x = x.split('_s')[0]
         if '_m' in x:
             s = x
         else:
@@ -1736,7 +1779,10 @@ def get_smiles_filename(x):
     if type(x) is pybel.Molecule:    
         s = x.write(format='can').strip().split()[0]
     elif type(x) is str:
-        s = x
+        if '_s' in x:
+           s, sym = x.split('_s')
+        else:
+           s = x
     else:
         s = ''
     s = s.replace('[','_b_')

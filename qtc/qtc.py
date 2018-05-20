@@ -112,6 +112,8 @@ def get_args():
                         help='The characther used for seperating different tasks in a qckeyword.')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
+    parser.add_argument('-M', '--sortbymass', action='store_true',
+                        help='Generates a sorted list of species')
     parser.add_argument('-Q', '--runqc', action='store_true',
                         help='Run quantum chemistry calculation')
     parser.add_argument('-P', '--parseqc', action='store_true',
@@ -205,9 +207,10 @@ def run(s):
     nrotor = parameters['nrotor']
     natom = parameters['natom']
     qlabel = qc.get_qlabel(qckeyword, calcindex)
-    parameters['all results'][s].update({qlabel:{}})
+    slabel = qc.get_slabel(s)
+    parameters['all results'][slabel].update({qlabel:{}})
     parameters['qlabel'] = qlabel
-    parameters['slabel'] = s
+    parameters['slabel'] = slabel
     parameters['tmpdir']  = io.join_path(*[scratch,ob.get_smiles_filename(s)])
     results = parameters['results']
     smilesname = ob.get_smiles_filename(s)
@@ -411,21 +414,21 @@ def run(s):
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
-    parameters['all results'][s][qlabel]['energy'] = float('nan')
+    parameters['all results'][slabel][qlabel]['energy'] = float('nan')
     if 'zpve' in parameters['results']:
-        parameters['all results'][s][qlabel]['zpve'] = parameters['results']['zpve']   
+        parameters['all results'][slabel][qlabel]['zpve'] = parameters['results']['zpve']   
     else:
-        parameters['all results'][s][qlabel]['zpve'] = 0.0
-    parameters['all results'][s][qlabel]['path'] = rundir   
+        parameters['all results'][slabel][qlabel]['zpve'] = 0.0
+    parameters['all results'][slabel][qlabel]['path'] = rundir   
     if 'hindered potential' in parameters['results'] and task.startswith('tors'):
         tc.get_hindered_potential(parameters['results']['hindered potential'],report=parameters['debug'])
         
-    #parameters['all results'][s]['mol_index'] = parameters['mol_index']  
+    #parameters['all results'][slabel]['mol_index'] = parameters['mol_index']  
     for key in results.keys():
         val = results[key]
         if hasattr(val, '__iter__'):
             if len(list(val))>0:
-                parameters['all results'][s][qlabel][key] = results[key]
+                parameters['all results'][slabel][qlabel][key] = results[key]
                 if 'freqs' in key:
                     floatfreqs = sorted([float(freq) for freq in results[key]])
                     parameters['freqdir'] = parameters['qcdirectory']
@@ -436,37 +439,41 @@ def run(s):
 
         else:
             if val:
-                parameters['all results'][s][qlabel].update({key: results[key]})
+                parameters['all results'][slabel][qlabel].update({key: results[key]})
                 if key == 'energy' or 'zpve' in key:
                     logging.info('{:10s} = {:10.8f}'.format(key,results[key]))
     parameters['results']['deltaH0'] = float('nan')
-    parameters['all results'][s][qlabel]['deltaH0'] = float('nan')   
+    parameters['all results'][slabel][qlabel]['deltaH0'] = float('nan')   
     parameters['results']['deltaH298'] = float('nan')
-    parameters['all results'][s][qlabel]['deltaH298'] = float('nan')                   
-    parameters['all results'][s][qlabel]['chemkin'] = ''
+    parameters['all results'][slabel][qlabel]['deltaH298'] = float('nan')                   
+    parameters['all results'][slabel][qlabel]['chemkin'] = ''
     if runtime > 1:
-        parameters['all results'][s][qlabel]['runtime'] = runtime
+        parameters['all results'][slabel][qlabel]['runtime'] = runtime
     if runthermo:
-        sym = 1
-        if natom == 1:
-            logging.info('Single atom, sym set to 1.')
+        sym = parameters['symm']
+        if sym:
             pass
         else:
-            x2zinp = ''
-            if io.check_file(formula + '.xyz') :
-                x2zinp = (formula + '.xyz')
-            elif 'xyz' in parameters['results'] and natom > 1:
-                x2zinp = parameters['results']['xyz']
-            logging.info('Running x2z for symmetry number')
-            if x2zinp:
-                try:
-                    x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
-                    sym = qc.get_x2z_sym(x2zout) 
-                    logging.info('Symmetry number = {}'.format(sym))
-                except:
-                    logging.error('x2z run failed, sym. number is set to 1. Probably a failed xyz')
+            sym = 1
+            if natom == 1:
+                logging.info('Single atom, sym set to 1.')
+                pass
             else:
-                logging.error('xyz file cannot be found')
+                x2zinp = ''
+                if io.check_file(formula + '.xyz') :
+                    x2zinp = (formula + '.xyz')
+                elif 'xyz' in parameters['results'] and natom > 1:
+                    x2zinp = parameters['results']['xyz']
+                logging.info('Running x2z for symmetry number')
+                if x2zinp:
+                    try:
+                        x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
+                        sym = qc.get_x2z_sym(x2zout) 
+                        logging.info('Symmetry number = {}'.format(sym))
+                    except:
+                        logging.error('x2z run failed, sym. number is set to 1. Probably a failed xyz')
+                else:
+                    logging.error('xyz file cannot be found')
         parameters['results']['sym'] = sym
         if formula in ['XH2','XO2','XN2']: #Remove X to use the definided values
             hof = 0.
@@ -478,8 +485,8 @@ def run(s):
         hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
-        parameters['all results'][s][qlabel]['deltaH0'] = hof
-        parameters['all results'][s][qlabel]['heat of formation basis'] = hfset
+        parameters['all results'][slabel][qlabel]['deltaH0'] = hof
+        parameters['all results'][slabel][qlabel]['heat of formation basis'] = hfset
         io.write_file(hftxt,formula + '.hofk')
         hof298 = 0.
         chemkintext = ''
@@ -500,9 +507,9 @@ def run(s):
                 logging.error('Failed in chemkin polynomial generation')
                 logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))         
         parameters['results']['deltaH298'] = hof298
-        parameters['all results'][s][qlabel]['deltaH298'] = hof298   
-        parameters['all results'][s][qlabel]['chemkin'] = chemkintext
-        parameters['all results'][s][qlabel]['NASAPolynomial'] = rmgpoly
+        parameters['all results'][slabel][qlabel]['deltaH298'] = hof298   
+        parameters['all results'][slabel][qlabel]['chemkin'] = chemkintext
+        parameters['all results'][slabel][qlabel]['NASAPolynomial'] = rmgpoly
     io.cd(cwd)
     return
 
@@ -637,6 +644,15 @@ def main(arg_update={}):
             logging.info('You can use qtc -b 1 -e 5, to compute species with indices 1,2,3,4,5.')
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
+    if parameters['sortbymass']:
+        mylist = qc.sort_species_list(mylist, printinfo=False,byMass=True)
+        myliststr = '\n'.join(mylist)
+        sortedfile = 'sortedbymass.txt'
+        io.write_file(myliststr, sortedfile)
+        if io.check_file(sortedfile,1):
+            logging.info('Sorted SMILES file = {}'.format(sortedfile))
+        else:
+            logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     if parameters['qckeyword']:
         logging.info('List of species')
         logging.info(pprint.pformat(mylist))
@@ -651,7 +667,7 @@ def main(arg_update={}):
             parameters['mol_index'] = mid + 1
             parameters['break'] = False
             parameters['results'] = {}
-            parameters['all results'].update({s:{}}) 
+            parameters['all results'].update({qc.get_slabel(s):{}}) 
             parameters = qc.add_species_info(s,parameters)
             for i in range(ncalc):
                 if parameters['break']:
@@ -698,11 +714,11 @@ def main(arg_update={}):
         out   = '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('IDX','SMILES', 'Energy', 'ZPVE', pathtitle)
         out  += '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('   ','      ', '[Hartree]', '[Hartree]', '  ')
         for i,s in enumerate(mylist):
-            sresults = parameters['all results'][s]
+            sresults = parameters['all results'][qc.get_slabel(s)]
             for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
                 runpath = qcresultval['path'].split('/database/')[-1]
                 out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
-                        str(i+1), s, qcresultval['energy'],qcresultval['zpve'],runpath)
+                        str(i+1), qc.get_slabel(s), qcresultval['energy'],qcresultval['zpve'],runpath)
         logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
@@ -710,11 +726,11 @@ def main(arg_update={}):
             out   = '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('IDX','SMILES', 'DeltaH(0)', 'DeltaH(298)', 'Key')
             out  += '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('   ','      ', '[kj/mol]', '[kj/mol]', '  ')
             for i,s in enumerate(mylist):
-                sresults = parameters['all results'][s]
+                sresults = parameters['all results'][qc.get_slabel(s)]
                 for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
                     if qcresultval['deltaH298']:
                         out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
-                            str(i+1), s,qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
+                            str(i+1), qc.get_slabel(s),qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
                         ckin += qcresultval['chemkin']
                     else:
                         out += s + '  not included in ckin because there is no pf output for ' + qcresultkey  + '\n'
@@ -746,7 +762,7 @@ def main(arg_update={}):
                         qlabel = qc.get_qlabel(parameters['qckeyword'], i) 
                         s    = qc.get_slabel(smi,mult)
                         try:
-                            thermoresults = parameters['all results'][s][qlabel]
+                            thermoresults = parameters['all results'][slabel][qlabel]
                             deltaH0   = thermoresults['deltaH0']
                             deltaH298 = thermoresults['deltaH298']
                             poly      = thermoresults['NASAPolynomial']
