@@ -532,11 +532,12 @@ def get_messpf_input(mol,parameters):
     natom = parameters['natom']
     label = parameters['qlabel']
     results = parameters['results']
+    multiplicity = parameters['mult']
     xyz = results['xyz']
     sym = results['sym']
     natom = len(mol.atoms)
     formula = mol.formula
-    multiplicity = mol.spin
+    #multiplicity = mol.spin
     freqs = []
     xmat = []
     rotconsts = []
