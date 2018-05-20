@@ -436,6 +436,13 @@ def run(s):
                     if any(freq < 0 for freq in floatfreqs) and runthermo:
                         runthermo = False
                         logging.error('Cannot run thermo')
+                if 'pfreqs' in key:
+                    floatfreqs = sorted([float(freq) for freq in results[key]])
+                    parameters['freqdir'] = parameters['qcdirectory']
+                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in floatfreqs]))
+                    if any(freq < 0 for freq in floatfreqs) and runthermo:
+                        runthermo = False
+                        logging.error('Cannot run thermo')
 
         else:
             if val:
