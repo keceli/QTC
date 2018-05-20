@@ -325,7 +325,7 @@ def get_chemkin_str(deltaH,tag,formula,filename):
     return lines1to3 + line4 +lines5to7
 
 
-def write_chemkin_file(slabel, qlabel, hof, hof298,formula,las, has, filename):
+def write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, filename):
     """
     Given formula string, tag string, deltaH float and a filename string,
     writes a file containing NASA polynomials in chemkin format:
@@ -344,7 +344,8 @@ def write_chemkin_file(slabel, qlabel, hof, hof298,formula,las, has, filename):
     nC = get_stoichometry(formula, 'C')
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
-    line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
+    cformula = '{}_{}'.format(formula,str(mid))
+    line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(cformula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
     lines5to7 = get_coefficients_str(las,has)
     s = comments + line4 +lines5to7
     io.write_file(s, filename)
@@ -772,6 +773,7 @@ def write_chemkin_polynomial(mol, parameters):
     formula = mol.formula
     qlabel = parameters['qlabel']
     slabel = parameters['slabel']
+    mid    = parameters['mol_index']
     hof = parameters['results']['deltaH0']
     inp = get_messpf_input(mol, parameters)
     io.write_file(inp, messpfinput)
@@ -802,7 +804,7 @@ def write_chemkin_polynomial(mol, parameters):
         chemkinfile = formula + '.ckin'
         logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))    
         try:
-            chemkininput = write_chemkin_file(slabel,qlabel, hof, hof298, formula, las, has, chemkinfile)
+            chemkininput = write_chemkin_file(slabel,qlabel, hof, hof298, formula, mid, las, has, chemkinfile)
             rmgpoly = get_rmg_polynomial(las,has)
         except:
             logging.error("Failed to write chemkin polynomials")
