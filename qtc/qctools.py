@@ -666,14 +666,14 @@ def parse_output(s, formula, write=False):
 	    rotdists       = pa.gaussian_rotdists(s) 
 	    freqs          = list(pa.gaussian_freqs(s))
 	    afreqs         = list(get_gaussian_fundamentals(s)[:,1])
-	if sum(afreqs) > 0:
-	    xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
-	    if type(xmat) == str:
-		xmat = []
-	else:
-	    afreqs = []
-	if energy:
-	    parsed = True
+	    if sum(afreqs) > 0:
+	        xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
+	        if type(xmat) == str:
+		        xmat = []
+	    else:
+	        afreqs = []
+	    if energy:
+	        parsed = True
     elif package == 'mopac':
         method = 'SEMO'
         energy = get_mopac_energy(s)
