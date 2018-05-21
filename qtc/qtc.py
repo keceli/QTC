@@ -483,14 +483,20 @@ def run(s):
                 else:
                     logging.error('xyz file cannot be found')
         parameters['results']['sym'] = sym
-        if formula in ['XH2','XO2','XN2']: #Remove X to use the definided values
-            hof = 0.
-            hfset = 'Definition'
-            logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
+        hof = parameters['hof']
+        if hof:
+            hfset  = ['N/A (Precomputed)']
+            hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
+            hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         else:
-            hof, hfset = hf.main_keyword(s,parameters)
-        hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
-        hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
+            if formula in ['XH2','XO2','XN2']: #Remove X to use the definided values
+                hof = 0.
+                hfset = 'Definition'
+                logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
+            else:
+                hof, hfset = hf.main_keyword(s,parameters)
+            hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
+            hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof

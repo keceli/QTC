@@ -66,6 +66,8 @@ def get_mol(s, make3D=False, mult=None):
     if type(s) is pybel.Molecule:
         mol = s
     elif type(s) is str or 'unicode' in str(type(s)):
+        if '_e' in s:
+            s, ene = s.split('_e')
         if '_s' in s:
             s, symm = s.split('_s')
         if s.endswith('.xyz'):
@@ -110,6 +112,8 @@ def get_mult(s):
         if '_m' in s:
             try:
                 mult = s.split('_m')[-1]
+                if '_e' in mult:
+                    mult, ene = mult.split('_e')
                 if '_s' in mult:
                     mult = int(mult.split('_s')[0])
             except:
@@ -121,16 +125,33 @@ def get_mult(s):
 
 def get_symm(s):
     """
-    Returns spin multiplicity as an integer for a given smiles or inchi string
+    Returns the symmetry factor specified in the smiles input string
     """
     sym = None
     if type(s) is str:
         if '_s' in s:
             try:
-                sym = float(s.split('_s')[-1])
+                sym = s.split('_s')[-1]
+                if '_e' in sym:
+                    sym, ene = sym.split('_e')[0]
+                sym = float(sym)
             except:
                 logging.debug('Symmetry format problem, get_symm failed in s.split for s= {}'.format(s))
     return sym
+
+def get_smileshof(s):
+    """
+    Returns the heat of formation at 0k specified in the smiles input string
+    """
+    ene = None
+    if type(s) is str:
+        if '_e' in s:
+            try:
+                ene = s.split('_e')[-1]
+                ene = float(ene)
+            except:
+                logging.debug('Energy format problem, get_smileshof failed in s.split for s= {}'.format(s))
+    return ene
 
 def get_slabel(s,mult=None):
     """
@@ -141,6 +162,8 @@ def get_slabel(s,mult=None):
     slabel = s + '_m' + str(mult)
     """
     symm = 0.
+    if '_e' in s:
+        s, ene = s.split('_e')
     if '_s' in s:
         s, symm = s.split('_s')
     if '_m' in s:
@@ -1712,8 +1735,10 @@ def get_smiles_mult(slabel):
     smi = slabel
     mult = 0
     symm = 0.
+    if '_e' in smi:
+        slabel, ene = slabel.split('_e')
     if '_s' in smi:
-        smi, symm = slabel.split('_s')
+        slabel, symm = slabel.split('_s')
     if '_m' in smi:
         smi, mult = slabel.split('_m')
     if not mult:
@@ -1735,6 +1760,8 @@ def get_smiles_path(x, mult=0, db= 'database'):
         s = x.write(format='can').strip().split()[0]
         s = s + '_m' + str(mult)
     elif type(x) is str:
+        if '_e' in x:
+            x = x.split('_e')[0]
         if '_s' in x:
             x = x.split('_s')[0]
         if '_m' in x:
@@ -1779,6 +1806,8 @@ def get_smiles_filename(x):
     if type(x) is pybel.Molecule:    
         s = x.write(format='can').strip().split()[0]
     elif type(x) is str:
+        if '_e' in x:
+           s, ene = x.split('_e')
         if '_s' in x:
            s, sym = x.split('_s')
         else:
