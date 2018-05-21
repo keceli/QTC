@@ -387,9 +387,9 @@ def update_smiles_list(slist):
     ['C', 'OO', 'O[O]', 'O[O]']
     """
     newlist = []
-    symm =  None
-    ene  =  None
     for s in slist:
+        symm =  None
+        ene  =  None
        # if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
         if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))

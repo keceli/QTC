@@ -401,7 +401,7 @@ def run(s):
                         pfreqs = qc.get_mess_frequencies(out)
                         parameters['results']['pfreqs'] = pfreqs
                     elif io.check_file( 'hrproj_freq.dat'):
-                        pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
+                        pfreqs = io.read_file('hrproj_freq.dat').split('0.00\n')[0].split('\n')[:-1]
                         parameters['results']['pfreqs'] = pfreqs
                     else:
                         logging.warning('hrproj_freq.dat file not found')

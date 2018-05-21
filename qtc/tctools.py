@@ -35,16 +35,29 @@ def get_stoichometry(formula,element):
     """
     formula = formula.upper()
     element = element.upper()
-    length  = len(element)
-    idx     = formula.find(element)
     n = 0
-    while idx > -1:
-        try:
-            n  += int(formula[idx+length])
-            idx = formula.find(element,idx+length)
-        except:
-            n += 1
-            idx = formula.find(element,idx+1)
+    if len(formula.split(element)) > 1:
+        formula = formula.split(element)[1]
+    formula = formula.split('C')[0]
+    formula = formula.split('H')[0]
+    formula = formula.split('N')[0]
+    formula = formula.split('O')[0]
+    if len(formula) > 0:
+        n =  int(formula)
+    #length  = len(element)
+    #idx     = formula.find(element)
+    #   try: 
+    #       int(c)   
+    #       n += c
+    #   except: 
+    #       
+    #while idx > -1:
+    #    try:
+    #        n  += int(formula[idx+length])
+    #        idx = formula.find(element,idx+length)
+    #    except:
+    #        n += 1
+    #        idx = formula.find(element,idx+1)
     return n
 
 
