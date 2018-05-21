@@ -23,6 +23,7 @@ def sort_species_list(slist, printinfo=False, byMass=False):
     """
     tmplist= []
     for s in slist:
+    #    s = get_slabel(s)
         isomers = ob.get_isomers(s)
         if len(isomers) > 1:
             logging.info('{} isomers found for {} : {}'.format(len(isomers),s,isomers))
@@ -41,6 +42,7 @@ def sort_species_list(slist, printinfo=False, byMass=False):
         tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[8],x[4],x[5],x[6]))
     else:
         tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[4],x[5],x[6]))
+
     sortedlist = [x[0] for x in tmplist]
     if printinfo:
         logging.info('-'*100)
@@ -56,6 +58,7 @@ def sort_species_list(slist, printinfo=False, byMass=False):
             else:
                 logging.info('{:8d}\t{:30s} {:20s} {:8d} {:8d} {:8d} {:8d} {:8d} {:8d}'.format(i,ob.get_smiles(tmp[0]),*tmp[1:]))
         logging.info('-'*100)
+    sortedlist = remove_dups(sortedlist)
     return sortedlist
 
 
@@ -84,6 +87,7 @@ def add_species_info(s, parameters):
         io.mkdir('xyz')
     io.cd(parameters['xyzdir'])
     parameters['symm'] = ob.get_symm(s) 
+    parameters['hof'] = ob.get_smileshof(s)
     s = get_slabel(s)
     xyzfile = ob.get_smiles_filename(s) + '.xyz'
     xyzfile = io.fix_path(xyzfile)
@@ -384,11 +388,14 @@ def update_smiles_list(slist):
     """
     newlist = []
     symm =  None
+    ene  =  None
     for s in slist:
        # if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
         if 'He' in s or 'Ne' in s or 'Ar' in s or 'Kr' in s or 'Xe' in s or 'Rn' in s:
             logging.info('Inert species {0} is removed from the smiles list'.format(s))
         else:
+            if '_e' in s:
+                s, ene = s.split('_e')
             if '_s' in s:
                 s, symm = s.split('_s')
             if '_m' in s:
@@ -405,7 +412,8 @@ def update_smiles_list(slist):
             slabel = canonical + '_m' + str(mult)
             if symm:
                 slabel += '_s' + symm
-            
+            if ene:
+                slabel += '_e' + ene
             newlist.append(slabel)
     return newlist
 
@@ -537,6 +545,8 @@ def get_slabel(smi,mult=None):
     QTC uses open babel.
     slabel = smi + '_m' + str(mult)
     """
+    if '_e' in smi:
+        smi, ene = smi.split('_e')
     if '_s' in smi:
         smi, symm = smi.split('_s')
     if '_m' in smi:
@@ -2275,6 +2285,14 @@ def get_mess_frequencies(out):
 
 def print_list(s):
     return s
+
+def remove_dups(seq):
+    """
+    https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-whilst-preserving-order
+    """
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
 if __name__ == "__main__":
     import doctest

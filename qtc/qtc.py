@@ -402,6 +402,7 @@ def run(s):
                         parameters['results']['pfreqs'] = pfreqs
                     elif io.check_file( 'hrproj_freq.dat'):
                         pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
+                        parameters['results']['pfreqs'] = pfreqs
                     else:
                         logging.warning('hrproj_freq.dat file not found')
                 else:
@@ -652,7 +653,7 @@ def main(arg_update={}):
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     if parameters['sortbymass']:
-        mylist = qc.sort_species_list(mylist, printinfo=False,byMass=True)
+        mylist = qc.sort_species_list(mylist, printinfo=True,byMass=True)
         myliststr = '\n'.join(mylist)
         sortedfile = 'sortedbymass.txt'
         io.write_file(myliststr, sortedfile)
