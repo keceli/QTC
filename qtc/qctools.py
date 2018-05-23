@@ -39,7 +39,7 @@ def sort_species_list(slist, printinfo=False, byMass=False):
             mass   = ob.get_mass(mol)
             tmplist.append([isomer,formula,smult,obmult,nrotor,nelec,natom,nheavy,mass])
     if byMass:
-        tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[8],x[4],x[5],x[6]))
+        tmplist = sorted(tmplist,reverse=False,key=lambda x: (x[8],x[4],x[5],x[6]))
     else:
         tmplist = sorted(tmplist,reverse=True,key=lambda x: (x[4],x[5],x[6]))
 

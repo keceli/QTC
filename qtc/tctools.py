@@ -38,12 +38,14 @@ def get_stoichometry(formula,element):
     n = 0
     if len(formula.split(element)) > 1:
         formula = formula.split(element)[1]
-    formula = formula.split('C')[0]
-    formula = formula.split('H')[0]
-    formula = formula.split('N')[0]
-    formula = formula.split('O')[0]
-    if len(formula) > 0:
-        n =  int(formula)
+        formula = formula.split('C')[0]
+        formula = formula.split('H')[0]
+        formula = formula.split('N')[0]
+        formula = formula.split('O')[0]
+        if len(formula) > 0:
+            n =  int(formula)
+        else:
+            n = 1
     #length  = len(element)
     #idx     = formula.find(element)
     #   try: 
@@ -186,12 +188,15 @@ def get_coefficients(c97text):
     lines = c97text.splitlines()
     las  = [0.] * 7
     has  = [0.] * 7
-    las[0:5] = parse_line16(lines[6][0:80])
-    las[5:7] = parse_line16(lines[7][48:80])
-    has[0:5] = parse_line16(lines[9][0:80])
-    has[5:7] = parse_line16(lines[10][48:80])
-
-    return las, has
+    msg  = None
+    if len (lines) > 1:
+        las[0:5] = parse_line16(lines[6][0:80])
+        las[5:7] = parse_line16(lines[7][48:80])
+        has[0:5] = parse_line16(lines[9][0:80])
+        has[5:7] = parse_line16(lines[10][48:80])
+    else:
+        msg = 'pacc has failed'
+    return las, has, msg
 
 
 def get_coefficients_str(las,has):
@@ -351,8 +356,8 @@ def write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, file
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
     comments   = '! {} \t {}\n'.format(slabel, qlabel)
-    comments += '! deltaH(0) {} kcal/mol\n'.format(hof)
-    comments += '! deltaH(298) {} kcal/mol\n'.format(hof298)
+    comments += '! deltaH(0) {:.2f} kcal/mol\n'.format(hof)
+    comments += '! deltaH(298) {:.2f} kcal/mol\n'.format(hof298)
     nH = get_stoichometry(formula, 'H')
     nC = get_stoichometry(formula, 'C')
     nN = get_stoichometry(formula, 'N')
@@ -813,7 +818,9 @@ def write_chemkin_polynomial(mol, parameters):
     c97file = formula + '.c97'
     if io.check_file(c97file):
         c97text  = io.read_file(c97file)
-        las, has = get_coefficients(c97text)
+        las, has, msg = get_coefficients(c97text)
+        if msg:
+            logging.info(msg)
         logging.debug('Converting to chemkin format.')
         chemkinfile = formula + '.ckin'
         logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))    
