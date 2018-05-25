@@ -693,6 +693,15 @@ def main(arg_update={}):
                     logging.info('\n' + 100*'*' + '\n')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)
+                    tmpxyz = parameters['smilesdir'] + '/' +  parameters['optdir'] + '/' +  ob.get_formula(s) + '.xyz'
+                    if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
+                        try:
+                            x2z_out = qc.run_x2z(tmpxyz, parameters['x2z'])
+                            parameters['nallrotor']= qc.get_x2z_nrotor(x2z_out)
+                            parameters['nmethyl'] = qc.get_x2z_nmethyl(x2z_out)
+                            parameters['nrotor']  = parameters['nallrotor'] - parameters['nmethyl']
+                        except:
+                            logging.error('x2z failed for {}'.format(s))
         if runthermo:
             logging.info('\n' + 120*'#' + '\n')
             logging.info("Starting thermo calculations")
@@ -719,6 +728,15 @@ def main(arg_update={}):
                     logging.info('\n' + 50*'-' + '\n')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)            
+                    tmpxyz = parameters['smilesdir'] + '/' +  parameters['optdir'] + '/' +  ob.get_formula(s) + '.xyz'
+                    if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
+                        try:
+                            x2z_out = qc.run_x2z(tmpxyz, parameters['x2z'])
+                            parameters['nallrotor']= qc.get_x2z_nrotor(x2z_out)
+                            parameters['nmethyl'] = qc.get_x2z_nmethyl(x2z_out)
+                            parameters['nrotor']  = parameters['nallrotor'] - parameters['nmethyl']
+                        except:
+                            logging.error('x2z failed for {}'.format(s))
     else:
         logging.info("You need to specify qckeyword with -k to run calculations")
     end = timer()
