@@ -1299,16 +1299,16 @@ Linear bonds:
     sym = 1
     ent = 1.
     key = 'rotational symmetry number ='
-    entkey = 'has enantiomer'
+    #entkey = 'has enantiomer'
     for line in lines:
         if line.startswith(key):
             try:
                 sym = int(line.split()[-1])
             except:
                 logging.error('Failed in parsing sym. number in x2z output {}'.format(out))
-        if line.startswith(entkey):
-            if 'yes' in line:
-                ent = 2.
+     #   if line.startswith(entkey):
+     #       if 'yes' in line:
+     #           ent = 2.
     return sym / ent  
 
 

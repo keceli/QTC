@@ -477,6 +477,7 @@ def run(s):
                     try:
                         x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
                         sym = qc.get_x2z_sym(x2zout) 
+                        sym = sym / ob.get_ent(s) 
                         logging.info('Symmetry number = {}'.format(sym))
                     except:
                         logging.error('x2z run failed, sym. number is set to 1. Probably a failed xyz')
