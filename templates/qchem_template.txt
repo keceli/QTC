@@ -1,0 +1,17 @@
+$comment
+QTC(SMILESNAME)
+$end
+
+$molecule
+0 QTC(MULTIPLICITY)
+QTC(ZMAT)
+$end
+
+$rem
+    jobtype     QTC(TASK)
+    method    QTC(METHOD)
+    basis       QTC(BASIS)
+    MEM_TOTAL  QTC(NODE_MEMORY_MB)
+    MAX_SCF_CYCLES 300
+$end
+

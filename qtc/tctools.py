@@ -35,31 +35,16 @@ def get_stoichometry(formula,element):
     """
     formula = formula.upper()
     element = element.upper()
+    length  = len(element)
+    idx     = formula.find(element)
     n = 0
-    if len(formula.split(element)) > 1:
-        formula = formula.split(element)[1]
-        formula = formula.split('C')[0]
-        formula = formula.split('H')[0]
-        formula = formula.split('N')[0]
-        formula = formula.split('O')[0]
-        if len(formula) > 0:
-            n =  int(formula)
-        else:
-            n = 1
-    #length  = len(element)
-    #idx     = formula.find(element)
-    #   try: 
-    #       int(c)   
-    #       n += c
-    #   except: 
-    #       
-    #while idx > -1:
-    #    try:
-    #        n  += int(formula[idx+length])
-    #        idx = formula.find(element,idx+length)
-    #    except:
-    #        n += 1
-    #        idx = formula.find(element,idx+1)
+    while idx > -1:
+        try:
+            n  += int(formula[idx+length])
+            idx = formula.find(element,idx+length)
+        except:
+            n += 1
+            idx = formula.find(element,idx+1)
     return n
 
 
@@ -188,15 +173,12 @@ def get_coefficients(c97text):
     lines = c97text.splitlines()
     las  = [0.] * 7
     has  = [0.] * 7
-    msg  = None
-    if len (lines) > 1:
-        las[0:5] = parse_line16(lines[6][0:80])
-        las[5:7] = parse_line16(lines[7][48:80])
-        has[0:5] = parse_line16(lines[9][0:80])
-        has[5:7] = parse_line16(lines[10][48:80])
-    else:
-        msg = 'pacc has failed'
-    return las, has, msg
+    las[0:5] = parse_line16(lines[6][0:80])
+    las[5:7] = parse_line16(lines[7][48:80])
+    has[0:5] = parse_line16(lines[9][0:80])
+    has[5:7] = parse_line16(lines[10][48:80])
+
+    return las, has
 
 
 def get_coefficients_str(las,has):
@@ -356,8 +338,8 @@ def write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, file
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
     comments   = '! {} \t {}\n'.format(slabel, qlabel)
-    comments += '! deltaH(0) {:.2f} kcal/mol\n'.format(hof)
-    comments += '! deltaH(298) {:.2f} kcal/mol\n'.format(hof298)
+    comments += '! deltaH(0) {} kcal/mol\n'.format(hof)
+    comments += '! deltaH(298) {} kcal/mol\n'.format(hof298)
     nH = get_stoichometry(formula, 'H')
     nC = get_stoichometry(formula, 'C')
     nN = get_stoichometry(formula, 'N')
@@ -586,33 +568,48 @@ def get_messpf_input(mol,parameters):
         elif 'afreqs' in results:
             freqs = results['afreqs']
         #xmat = anharm.mess_x(xmat)
+
     coreIsMd = False
     if  'hindered potential' in results:
         if  'Core' in results['hindered potential']:
             coreIsMd = True
+
+    #########HEADER
     inp  = 'AtomDistanceMin[angstrom] 0.6\n'
     inp += 'Temperature(step[K],size)        100.   30\n'
     inp += 'RelativeTemperatureIncrement            0.001\n'
+    ###  BEGIN INPUT
     inp += 'Species {0}\n'.format(formula)
     if natom == 1:
         inp += 'Atom\n'
         inp += 'Mass[amu] {}\n'.format(ut.atommasses[formula])
         inp += 'End\n'
     else:
+        ###  BEGIN RRHO
         inp += 'RRHO\n'
-        inp += '\tGeometry[angstrom] {0} !{1}\n'.format(natom,label)
-        inp += ''.join(xyz.splitlines(True)[2:])
-        inp += '\nZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
-        inp += 'ElectronicLevels[1/cm]  1\n'
-        inp += '\t 0 {0}\n'.format(multiplicity)
-        if 'hindered potential' in results and coreIsMd:
-                inp += '\t{}'.format(results['hindered potential' ])
-        else:
-            inp += 'Core RigidRotor\n'
-            inp += '\tZeroPointEnergy[1/cm] {}\n'.format(zpe)
-            inp += '\tInterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
-            inp += '\tSymmetryFactor {0}\n'.format(sym)
-            #inp += 'End\n'
+        inp += '  Geometry[angstrom] {0} !{1}\n\t  '.format(natom,label)
+        inp += '\t  '.join(xyz.splitlines(True)[2:])
+        inp += '\n  ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
+        inp += '  ElectronicLevels[1/cm]  1\n'
+        inp += '     0 {0}\n'.format(multiplicity)
+
+        ###  BEGIN CORE
+        coreline  = '   Core RigidRotor\n'
+        coreline += '      ZeroPointEnergy[1/cm] {}\n'.format(zpe)
+        hindlines = ''
+        if 'hindered potential' in results: 
+            if  coreIsMd:
+                coreline  = '  Core MultiRotor\n'
+                hindlines = '     {}'.format('     '.join(results['hindered potential' ].splitlines(True)[3:]))
+            else:
+                hindlines  = '   End\n'
+                hindlines += '  {}'.format('  '.join(results['hindered potential' ].splitlines(True)))
+        inp += coreline
+        inp += '      InterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
+        inp += '      SymmetryFactor {0}\n'.format(sym)
+        if coreIsMd:
+            inp += hindlines  ###   END RRHO
+        #freqs
         if len(freqs) > 0:
             posfreqs = []
             for freq in freqs:
@@ -620,32 +617,28 @@ def get_messpf_input(mol,parameters):
                     posfreqs.append(freq)
             if len(posfreqs) < len(freqs):
                 logging.warning('Imaginary frequencies are ignored')
-            inp += '\t\tFrequencies[1/cm] {0} !{1}\n'.format(len(posfreqs),label)
-            inp += '\t\t' + ' '.join([str(x) for x in posfreqs]) + '\n'
+            inp += '      Frequencies[1/cm] {0} !{1}\n'.format(len(posfreqs),label)
+            inp += '      ' + ' '.join([str(x) for x in posfreqs]) + '\n'
+        #anharmonics
         if len(xmat) > 0:
-            inp += ' Anharmonicities[1/cm]\n'
-            #inp += xmat
+            inp += '      Anharmonicities[1/cm]\n'
             for i in range( len(xmat)):
-                #for j in range(i+1):
-                    #inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
-                    #inp += str(xmat[i,j]) + '\n'
-                 
                 inp += '\t\t' + ' '.join([str(xmat[i,j]) for j in range(i+1)]) + '\n'
-        if len(rotconsts) > 0:
-            inp += ' RotationalConstants[1/cm] '
-            inp += ' '.join(rotconsts) + '\n'
-        if len(vibrots) > 0:
-            inp += ' RovibrationalCouplings[1/cm]\n'
-            inp += vibrots + '\n'
-        if len(rotdists) > 0:
-            inp += ' RotationalDistortion[1/cm]\n'
-            inp += rotdists + '\n'
-            inp += '\t End\n'
-        inp += '\t End\n' # Core RigidRotor
+        #if len(rotconsts) > 0:
+        #    inp += '      RotationalConstants[1/cm] '
+        #    inp += ' '.join(rotconsts) + '\n'
+        #if len(vibrots) > 0:
+        #    inp += '      RovibrationalCouplings[1/cm]\n'
+        #    inp += '\t   ' + '\t   '.join(vibrots.splitlines(True)) + '\n'
+        #if len(rotdists) > 0:
+        #    inp += '      RotationalDistortion[1/cm]\n'
+        #    inp += '\t   ' + '\t   '.join(rotdists.splitlines(True)) + '\n'
+        #    inp += '      End\n' ###   END CORE
         if not coreIsMd:
-            if 'hindered potential' in results:
-                inp += '{}'.format(results['hindered potential' ])
-            inp += '\t End\n' # hindered
+            inp += hindlines  ###   END RRHO
+        if not 'hindered potential' in results: 
+            inp += '   End\n'
+        inp += 'End\n' ###   END CORE
     return inp
 
 def run_pf(messpf='messpf',inputfile='pf.inp'):
@@ -794,11 +787,14 @@ def write_chemkin_polynomial(mol, parameters):
     slabel = parameters['slabel']
     mid    = parameters['mol_index']
     hof = parameters['results']['deltaH0']
-    inp = get_messpf_input(mol, parameters)
-    io.write_file(inp, messpfinput)
-    logging.debug('Running {0} to generate partition function...'.format(parameters['messpf']))
-    msg = io.execute([parameters['messpf'],messpfinput])
-    logging.debug(msg)
+    if parameters['skippf']:
+        logging.debug('Skipping pf generation...')
+    else:
+        inp = get_messpf_input(mol, parameters)
+        io.write_file(inp, messpfinput)
+        logging.debug('Running {0} to generate partition function...'.format(parameters['messpf']))
+        msg = io.execute([parameters['messpf'],messpfinput])
+        logging.debug(msg)
     logging.debug('Running thermp...')
     inp = get_thermp_input(mol.formula, hof)
     msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp']) 
@@ -818,9 +814,7 @@ def write_chemkin_polynomial(mol, parameters):
     c97file = formula + '.c97'
     if io.check_file(c97file):
         c97text  = io.read_file(c97file)
-        las, has, msg = get_coefficients(c97text)
-        if msg:
-            logging.info(msg)
+        las, has = get_coefficients(c97text)
         logging.debug('Converting to chemkin format.')
         chemkinfile = formula + '.ckin'
         logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))    

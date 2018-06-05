@@ -133,7 +133,7 @@ def get_symm(s):
             try:
                 sym = s.split('_s')[-1]
                 if '_e' in sym:
-                    sym, ene = sym.split('_e')[0]
+                    sym, ene = sym.split('_e')
                 sym = float(sym)
             except:
                 logging.debug('Symmetry format problem, get_symm failed in s.split for s= {}'.format(s))
@@ -173,6 +173,17 @@ def get_slabel(s,mult=None):
         mult = get_multiplicity(s)
     return s + '_m' + str(mult)
 
+def get_ent(s):
+    """
+    Return 1 if there is no enantiomer and 2 if there is based on 
+    @ sign appearing in the smiles
+    """
+    ent = 1.
+    xyz = get_xyz(s)
+    s2  = get_smiles(xyz)
+    if '@' in s2:
+        ent = 2.
+    return ent
 
 def get_isomers_old(s):
     """
@@ -1613,7 +1624,7 @@ def get_geo(x):
     return ''.join(xyz[2:natom+2])
 
 
-def get_zmat(x):
+def get_zmat(x, qchem=False):
     """
     Returns internal coordinates as as string suitable for Gaussian zmat input.
     Note: zmat coordinates are deterministic.
@@ -1636,7 +1647,13 @@ def get_zmat(x):
     <BLANKLINE>
     """
     mol = get_mol(x, make3D=True)
-    return '\n'.join(mol.write('gzmat').splitlines()[5:])
+    if qchem:
+        zmat = mol.write('fh').splitlines()[2:]
+        zmat[0] = zmat[0].split()[0]
+        zmat = '\n'.join(zmat)
+    else: 
+        zmat =  '\n'.join(mol.write('gzmat').splitlines()[5:])
+    return zmat
 
 
 def get_mop(x, keys='pm3 precise nosym threads=1 opt'):
@@ -1807,11 +1824,10 @@ def get_smiles_filename(x):
         s = x.write(format='can').strip().split()[0]
     elif type(x) is str:
         if '_e' in x:
-           s, ene = x.split('_e')
+           x, ene = x.split('_e')
         if '_s' in x:
-           s, sym = x.split('_s')
-        else:
-           s = x
+           x, sym = x.split('_s')
+        s = x
     else:
         s = ''
     s = s.replace('[','_b_')

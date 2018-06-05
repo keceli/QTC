@@ -110,6 +110,8 @@ def get_args():
     parser.add_argument('-z', '--task_seperator', type=str,
                         default=',',
                         help='The characther used for seperating different tasks in a qckeyword.')
+    parser.add_argument('-B', '--bac', action='store_true',
+                        help='Generates a sorted list of species')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
     parser.add_argument('-M', '--sortbymass', action='store_true',
@@ -130,7 +132,8 @@ def get_args():
                         help='Ignores RUNNING.tmp files and run the calculations')
     parser.add_argument('-R', '--recover', action='store_true',
                         help='Attempt to recover failed calculations')
-    parser.add_argument('-O', '--overwrite', action='store_true',
+    parser.add_argument('-O', '--overwrite', type=str,
+                        default = 'none',
                         help='Overwrite existing calculations. Be careful, data will be lost.')
     parser.add_argument('-X', '--excel', action='store_true',
                         help='Generate excel file')
@@ -140,6 +143,8 @@ def get_args():
                         help='Anharmonic corrections')
     parser.add_argument('-D', '--debug', action='store_true',
                         help='Run in debug mode')
+    parser.add_argument('--skippf', action='store_true',
+                        help='use to skip pf input and output file generation when collecting thermo')
     parser.add_argument('--fix', type=int,
                         default=0,
                         help='If FIX > 0, interpolate negative energies in hindered potential input for mess')
@@ -151,6 +156,9 @@ def get_args():
                         help='Path for nwchem executable')
     parser.add_argument('--molpro', type=str,
                         default='molpro',
+                        help='Path for molpro executable')
+    parser.add_argument('--qchem', type=str,
+                        default='qchem',
                         help='Path for molpro executable')
     parser.add_argument('--gaussian', type=str,
                         default='g09',
@@ -198,6 +206,27 @@ def run(s):
     calcindex = parameters['calcindex']
     ignore = parameters['ignorerunningjobs']
     overwrite=parameters['overwrite']
+    over = False
+    if overwrite == 'all':
+        over = True
+    elif len(overwrite.split('.')) > 1:
+        overwrite = overwrite.split('.')
+        if overwrite[0] == 'a':
+            if overwrite[1] == 'a':
+                over = True
+            elif overwrite[1] == str(calcindex):
+                over = True
+        elif overwrite[0] == str(parameters['mol_index']):
+            if overwrite[1] == 'a':
+                over = True
+            elif overwrite[1] == str(calcindex):
+                over = True
+        else:
+            over = False
+        overwrite = '.'.join(overwrite)
+    elif overwrite == str(parameters['mol_index']):
+        over = True
+    parameters['overwrite'] = over
     scratch = parameters['scratch']
     xyz = parameters['xyz']
     mol = ob.get_mol(xyz)
@@ -238,6 +267,7 @@ def run(s):
         parameters['parseqc'] = True
 
     msg  = 'Mol. index   = {0}\n'.format(parameters['mol_index'])
+    msg += 'Calc index   = {0}\n'.format(calcindex)
     msg += "Formula      = {0}\n".format(formula)
     msg += "SMILES       = {0}\n".format(s)
     msg += "InChI        = {0}\n".format(inchi)
@@ -262,7 +292,7 @@ def run(s):
     else:
         logging.error('I/O error, {0} directory not found.\n'.format(rundir))
         return -1
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian']
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian','qchem']
     runfile = 'RUNNING.tmp'
     if io.check_file(runfile):
         if overwrite:
@@ -277,7 +307,7 @@ def run(s):
             runthermo = False
             if 'opt' in task:
                 parameters['break'] = True
-            logging.warning('Skipping calculation since it is already running. Use -O to overwrite or delete "{}" file'.format(io.get_path(runfile)))
+            logging.warning('Skipping calculation since it is already running. Use -O {1}.{2} to overwrite or delete "{0}" file'.format(io.get_path(runfile),parameters['mol_index'],calcindex))
     elif ignore and task is not 'composite':
         runqc = False
     if task is 'composite':
@@ -304,6 +334,8 @@ def run(s):
                 io.write_file(geo, geofile)
                 if io.check_file(geofile, 1):
                     qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
+            elif parameters['qcmethod'] == 'given':
+                qc.use_given_hof(parameters)
             else:
                 logging.error('{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage,available_packages))
             io.rm(runfile)
@@ -320,6 +352,7 @@ def run(s):
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))         
+    parameters['overwrite'] = overwrite
     if parseqc:
         logging.info('Parsing output...')
         if parameters['qctask'] == 'composite':
@@ -333,7 +366,11 @@ def run(s):
                     runthermo = False
                 else:
                     logging.debug('No energy file "{0}".\n'.format(enefile))
-                    
+        elif parameters['qcmethod'] == 'given':
+            enefile = formula + '.ene'
+            if io.check_file(enefile,0,True):
+                energy = float(io.read_file(enefile).strip())
+                parameters['results']['energy'] = energy
         elif io.check_file(qcoutput, timeout=1,verbose=False):
             out = io.read_file(qcoutput, aslines=False)
             if qc.check_output(out):
@@ -401,7 +438,7 @@ def run(s):
                         pfreqs = qc.get_mess_frequencies(out)
                         parameters['results']['pfreqs'] = pfreqs
                     elif io.check_file( 'hrproj_freq.dat'):
-                        pfreqs = io.read_file('hrproj_freq.dat').split('0.00\n')[0].split('\n')[:-1]
+                        pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
                         parameters['results']['pfreqs'] = pfreqs
                     else:
                         logging.warning('hrproj_freq.dat file not found')
@@ -457,6 +494,7 @@ def run(s):
     parameters['all results'][slabel][qlabel]['chemkin'] = ''
     if runtime > 1:
         parameters['all results'][slabel][qlabel]['runtime'] = runtime
+    bonds = True
     if runthermo:
         sym = parameters['symm']
         if sym:
@@ -478,6 +516,7 @@ def run(s):
                         x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
                         sym = qc.get_x2z_sym(x2zout) 
                         sym = sym / ob.get_ent(s) 
+                        bonds =  qc.get_x2z_bonds(x2zout)
                         logging.info('Symmetry number = {}'.format(sym))
                     except:
                         logging.error('x2z run failed, sym. number is set to 1. Probably a failed xyz')
@@ -485,7 +524,7 @@ def run(s):
                     logging.error('xyz file cannot be found')
         parameters['results']['sym'] = sym
         hof = parameters['hof']
-        if hof:
+        if hof and parameters['qcmethod'] == 'given':
             hfset  = ['N/A (Precomputed)']
             hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
@@ -498,11 +537,29 @@ def run(s):
                 hof, hfset = hf.main_keyword(s,parameters)
             hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
+        io.write_file(hftxt,formula + '.hofk')
+        if parameters['bac']:
+            if bonds:
+                x2zinp = ''
+                if io.check_file(formula + '.xyz') :
+                    x2zinp = (formula + '.xyz')
+                elif 'xyz' in parameters['results'] and natom > 1:
+                    x2zinp = parameters['results']['xyz']
+                logging.info('Running x2z for BAC bonds')
+                if x2zinp:
+                    try:
+                        x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
+                        bonds =  qc.get_x2z_bonds(x2zout)
+                        logging.info('Bonds found = {}'.format(bonds))
+                    except:
+                        logging.error('x2z run failed, no bonds will be corrected')
+            bac  = qc.get_bac(parameters, bonds)
+            hof +=  bac
+            io.write_file(str(bac),formula + '.BAChofk')
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof
         parameters['all results'][slabel][qlabel]['heat of formation basis'] = hfset
-        io.write_file(hftxt,formula + '.hofk')
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
@@ -640,6 +697,7 @@ def main(arg_update={}):
     if runthermo: 
         logging.info("QTC: Number of species       = {0}".format(len(mylist)))
         for s in mylist:
+            s = qc.get_slabel(s)
             formula = ob.get_formula(s)
             _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['reference'].split(','))
             for basismol in basismolecules:
@@ -694,15 +752,6 @@ def main(arg_update={}):
                     logging.info('\n' + 100*'*' + '\n')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)
-                    tmpxyz = parameters['smilesdir'] + '/' +  parameters['optdir'] + '/' +  ob.get_formula(s) + '.xyz'
-                    if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
-                        try:
-                            x2z_out = qc.run_x2z(tmpxyz, parameters['x2z'])
-                            parameters['nallrotor']= qc.get_x2z_nrotor(x2z_out)
-                            parameters['nmethyl'] = qc.get_x2z_nmethyl(x2z_out)
-                            parameters['nrotor']  = parameters['nallrotor'] - parameters['nmethyl']
-                        except:
-                            logging.error('x2z failed for {}'.format(s))
         if runthermo:
             logging.info('\n' + 120*'#' + '\n')
             logging.info("Starting thermo calculations")
@@ -729,15 +778,6 @@ def main(arg_update={}):
                     logging.info('\n' + 50*'-' + '\n')
                     parameters = qc.parse_qckeyword(parameters, calcindex=i)
                     run(s)            
-                    tmpxyz = parameters['smilesdir'] + '/' +  parameters['optdir'] + '/' +  ob.get_formula(s) + '.xyz'
-                    if parameters['natom'] > 1 and io.check_exe(parameters['x2z']):
-                        try:
-                            x2z_out = qc.run_x2z(tmpxyz, parameters['x2z'])
-                            parameters['nallrotor']= qc.get_x2z_nrotor(x2z_out)
-                            parameters['nmethyl'] = qc.get_x2z_nmethyl(x2z_out)
-                            parameters['nrotor']  = parameters['nallrotor'] - parameters['nmethyl']
-                        except:
-                            logging.error('x2z failed for {}'.format(s))
     else:
         logging.info("You need to specify qckeyword with -k to run calculations")
     end = timer()
