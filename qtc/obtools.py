@@ -178,11 +178,15 @@ def get_ent(s):
     Return 1 if there is no enantiomer and 2 if there is based on 
     @ sign appearing in the smiles
     """
-    ent = 1.
+    sites = 0
+
     xyz = get_xyz(s)
     s2  = get_smiles(xyz)
-    if '@' in s2:
-        ent = 2.
+    frags = s2.split('[')
+    for frag in frags:
+        if '@' in frag:
+            sites += 1
+    ent = 2.**sites
     return ent
 
 def get_isomers_old(s):
