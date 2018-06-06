@@ -421,6 +421,26 @@ def run(s):
                     logging.error('Cannot find xyz, optimization failed')
                     parameters['break'] = True
                     runthermo = False
+            if parameters['bac']:
+                x2zinp = ''
+                if io.check_file(formula + '.xyz') :
+                    x2zinp = (formula + '.xyz')
+                elif 'xyz' in parameters['results'] and natom > 1:
+                    x2zinp = parameters['results']['xyz']
+                logging.info('Running x2z for BAC bonds')
+                if x2zinp:
+                    try:
+                        x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
+                        bonds =  qc.get_x2z_bonds(x2zout)
+                        logging.info('Bonds found = {}'.format(bonds))
+                    except:
+                        logging.error('x2z run failed, no bonds will be corrected')
+                bac  = qc.get_bac(parameters, bonds)
+                bondstr = ''
+                for key in bonds:
+                    bondstr += '{} x{}\n'.format(key, bonds[key])
+                io.write_file('{:.3f}\n{}'.format(bac, bondstr), formula + '.bac')
+                parameters['all results'][slabel][qlabel]['bac'] = bac                   
 ############################ BLUES specific
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
                 RPHt, geolines = parameters['results']['RPHt input'].split('geometry')
@@ -543,23 +563,8 @@ def run(s):
             hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         io.write_file(hftxt,formula + '.hofk')
         if parameters['bac']:
-            if bonds:
-                x2zinp = ''
-                if io.check_file(formula + '.xyz') :
-                    x2zinp = (formula + '.xyz')
-                elif 'xyz' in parameters['results'] and natom > 1:
-                    x2zinp = parameters['results']['xyz']
-                logging.info('Running x2z for BAC bonds')
-                if x2zinp:
-                    try:
-                        x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
-                        bonds =  qc.get_x2z_bonds(x2zout)
-                        logging.info('Bonds found = {}'.format(bonds))
-                    except:
-                        logging.error('x2z run failed, no bonds will be corrected')
-            bac  = qc.get_bac(parameters, bonds)
-            hof +=  bac
-            io.write_file(str(bac),formula + '.BAChofk')
+            #put correction to HOF here
+            bac = 0
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof

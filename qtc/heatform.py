@@ -650,9 +650,8 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm,dbdir='./'):
     E        - 0K heat of formation of molecule
    
     """
-    kj2au = 0.000380879803
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * kj2au
+        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * ut.kj2au
         e    =  find_E(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
         E   -=  coefflist[i] * e
 
@@ -676,6 +675,8 @@ def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
     for i,bas in enumerate(basis):
         E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * ut.kj2au
         e    =  E_QTC(bas, opt, en, freq, parameters)
+        if parameters['bac']:
+            e += E_BAC(bas, parameters) / ut.au2kcal
         E   -=  coefflist[i] * e
     return E
     
@@ -791,6 +792,26 @@ def comp_coefficients(molform, basis='auto'):
     clist =  comp_coeff(mat,stoich)
     return clist, basis, basprint
 
+def E_BAC(bas, parameters):
+    ### Check dictionary ###
+    from testdb import db
+    import qctools as qc
+    import iotools as io
+    slabel = qc.get_slabel(bas)
+    calcindex = parameters['calcindex']
+    qckeyword = parameters['qckeyword']
+    qlabel = qc.get_qlabel(qckeyword, calcindex)
+    bac = 0.
+    if 'bac' in parameters['all results'][slabel][qlabel]:
+        bac = parameters['all results'][slabel][qlabel]['bac']
+    if bac:
+        logging.debug('BAC for {0} {1} = {2} kcal/mol'.format(slabel, qlabel,bac))
+    else: 
+        logging.error('BAC not found for {0} {1}'.format(slabel, qlabel))
+    return  float(bac)
+
+
+
 def E_QTC(bas, opt, en, freq, parameters):
     ### Check dictionary ###
     from testdb import db
@@ -800,10 +821,9 @@ def E_QTC(bas, opt, en, freq, parameters):
     slabel = qc.get_slabel(bas)
     parameters['natom'] = natom
     calcindex = parameters['calcindex']
- #   parameters = qc.parse_qckeyword(parameters, calcindex)
     qckeyword = parameters['qckeyword']
     qlabel = qc.get_qlabel(qckeyword, calcindex)
-    en, zpve = 0., 0.
+    en, zpve, bac = 0., 0., 0.
     if 'energy' in parameters['all results'][slabel][qlabel]:
         en = parameters['all results'][slabel][qlabel]['energy']
     if en:
@@ -876,6 +896,8 @@ def main_keyword(s,parameters):
     params['suppress_printing']=True
     params['qckeyword'] = ','.join(qckeys[:index+1])
     E =  E_QTC(s, optlevel, enlevel, freqlevel, params)
+    if parameters['bac']:
+        E += E_BAC(s, params) / ut.au2kcal
     E =  E_hfbasis_QTC(molform, basis, clist, E, optlevel, enlevel, freqlevel, params)
     hf0k = AU_to_kcal(E)
     #parameters['runthermo']=True
