@@ -295,7 +295,7 @@ def run(s):
     available_packages=['nwchem', 'molpro', 'mopac', 'gaussian','qchem']
     runfile = 'RUNNING.tmp'
     if io.check_file(runfile):
-        if overwrite:
+        if over:
             runqc = True
             logging.info('Overwriting the calculation...')
         elif task is 'composite':
@@ -405,7 +405,11 @@ def run(s):
             if 'xyz' in results and natom > 1:
                 final_xyz  = parameters['results']['xyz']
                 parameters['xyzpath']=io.get_path(xyzfilename)
-                inchifinal = ob.get_inchi(final_xyz)
+                try:
+                    inchifinal = ob.get_inchi(final_xyz)
+                except Exception as e:
+                    logging.error('Exception {}. Final xyz can not be converted to INCHI -- Using original inchi'.format(e))       
+                    inchifinal = inchi 
                 logging.info('Final xyz = \n {}'.format(final_xyz))
                 if inchi.strip() == inchifinal.strip():
                     parameters['xyz'] = final_xyz

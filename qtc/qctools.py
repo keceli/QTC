@@ -23,7 +23,7 @@ def sort_species_list(slist, printinfo=False, byMass=False):
     """
     tmplist= []
     for s in slist:
-    #    s = get_slabel(s)
+        # s = get_slabel(s)
         isomers = ob.get_isomers(s)
         if len(isomers) > 1:
             logging.info('{} isomers found for {} : {}'.format(len(isomers),s,isomers))
@@ -298,6 +298,10 @@ def get_input(x, template, parameters):
                 task = ''
             elif task.lower().startswith('freq'):
                 task = '{frequencies;print,hessian}'
+        elif package == 'qchem':
+            zmat = ob.get_zmat(mol,True)
+            if task == 'energy':
+                task = 'sp'
     if nopen == 0:
         scftype = 'RHF'
         rhftype = 'RHF'
@@ -523,7 +527,10 @@ def parse_qckeyword(parameters, calcindex=0):
             parameters['anharmonic'] = True
         elif task.startswith('sp') or task.startswith('single') or task.startswith('ene'):
             task = 'energy'
-            qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
+            if method == 'given':
+                qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,package]))
+            else:
+                qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
         else:
             logging.info('ERROR! Invalid qckeyword task: {0}'.format(task))
             return      
@@ -601,6 +608,9 @@ def get_xyz(out,package=None):
         xyz = pa.gaussian_xyz(out)
     elif package == 'molpro':
         xyz = pa.molpro_xyz(out)
+    elif package == 'qchem':
+        xyz = pa.qchem_xyz(out)
+    return xyz
     return xyz
         
         
@@ -661,6 +671,17 @@ def parse_output(s, formula, write=False):
         freqs          = list(pa.molpro_freqs(s))
         if energy:
             parsed = True
+    elif package == 'qchem':
+        energy = pa.qchem_energy(s)
+        method = pa.qchem_method(s)
+        zpve           = pa.qchem_zpve(s)
+        xyz            = pa.qchem_xyz(s)
+        geo            = pa.qchem_geo(s)
+        calculation    = pa.qchem_calc(s)
+        basis          = pa.qchem_basisset(s)
+        freqs          = list(pa.qchem_freqs(s))
+        if energy:
+            parsed = True
     elif package == 'gaussian':
 	    method, energy = pa.gaussian_energy(s)
 	    zpve           = pa.gaussian_zpve(s)
@@ -713,7 +734,12 @@ def parse_output(s, formula, write=False):
                 parsed = False
             if io.check_dir('me_files', 1):
                 try:
-                    xyz, freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
+                    xyznew, freqs, pfreqs, zpve, messhindered, RPHtinput = parse_me_files()
+                    try:
+                        ob.get_mol(xyznew)
+                        xyz = xyznew
+                    except:
+                        logging.error('parse_output: torsscan optimization did not converge')
                 except:
                     logging.error('parse_output: Cannot parse me_files {}'.format(io.get_path('me_files')))
         elif io.check_file(xyzfile):
@@ -764,6 +790,9 @@ def parse_output(s, formula, write=False):
                'zpve': zpve,
                'azpve': azpve,
                'xmat': xmat,
+               'rotconsts': rotconsts,
+               'vibrots': vibrots,
+               'rotdists': rotdists,
                'hindered potential': messhindered,
                'RPHt input': RPHtinput,
                'Hessian'   : hessian,
@@ -1051,7 +1080,7 @@ def run(s, parameters, mult=None, trial=0):
     if runqc:
         io.write_file(inptext, inpfile)
         pwd = io.pwd()
-        if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt' ]:
+        if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt','qchem' ]:
             if package.startswith('nwc'):
                 io.mkdir(tmpdir)
                 if parameters['machinefile']:
@@ -1060,6 +1089,9 @@ def run(s, parameters, mult=None, trial=0):
                     parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(qcnproc)
             elif package.startswith('molp'):
                 parameters['qcexe'] = '{0} -n {1} -d {2}'.format(parameters['molpro'],qcnproc,parameters['tmpdir'])
+            elif package.startswith('qch'):
+                #parameters['qcexe'] = '{0} -np {1}'.format(parameters['qchem'],qcnproc)
+                parameters['qcexe'] = '{0}'.format(parameters['qchem'])
             elif package.startswith('mopac'):
                 parameters['qcexe'] = parameters['mopac']
             elif task.startswith('tors'):
@@ -1148,6 +1180,22 @@ def run_composite(parameters):
         energy = 0.
         logging.error('Problem in given composite formula: {}'.format(compositeformula))
     return energy
+
+def use_given_hof(parameters):
+    """
+    Prints success of hof read from <smiles>_e<hof>
+    """
+    method = parameters['qcpackage'] 
+    slabel  = parameters['slabel']
+    hof = None
+    if parameters['hof']:
+        hof = parameters['hof'] 
+    if hof:
+        logging.info('Given HoF = {} kcal\n'.format(hof))
+    else:
+        hof = 0.
+        logging.error('Problem in given energy: {}'.format(hof))
+    return hof
 
 
 def run_qcscript(qcscriptpath, inputpath, geopath, multiplicity):
@@ -1297,20 +1345,70 @@ Linear bonds:
     out = out.lower()
     lines = out.splitlines()
     sym = 1
-    ent = 1.
     key = 'rotational symmetry number ='
-    #entkey = 'has enantiomer'
     for line in lines:
         if line.startswith(key):
             try:
                 sym = int(line.split()[-1])
             except:
                 logging.error('Failed in parsing sym. number in x2z output {}'.format(out))
-     #   if line.startswith(entkey):
-     #       if 'yes' in line:
-     #           ent = 2.
-    return sym / ent  
+    return sym
 
+def get_x2z_bonds(out):
+    """
+    Gets bonds from x2z connectivity matrix
+    """
+    if io.check_file(out):
+        out = io.read_file(out)
+    out = out.lower().replace('\n\n','\n')
+    lines = out.splitlines()
+    mat = []
+    startkey = 'molecular structure:'
+    endkey = 'z-matrix atom order:'
+    save = False
+    for line in lines:
+        if line.startswith(endkey):
+            save = False
+        if save:
+            mat.append(line)
+        if line.startswith(startkey):
+            save = True
+    atoms = get_atom_list(mat[0])
+    
+    bonds = {}
+    for i, line in enumerate(mat[1:]):
+        if line == '':
+            break
+        for j, typ in enumerate(line.split()[1:-1]):
+            if int(typ) > 0:
+                bonded = sorted([atoms[i], atoms[j]])
+                bond = '{0}-{2}({1})'.format(bonded[0],typ,bonded[1])
+                if bond in bonds:
+                    bonds[bond] += 1
+                else:
+                    bonds[bond]  = 1
+    return bonds
+
+def get_atom_list(line):
+    """
+    splits the number from the atom 
+    a\\a   o1   c2   c3   c4   o5   h6   h7   h8   h9
+    -> [O, C, C, C, O, H, H, H, H]
+    """
+    line = line.split()[1:]
+    atoms =  []
+    for a in line:
+        atom = ''
+        num  = ''
+        for b in a:
+           if b.isdigit():
+               num += b
+           else:
+               atom += b
+        atoms.append(atom.capitalize())
+    return atoms
+ 
+   
 
 def get_x2z_info(out):
     """
@@ -1330,6 +1428,7 @@ def get_x2z_info(out):
     x2zinfo['nrotor'] = 0
     x2zinfo['nresonance'] = 0
     x2zinfo['nmethyl'] = get_x2z_nmethyl(out)
+    x2zinfo['bonds'] = get_x2z_bonds(out)
     for line in lines:
         if 'molecule is' in line:
             x2zinfo['moltype'] = line.replace('molecule is', '').strip()
@@ -1359,6 +1458,26 @@ def get_x2z_info(out):
                     x2zinfo['nresonance'] = int(item)
     return x2zinfo                
 
+
+def get_bac(parameters, bonds):
+    """
+    Given a set of bonds, calculate the bond additivity correction
+    using a  template specified in parameters
+    """
+    bacfile = parameters['qctemplate'] +'/bac.txt'
+    bacfile = io.read_file(bacfile).splitlines()
+    bacdic  = {}
+    for line in bacfile:
+        line = line.split()
+        if len(line) > 1:
+            bacdic[line[0]] = float(line[1])
+    correction = 0.
+    for key in bonds:
+        if key in bacdic:
+            correction += bonds[key] * bacdic[key] 
+        else:
+            print '{} bond has no correction'.format(key)
+    return correction
 
 def get_ob_info(s):
     """
@@ -1414,6 +1533,8 @@ def check_output(s):
         completed = True
     elif "Variable memory released" in s:
         completed = True
+    elif "Thank you very much for using Q-Chem" in s:
+        completed = True
     elif io.check_file('me_files/reac1_fr.me'):#TorsScan/ES2KTP
         completed = True
     elif io.check_file('geom.xyz'):#Torsopt/ES2KTP
@@ -1463,6 +1584,8 @@ def get_output_package(out,filename=False):
         p = 'molpro'
     elif "Task: Submitting EStokTP job" in out:
         p = 'torsscan'
+    elif "Thank you very much for using Q-Chem" in out:
+        p = 'qchem'
     else:
         p = None
     return p
@@ -1477,6 +1600,8 @@ def get_package(templatename):
         p = 'extrapolation'
     elif 'nwchem' in templatename or 'nw' in suffix:
         p = 'nwchem'
+    elif 'qchem' in templatename or 'qc' in suffix:
+        p = 'qchem'
     elif 'gau' in templatename or 'g09' in suffix or 'com' in suffix or 'g03' in suffix:
         p = 'gaussian'
     elif 'mopac' in templatename or 'mop' in suffix:
