@@ -443,26 +443,28 @@ def run(s):
                 parameters['all results'][slabel][qlabel]['bac'] = bac                   
 ############################ BLUES specific
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
-                RPHt, geolines = parameters['results']['RPHt input'].split('geometry')
-                geolines, gradlines = geolines.split('gradient')
-                xyz = parameters['results']['xyz'].splitlines()[2:]
-                RPHt += 'geometry\n'
-                for i, line in enumerate( geolines.splitlines()[1:]):
-                    RPHt += '\t' + '\t'.join(line.split()[0:3]) + '\t' + '\t'.join(xyz[i].split()[1:]) + '\n'
-                RPHt += 'gradient' +  gradlines.split('Hessian')[0] + 'Hessian\n' + parameters['results']['Hessian']
-                parameters['results']['RPHtinput'] = RPHt
                 RPHtexe = '/lcrc/project/PACC/codes/EStokTP/exe/RPHt.exe'
-                RPHtfile = 'RPHt_input_data.dat'
+                if not task.startswith('tors') and not task.startswith('md'):
+                    RPHt, geolines = parameters['results']['RPHt input'].split('geometry')
+                    geolines, gradlines = geolines.split('gradient')
+                    xyz = io.read_file(formula + '_initial.xyz').splitlines()[2:]
+                    RPHt += 'geometry\n'
+                    for i, line in enumerate( geolines.splitlines()[1:]):
+                        RPHt += '\t' + '\t'.join(line.split()[0:3]) + '\t' + '\t'.join(xyz[i].split()[1:]) + '\n'
+                    RPHt += 'gradient' +  gradlines.split('Hessian')[0] + 'Hessian\n' + parameters['results']['Hessian']
+                    parameters['results']['RPHt input'] = RPHt
+                    RPHtfile = 'RPHt_input_data.dat'
                 if io.check_file(RPHtexe):
-                    io.write_file(RPHt,RPHtfile)
-                    io.execute(RPHtexe  + ' ' + RPHtfile)
+                    if not task.startswith('tors') and not task.startswith('md'):
+                        io.write_file(RPHt,RPHtfile)
+                        io.execute(RPHtexe  + ' ' + RPHtfile)
                     #if io.check_file( 'hrproj_freq.dat'):
                     if io.check_file( 'me_files/reac1_fr.me'):
                         out = io.read_file('me_files/reac1_fr.me', aslines=False)
                         pfreqs = qc.get_mess_frequencies(out)
                         parameters['results']['pfreqs'] = pfreqs
                     elif io.check_file( 'hrproj_freq.dat'):
-                        pfreqs = io.read_file('hrproj_freq.dat').split('0.0')[0].split('\n')[:-1]
+                        pfreqs = io.read_file('hrproj_freq.dat').split(' 0.00')[0].split('\n')[:-1]
                         parameters['results']['pfreqs'] = pfreqs
                     else:
                         logging.warning('hrproj_freq.dat file not found')
@@ -482,7 +484,7 @@ def run(s):
     else:
         parameters['all results'][slabel][qlabel]['zpve'] = 0.0
     parameters['all results'][slabel][qlabel]['path'] = rundir   
-    if 'hindered potential' in parameters['results'] and task.startswith('tors'):
+    if 'hindered potential' in parameters['results'] and (task.startswith('tors') or task.startswith('md')):
         tc.get_hindered_potential(parameters['results']['hindered potential'],report=parameters['debug'])
         
     #parameters['all results'][slabel]['mol_index'] = parameters['mol_index']  
@@ -562,9 +564,6 @@ def run(s):
             hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         io.write_file(hftxt,formula + '.hofk')
-        if parameters['bac']:
-            #put correction to HOF here
-            bac = 0
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof

@@ -35,16 +35,17 @@ def get_stoichometry(formula,element):
     """
     formula = formula.upper()
     element = element.upper()
-    length  = len(element)
-    idx     = formula.find(element)
     n = 0
-    while idx > -1:
-        try:
-            n  += int(formula[idx+length])
-            idx = formula.find(element,idx+length)
-        except:
-            n += 1
-            idx = formula.find(element,idx+1)
+    if len(formula.split(element)) > 1:
+          formula = formula.split(element)[1]
+          formula = formula.split('C')[0]
+          formula = formula.split('H')[0]
+          formula = formula.split('N')[0]
+          formula = formula.split('O')[0]
+          if len(formula) > 0:
+              n =  int(formula)
+          else:
+              n =  1
     return n
 
 
@@ -173,12 +174,15 @@ def get_coefficients(c97text):
     lines = c97text.splitlines()
     las  = [0.] * 7
     has  = [0.] * 7
-    las[0:5] = parse_line16(lines[6][0:80])
-    las[5:7] = parse_line16(lines[7][48:80])
-    has[0:5] = parse_line16(lines[9][0:80])
-    has[5:7] = parse_line16(lines[10][48:80])
-
-    return las, has
+    msg  = None
+    if len (lines) > 1:
+        las[0:5] = parse_line16(lines[6][0:80])
+        las[5:7] = parse_line16(lines[7][48:80])
+        has[0:5] = parse_line16(lines[9][0:80])
+        has[5:7] = parse_line16(lines[10][48:80])
+    else:
+        msg = 'pacc has failed'
+    return las, has, msg
 
 
 def get_coefficients_str(las,has):
@@ -338,8 +342,8 @@ def write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, file
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
     comments   = '! {} \t {}\n'.format(slabel, qlabel)
-    comments += '! deltaH(0) {} kcal/mol\n'.format(hof)
-    comments += '! deltaH(298) {} kcal/mol\n'.format(hof298)
+    comments += '! deltaH(0) {:.2f} kcal/mol\n'.format(hof)
+    comments += '! deltaH(298) {:.2f} kcal/mol\n'.format(hof298)
     nH = get_stoichometry(formula, 'H')
     nC = get_stoichometry(formula, 'C')
     nN = get_stoichometry(formula, 'N')
@@ -541,9 +545,10 @@ def get_messpf_input(mol,parameters):
     freqs = []
     xmat = []
     rotconsts = []
+    posfreqs = []
     zpe = 0
     rotdists = ''
-    vibrots = ''
+    vibrots = None
     emax = 500 #kcal/mol, not sure
     if 'azpve' in results:
         zpve = results['azpve']
@@ -555,16 +560,26 @@ def get_messpf_input(mol,parameters):
         freqs = results['pfreqs']
     elif 'freqs' in results:
         freqs = results['freqs']    
+        if len(freqs) > 0:
+            for freq in freqs:
+                if float(freq) > 0:
+                    posfreqs.append(freq)
+            if len(posfreqs) < len(freqs):
+                logging.warning('Imaginary frequencies are ignored')
+            results['freqs'] = posfreqs
+            freqs = posfreqs
     if 'rotconsts' in results:
         rotconsts = results['rotconsts']  
     if 'vibrots' in results:
         vibrots = results['vibrots']    
+    else:
+        vibrots = None
     if 'rotdists' in results:
-        rotdists = results['rotdists']   
+        rotdists = results['rotdists']  
     if 'xmat' in results:
         xmat = np.asarray(results['xmat'])
         if 'pfreqs' in results:
-            freqs, fill, xmat, fill2, fill3 = anharm.main(results)
+            freqs, fill, xmat, fill2, fill3, vibrots = anharm.main(results, vibrots)
         elif 'afreqs' in results:
             freqs = results['afreqs']
         #xmat = anharm.mess_x(xmat)
@@ -611,32 +626,30 @@ def get_messpf_input(mol,parameters):
             inp += hindlines  ###   END RRHO
         #freqs
         if len(freqs) > 0:
-            posfreqs = []
-            for freq in freqs:
-                if float(freq) > 0:
-                    posfreqs.append(freq)
-            if len(posfreqs) < len(freqs):
-                logging.warning('Imaginary frequencies are ignored')
-            inp += '      Frequencies[1/cm] {0} !{1}\n'.format(len(posfreqs),label)
-            inp += '      ' + ' '.join([str(x) for x in posfreqs]) + '\n'
+            inp += '      Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
+            inp += '      ' + ' '.join([str(x) for x in freqs]) + '\n'
         #anharmonics
         if len(xmat) > 0:
             inp += '      Anharmonicities[1/cm]\n'
             for i in range( len(xmat)):
-                inp += '\t\t' + ' '.join([str(xmat[i,j]) for j in range(i+1)]) + '\n'
-        #if len(rotconsts) > 0:
-        #    inp += '      RotationalConstants[1/cm] '
-        #    inp += ' '.join(rotconsts) + '\n'
-        #if len(vibrots) > 0:
-        #    inp += '      RovibrationalCouplings[1/cm]\n'
-        #    inp += '\t   ' + '\t   '.join(vibrots.splitlines(True)) + '\n'
-        #if len(rotdists) > 0:
-        #    inp += '      RotationalDistortion[1/cm]\n'
-        #    inp += '\t   ' + '\t   '.join(rotdists.splitlines(True)) + '\n'
-        #    inp += '      End\n' ###   END CORE
+                inp += '\t\t' + ' '.join([str(xmat[i][j]) for j in range(i+1)]) + '\n'
         if not coreIsMd:
+            if len(rotconsts) > 0:
+                inp += '      RotationalConstants[1/cm] '
+                inp += ' '.join(rotconsts) + '\n'
+            if vibrots:
+                vibrots = vibrots.splitlines(True)
+                if len(freqs) == len(vibrots):
+                    inp += '      RovibrationalCouplings[1/cm]\n'
+                    inp += '\t   ' + '\t   '.join(vibrots) + '\n'
+                else:
+                    logging.warning("Rotational Couplings length does not match freqs -- removed from pf.inp")
+            if len(rotdists) > 0:
+                inp += '      RotationalDistortion[1/cm]\n'
+                inp += '\t   ' + '\t   '.join(rotdists.splitlines(True)) + '\n'
+                inp += '      End\n' ###   END CORE
             inp += hindlines  ###   END RRHO
-        if not 'hindered potential' in results: 
+        if not 'hindered potential' in results:
             inp += '   End\n'
         inp += 'End\n' ###   END CORE
     return inp
@@ -814,7 +827,9 @@ def write_chemkin_polynomial(mol, parameters):
     c97file = formula + '.c97'
     if io.check_file(c97file):
         c97text  = io.read_file(c97file)
-        las, has = get_coefficients(c97text)
+        las, has, msg = get_coefficients(c97text)
+        if msg:
+            logging.info(msg)
         logging.debug('Converting to chemkin format.')
         chemkinfile = formula + '.ckin'
         logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))    

@@ -1,4 +1,4 @@
-Restart at: 0
+Restart at: 3
 (0 - beginning, 1 - estoktp level 0 successfully completed
  2 - estoktp level 1 completed, 3 - estoktp 1D completed, 
  4 - estoktp MD completed, 5 - just run thermo)
@@ -20,32 +20,32 @@ Use QTC xyz: QTC(XYZPATH)
              logfilename.log - makes torsscan parse out xyz from logfile in cwd
              True - xyz in testchem form in cwd
 
-Use xyz as (start-starting geometry, 0-level0 geometry): start
+Use xyz as (start-starting geometry, 0-level0 geometry): 0
 
 ==============
 BLUES options   
 ==============
 Run on node (0 if on login OR on a node, d to debug): 0
 No. of cores high: QTC(NPROC)
-No. of cores low: QTC(NPROC)
+No. of cores  low:  QTC(NPROC)
 Memory (MW): QTC(CORE_MEMORY_MW)
+
 
 ================
 EStoKTP options
 ================
-Calculate no. MC points (A,B,C,D): 6,2,3,100
 No. MC  sampling points: QTC(NMC)
 Scan interval (degrees): 360
 No. of steps on the PES: 12
-Multidim scan (2 or 3D): auto
+Multidim scan (2 or 3D): 2
 
 ------------------------------------------------ 
    Module      :    Program    :      Theory
 ------------------------------------------------
-Opt            :  QTC(PACKAGE) : QTC(METHOD)/QTC(BASIS)
-Opt_1          :               :
-1dTau          :               :
-MdTau          :               :
+Opt            :               : 
+Opt_1          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)
+1dTau          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)  
+MdTau          : QTC(PACKAGE)  : QTC(METHOD)/QTC(BASIS)  
 Symm           :               :
 HL             :               :
 Irc            :               :
@@ -57,7 +57,7 @@ THERMO options
 Perform all thermochemistry? (default true): False
 Precomputed heat of formation (hf0kreac1, hf0kreac2, hf0kTS1, ... in kcal): QTC(HOF)
 Basis for heat of formation: QTC(REFERENCE) 
-Anharmonic (0 for level0 theory, 1 for level1 theory, false for off, or prog/meth/bas): QTC(ANHARMLOC)
+Anharmonic (0 for level0 theory, 1 for level1 theory, false for off, or prog/meth/bas): false
 Overwrite anharmonic: false
 Parse all: false
 

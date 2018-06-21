@@ -191,7 +191,9 @@ def get_input(x, template, parameters):
     formula = parameters['formula']
     natom = parameters['natom']
     geo = '\n'.join(xyz.splitlines()[2:natom+2]) 
-    zmat = ob.get_zmat(mol)
+    #zmat = ob.get_zmat(mol)
+    x2zout = run_x2z(xyz, parameters['x2z'])
+    zmat =  get_x2z_zmat(x2zout)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     smiles = ob.get_smiles(mol)
@@ -228,7 +230,7 @@ def get_input(x, template, parameters):
             pass # Ignore comments
         else:
             inp += line + '\n'
-    if task.startswith('tors'):
+    if task.startswith('tors') or task.startswith('md'):
         if io.check_file(xyzpath):
             inp = inp.replace("QTC(XYZPATH)",xyzpath)
         else:
@@ -314,7 +316,7 @@ def get_input(x, template, parameters):
     inp = inp.replace("QTC(UNIQUENAME)", uniquename)
     inp = inp.replace("QTC(SMILESNAME)", smilesname)
     inp = inp.replace("QTC(TMPDIR)", tmpdir)
-    if task.startswith('tors'):
+    if task.startswith('tors') or task.startswith('md'):
         inp = inp.replace("QTC(SMILES)", slabel)
     else:
         inp = inp.replace("QTC(SMILES)", smiles)
@@ -364,6 +366,14 @@ def fix_qckeyword(keyword):
     keyword = keyword.replace('/sto3g','/sto-3g')
     keyword = keyword.replace('631','6-31')
     keyword = keyword.replace('torscan/','torsscan/')
+    if 'md' in keyword and not 'torsscan' in keyword:
+        keywordstr = []
+        keyword =  keyword.split(',')
+        for key in keyword:
+           if 'md' in key:
+               keywordstr.append( key.replace('md','torsscan'))
+           keywordstr.append(key)
+        keyword = ','.join(keywordstr)
     return keyword
 
 def get_slabels_from_json(j):
@@ -470,6 +480,13 @@ def parse_qckeyword(parameters, calcindex=0):
         elif task.startswith('torsscan'):
             logging.info('Replacing Task = {} with Task = optfreq, since there are no torsions.'.format(task))
             task = 'optfreq'
+        elif task.startswith('md'):
+            logging.info('Replacing Task = {} with Task = optfreq, since there are no torsions.'.format(task))
+            task = 'optfreq'
+    elif parameters['nallrotor'] < 2:
+        if task.startswith('md'):
+            logging.info('Replacing Task = {} with Task = torsscan, since there is only one torsion.'.format(task))
+            task = 'torsscan'
     if task.startswith('ext') or task.startswith('cbs') or task.startswith('comp'):
         task = 'composite'
         if len(tokens) > 2:
@@ -513,7 +530,7 @@ def parse_qckeyword(parameters, calcindex=0):
         elif 'opt' in task:
             qcdirectory = io.fix_path(io.join_path(*['opt',method,basis,package]))
             parameters['optdir'] = qcdirectory
-        elif task == 'torsscan':
+        elif task == 'torsscan' or task == 'md':
             qcdirectory = io.fix_path(io.join_path(*[optdir,task,method,basis,package]))
             parameters['freqdir'] = qcdirectory
         elif task.startswith('freq') or task.startswith('harm') or task.startswith('hrm'):
@@ -715,7 +732,7 @@ def parse_output(s, formula, write=False):
         zpve = get_mopac_zpe(s)
         if energy:
             parsed = True
-    elif package.startswith('tors'):
+    elif package.startswith('tors') or package.startswith('md'):
         #optlevel, method, energy = get_torsscan_info(s)
         outfile = 'geoms/reac1_l1.log'
         outfile2 = 'geom.log' #  For torsopt
@@ -1037,7 +1054,12 @@ def run(s, parameters, mult=None, trial=0):
             if task.startswith('tors'):
                 if io.check_file('geom.xyz'):
                     msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path('geom.xyz'))
-                    runqc = False                
+                    runqc = False               
+            elif task.startswith('md'):
+                if io.check_file('me_files/reac1_hr.me'):
+                    if 'Quantum' in io.read_file('me_files/reac1_hr.me'):
+                        msg = 'Skipping calculation, found "{0}"\n'.format(io.get_path('me_files/reac1_hr.me'))
+                        runqc = False               
             else:
                 if check_output(out):
                     logging.info('Successful calculation found "{0}"\n'.format(io.get_path(outfile)))
@@ -1056,6 +1078,10 @@ def run(s, parameters, mult=None, trial=0):
     if task.startswith('tors'):
         package = 'torsscan'
         templatename = task + '_template' + '.txt'
+        templatefile = io.join_path(*[tempdir,templatename])
+    elif task.startswith('md'):
+        package = 'torsscan'
+        templatename =  'md_template.txt'
         templatefile = io.join_path(*[tempdir,templatename])
     else:
         if trial > 0:
@@ -1078,9 +1104,21 @@ def run(s, parameters, mult=None, trial=0):
             runqc = False
         recover = False
     if runqc:
-        io.write_file(inptext, inpfile)
+       
         pwd = io.pwd()
-        if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt','qchem' ]:
+        if task.startswith('md'):
+            import shutil
+            ddir = pwd.split('md')
+            if len(ddir) > 2:
+                ddir = 'md'.join(ddir[:-1]) + 'torsscan' + ddir[-1]
+            else:
+                ddir = ddir[0] + 'torsscan' + ddir[1]
+            shutil.rmtree(pwd)
+            shutil.copytree(ddir, pwd)
+            io.cd(pwd)
+        inpfile = io.join_path(*[pwd, inpfile])
+        io.write_file(inptext, inpfile)
+        if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan','torsopt','qchem','md' ]:
             if package.startswith('nwc'):
                 io.mkdir(tmpdir)
                 if parameters['machinefile']:
@@ -1094,12 +1132,12 @@ def run(s, parameters, mult=None, trial=0):
                 parameters['qcexe'] = '{0}'.format(parameters['qchem'])
             elif package.startswith('mopac'):
                 parameters['qcexe'] = parameters['mopac']
-            elif task.startswith('tors'):
+            elif task.startswith('tors') or task.startswith('md'):
                 parameters['qcexe'] = parameters['torsscan']
             else:
                 parameters['qcexe'] = parameters[package]
         if io.check_file(inpfile, timeout=1):
-            if package in  ['nwchem', 'torsscan','torsopt']:
+            if package in  ['nwchem', 'torsscan','torsopt', 'md']:
                 command = parameters['qcexe'] + ' ' + inpfile
                 if package == 'nwchem':
                     io.mkdir('tmp_nwchem')
@@ -1354,6 +1392,40 @@ Linear bonds:
                 logging.error('Failed in parsing sym. number in x2z output {}'.format(out))
     return sym
 
+def get_x2z_zmat(out):
+    if io.check_file(out):
+        out = io.read_file(out)
+    zmat = ''
+    atoms = []
+    measure = []
+    props, lines = out.split('Z-Matrix:\n')
+    #zmatrix connectivity
+    lines = lines.split('\n')
+    for i,line in enumerate(lines):
+        if line == '':
+            break
+        atoms.append('  '.join(line.rstrip('\n').replace(' ','').split(',')))     #Main part of ZMAT
+    zmat += '\n'.join(atoms)
+    #zmatrix parameters
+    for j in range(i+1,len(lines)):
+        if lines[j]:
+            if 'const' in lines[j].lower() or 'Rot' in lines[j] or 'Beta' in lines[j]:
+                break
+        measure.extend(lines[j].replace('=',' ').rstrip('\n').split())   #Gets parameters
+    measure = np.array(measure)                     
+    if  (len(measure)%2 != 0):
+        measure = measure[:-1]
+    measure = measure.reshape( len(measure)/2, 2)      #Puts measurements into two columns
+    for angle in measure:
+        if 'R' in angle[0]:
+            angle[1] = str(float(angle[1]) * 0.529177) #bohr to angstrom 
+        angle[1] = '{:.4f}'.format(float(angle[1]))
+    measure = measure.tolist()
+    for i, meas in enumerate(measure): 
+        measure[i] = ' = '.join(measure[i])    
+    zmat += '\nVariables:\n' + '\n'.join(measure) 
+    return zmat
+
 def get_x2z_bonds(out):
     """
     Gets bonds from x2z connectivity matrix
@@ -1408,7 +1480,28 @@ def get_atom_list(line):
         atoms.append(atom.capitalize())
     return atoms
  
-   
+def get_atom_stoich(line):
+    line += 'Z'
+    atoms = {}
+    atom = ''
+    num  = ''
+    newatom = False
+    for b in line:
+       if b.isdigit():
+           num += b
+       else:
+           if atom and b.lower() != b:
+               newatom = True
+           if newatom:
+               if num:
+                   atoms[atom] = float(num)
+               else:
+                   atoms[atom] = 1.
+               num = ''
+               atom = ''
+               newatom = False
+           atom += b
+    return atoms
 
 def get_x2z_info(out):
     """
@@ -1427,6 +1520,7 @@ def get_x2z_info(out):
     x2zinfo['nsym'] = -1
     x2zinfo['nrotor'] = 0
     x2zinfo['nresonance'] = 0
+    x2zinfo['zmat'] = get_x2z_zmat(out)
     x2zinfo['nmethyl'] = get_x2z_nmethyl(out)
     x2zinfo['bonds'] = get_x2z_bonds(out)
     for line in lines:
