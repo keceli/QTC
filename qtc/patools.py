@@ -153,21 +153,35 @@ def gaussian_freqs(lines):
     """
     Return harmonic frequencies.
     """
-    kw = 'Frequencies --  (.+)'
-    freqlines = re.findall(kw, lines)
+    nfreq = gaussian_nfreq(lines)
+
     freqs = []
-    k = 0
-    if len(freqlines) > 0:
-        nfreq = gaussian_nfreq(lines)
-        freqs = ['']*nfreq
-        for i in range(len(freqlines)):
-            tokens = freqlines[i].split()
-            for j in range(len(tokens)):
-                freqs[k] = tokens[j]
-                k += 1
-            if k == nfreq:
-                break
+    lines = lines.splitlines()
+    key = 'Fundamental Bands (DE w.r.t. Ground State)'
+    iline = io.get_line_number(key,lines=lines)
+    if iline > 0:
+        for i in range(nfreq):
+            iline += 1
+            line = lines[iline]
+            cols = line.split()
+            freqs.append(cols[-5])
+    else:
+        lines = '\n'.join(lines)
+        kw = 'Frequencies --  (.+)'
+        freqlines = re.findall(kw, lines)
+        freqs = []
+        k = 0
+        if len(freqlines) > 0:
+            freqs = ['']*nfreq
+            for i in range(len(freqlines)):
+                tokens = freqlines[i].split()
+                for j in range(len(tokens)):
+                    freqs[k] = tokens[j]
+                    k += 1
+                if k == nfreq:
+                    break
     return freqs
+
 def gaussian_hessian(lines):
     startkey = 'Force constants in Cartesian coordinates:'
     endkey   = 'Force constants in internal coordinates:'
@@ -276,10 +290,12 @@ def gaussian_rotconstscent(lines):
 def gaussian_rotconsts(lines):
     rot = 'Rotational constants\s*\(GHZ\):\s*([\s,\d,\.,\-]*)'     
     rot = re.findall(rot,lines)
-    if len(rot) > 1: 
+    if len(rot) > 0: 
         rot = rot[-1].split()
     ndof  = gaussian_nfreq(lines)
     if ndof < 2:
+        rot = rot[1:]
+    if abs(float(rot[0])) < 0.000001:
         rot = rot[1:]
     return rot
  
@@ -314,7 +330,7 @@ def gaussian_vibrot(lines):
            lines[i] = lines[i].split(')')[1]
        if ndof < 2:
           lines[i] = '\t'.join(lines[i].split()[:-1])
-    mat   = '\n'.join(lines)
+    mat   = '\n'.join(lines).split('---------------')[0]
     return mat
     
 ##############################################
