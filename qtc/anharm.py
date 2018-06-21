@@ -73,15 +73,20 @@ def find_hinfreqs(proj,unproj,order):
     order  -  in case the frequencies were reordered when sorting, keeps track of 
               which index of unproj corresponds to which normal mode
     """
-    for i in range(len(proj)):
-        length = len(unproj)-1
-        closeenough = 0.15
-        for k in range(len(unproj)):
-            if abs(proj[i]-unproj[k]) < unproj[k] * closeenough:
-                #proj = np.delete(proj, 0)
-                unproj = np.delete(unproj, k)
-                order = np.delete(order, k)
-                break
+    diff = len(unproj) - len(proj)
+    if diff > 0:
+        for i in range(len(proj)):
+            length = len(unproj)-1
+            closeenough = 0.02
+            for k in range(len(unproj)):
+                if (abs(proj[i]-unproj[k]) < unproj[k] * closeenough):
+                    #proj = np.delete(proj, 0)
+                    unproj = np.delete(unproj, k)
+                    order = np.delete(order, k)
+                    break
+        order = order[:diff]
+    else:
+        order = []
     modes = [mode+1 for mode in order]
     return modes
 
@@ -93,14 +98,31 @@ def remove_modes(xmat,modes):
     modes - the modes to delete from the matrix (with 1 being the first mode)
     OUTPUTS:
     xmat  - anharmonic constant matrix with columns and rows deleted for specified modes
-    """ 
-    modes.sort(reverse=True)
+    """
+    modes.sort()#reverse=True)
     modeindex = [mode-1 for mode in modes]
-    
     for index in modeindex:
         xmat = np.delete(xmat,index,0)
         xmat = np.delete(xmat,index,1)
     return xmat
+
+def remove_vibrots(vibrot,modes):
+    """
+    Removes specified modes from anharmonic constant matrix
+    INPUTS:
+    xmat  - anharmonic constant matrix
+    modes - the modes to delete from the matrix (with 1 being the first mode)
+    OUTPUTS:
+    xmat  - anharmonic constant matrix with columns and rows deleted for specified modes
+    """
+    modes.sort()#reverse=True)
+    vibrot = vibrot.splitlines()
+    modeindex = [mode-1 for mode in modes]
+    vibrots = []
+    for index in range(len(vibrot)):
+        if index not in modeindex:
+            vibrots.append(vibrot[index])
+    return '\n'.join(vibrots)
 
 def gauss_anharm_inp(filename,anlevel):
     """
@@ -116,7 +138,7 @@ def gauss_anharm_inp(filename,anlevel):
     zmat = full[0].split('***************************')[2].replace('*','')
     zmat = zmat.split('Will')[0]
     zmat = ' ' + zmat.lstrip()
-    zmat += full[0].split('-------------------------------------------')[3].replace('--','')
+    zmat += full[0].split('-------------------------------------------')[3].replace('-','').replace('-','').replace('-','').replace('\n ','')
     if not anlevel == 'ignore':
         zmat =  zmat.split('#')[0] + ' # ' + anlevel + ' opt = internal ' + zmat.split('#')[2]
     zmat += '# scf=verytight nosym Freq=Anharmonic Freq=Vibrot\n'
@@ -155,13 +177,13 @@ def run_gauss(filename,node):
     """
     if io.check_file(filename):
         executea = 'soft add +gcc-5.3; soft add +g09; g09 ' + filename 
-        executeb = 'cd `pwd`; export PATH=$PATH:~/bin; i'
+        executeb = 'cd `pwd`; export PATH=$PATH:~/bin; '
         ssh ='/usr/bin/ssh'
         host =node
         if str(host) == '0':
             os.system(executea)
         else: 
-            os.system('exec ' + ssh + ' -n ' + host +' \"' + executea + executeb + '\"')
+            os.system('exec ' + ssh + ' -n ' + host +' \"' + executeb + executea + '\"')
     
     return
 
@@ -177,11 +199,11 @@ def anharm_freq(freqs,xmat):
     anharms = np.zeros(len(freqs))
     for i, freq in enumerate(freqs):
         anharms[i]  = freq
-        anharms[i] += 2. * xmat[i,i]
+        anharms[i] += 2. * xmat[i][i]
         tmp = 0
         for j in range(len(freqs)):
             if j != i:
-                tmp += xmat[i,j]
+                tmp += xmat[i][j]
 
         anharms[i] += 1./2 * tmp
 
@@ -192,7 +214,8 @@ def mess_x(xmat):
     inp = ' Anharmonicities[1/cm]\n'
     for i in range( len(xmat)):
         for j in range(i+1):
-            inp += '  ' + str(i) + ' ' + str(j) + ' ' + str(xmat[i,j]) + '\n'
+             inp += '   {:.3f}'.format(xmat[i][j])
+        inp += '\n'
     inp += ' End\n'
     return inp
 
@@ -206,7 +229,7 @@ def mess_fr(freqs):
     inp += '\n'
     return inp
 
-def main(args):
+def main(args, vibrots = None):
     
     extra = ' ZeroEnergy[kcal/mol]\t 0.\n ElectronicLevels[1/cm]\t\t1\n  0.0000000000000000\t\t1.0000000000000000\nEnd' 
     if isinstance(args, dict):
@@ -214,6 +237,7 @@ def main(args):
         if 'writegauss' in args:
             if args['writegauss'] == 'true':
                 anharminp = args['anharmlog' ] + '.inp'
+                anlevel = args['anlevel'].replace('g09','gaussian')
                 write_anharm_inp(args['logfile'],anharminp,'{}/{}'.format(anlevel.split('/')[1], anlevel.split('/')[2]))
         if 'rungauss' in args:
             if args['rungauss'] == 'true':
@@ -223,10 +247,10 @@ def main(args):
         if 'pfreqs' in args:
             proj = np.array(args['pfreqs']).astype(np.float)
             unproj = np.array(args['freqs']).astype(np.float)
-            proj = np.sort(proj)[::-1]
-            unproj = np.sort(unproj)[::-1]
-            a = np.arange(len(proj)+1)[::-1]
-            b = np.arange(len(unproj)+1)[::-1]
+            proj = np.sort(proj)
+            unproj = np.sort(unproj)
+            a = np.arange(len(proj)+1)
+            b = np.arange(len(unproj)+1)
             #a = nargs['pfreqs']).argsort()[::-1]
             #b = args['freqs'].argsort()[::-1]
         else:
@@ -253,11 +277,13 @@ def main(args):
             for j in range(i):
                 xmat[i][j] = float(xmat[i][j])
                 xmat[j][i] = xmat[i][j]
-        modes     = find_hinfreqs(proj,unproj,a)
+        modes     = find_hinfreqs(proj,unproj,b)
         xmat      = remove_modes(xmat,modes)
         #proj, b   = get_freqs(eskproj)
         anfreq = anharm_freq(proj,xmat)
-        return anfreq, mess_fr(anfreq),  xmat, mess_x(xmat), extra
+        if vibrots:
+            vibrots = remove_vibrots(vibrots, modes)
+        return anfreq, mess_fr(anfreq),  xmat, mess_x(xmat), extra, vibrots
     ##########################
     else: 
         anharmlog = args.anharmlog

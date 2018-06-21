@@ -308,7 +308,6 @@ def nest_2_dic(bas,key1,key2):
     for dic in db:
         if dic['_id'] == bas:
             break
-
     if key1 in dic:
         if key2 in dic[key1]:
             logging.info('{} {}: {:5f}  pulled from dictionary testdb'.format(bas, key1, dic[key1][key2]))
@@ -515,9 +514,9 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         
     else:     #mol is dictionary
         stoich = mol['stoich']
-
-    dic    = mol      
     
+    dic    = mol
+     
     optdir    = io.db_opt_path(optprog, optmeth,  optbas, None, mol)
     coordfile = io.join_path(optdir, mol + '.zmat')
     if io.check_file(coordfile):
@@ -552,7 +551,7 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq,anharm=anharm)
         run_molpro(filename)
         io.parse_all(mol, io.read_file(filename.replace('.inp','.out')), optprog, optmeth, optbas)
-        E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
+        E = float(io.db_get_sp_prop(mol, entype, db_location = directory))
         return E
 
 def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
@@ -574,6 +573,7 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
     from testdb import db
     E, zpve = 0, 0
     zpvetype = 'zpve'
+    
     #Check dictionary    
     #for dbdic in db:
     #    if dbdic['_id'] == bas:
@@ -651,10 +651,9 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm,dbdir='./'):
    
     """
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * ut.kj2au
-        e    =  find_E(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
-        E   -=  coefflist[i] * e
-
+        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0)  * ut.kj2au
+        e   =  find_E(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
+        E  -=  coefflist[i] * e
     return E
 
 def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
@@ -707,7 +706,7 @@ def get_progmethbasis(level, loglines='', optlevel=''):
         return get_progmethbasis(optlevel, loglines)
     else:
         prog, method, basisset = level.split('/')
-    return [prog, method, basisset]
+    return [prog.replace('g09','gaussian'), method, basisset]
 
 def update_level(level):
     if level != None:
@@ -910,7 +909,8 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
 
 
     #Convert basis selection to smiles if it is mol. formula format
-    basis = basis.split()
+    if type(basis) is str:
+        basis = basis.split()
     if bas_not_smiles:
         basis = convert_to_smiles(basis)
 
@@ -931,7 +931,8 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
      
     #Search database for coords, energy, and zpve of mol and compute if its not there, unless told to parse it from logfile
     for spec in mol.split('_'):
-        molform += ob.get_formula(ob.get_mol(spec))  #So transition states can be specified by two species
+        if not spec.startswith('m'):
+            molform += ob.get_formula(ob.get_mol(spec))  #So transition states can be specified by two species
     clist, basis, basprint = comp_coefficients(molform, basis)
 
     ###PRINT STUFF OUT
@@ -943,6 +944,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
               basprint) 
     lines +=  '\n\nCoefficients are: '
     lines += ', '.join(['{}'.format(co) for co in clist])
+    print lines
     logging.debug(lines + '\n')
     #print check(clist, basis, stoich,atomlist)
 

@@ -1432,10 +1432,12 @@ def get_isomers(s):
         logging.debug('{0} chiral centers in {1}'.format(nchiral,s))
     if len(isomers)==1:
         if '_m' in s:
-            isomers = [s]
+            #isomers = [s]
+            isomers = [get_slabel(isomers[0])]
         else:
             mult = get_mult(s)
-            slabel = get_slabel(s,mult)
+            slabel = get_slabel(isomer[0],mult)
+            #slabel = get_slabel(s,mult)
             logging.debug("Multiplicity {} assigned by open babel for {}".format(mult,s))
             isomers = [slabel]
     return isomers
@@ -1847,7 +1849,9 @@ def get_smiles_filename(x):
     s = s.replace('#','_t_')
     s = s.replace('<','_v_')
     s = s.replace('>','_y_')
-    s = s.replace('?','_z_')
+    s = s.replace('@@','_aa_')
+    s = s.replace('@','_a_')
+
 
     return s
 
