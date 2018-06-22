@@ -7,6 +7,7 @@ import sys
 #sys.path.insert(0, '/home/elliott/Packages/QTC/')
 sys.path.insert(0, '/home/snelliott/projects/anl/QTC/')
 import iotools as io
+import qctools as qc
 import patools as pa
 import obtools as ob
 import logging
@@ -304,17 +305,33 @@ def nest_2_dic(bas,key1,key2):
     """
     Returns a dictionary value that requires two key values (is in singly nested loop )
     """
-    from testdb import db
+    from heatform_db import db
+ 
+    dicfound = False
+    bas = ob.get_slabel(bas)
     for dic in db:
         if dic['_id'] == bas:
+            dicfound = True
             break
-    if key1 in dic:
-        if key2 in dic[key1]:
-            logging.info('{} {}: {:5f}  pulled from dictionary testdb'.format(bas, key1, dic[key1][key2]))
-            return dic[key1][key2]
-    logging.info('Value for ' + str(key1) + ',' + str(key2) + ' not found -- ommitting its contribution')
+    if dicfound:
+        if key1 in dic:
+            key2 = 'ANL1'
+            if key2 in dic[key1]:
+                logging.info('{} {}: {:.2f}  pulled from {} in heatform_db'.format(bas, key1, dic[key1][key2], key2))
+                return dic[key1][key2]
+            key2 = 'ATcTsig'
+            if key2 in dic[key1]:
+                if dic[key1][key2] < 1:
+                    if 'ATcT' in dic[key1]:
+                        logging.info('{} {}: {:.2f}  pulled from {} in heatform_db (sigma = {:.2f})'.format(bas, key1, dic[key1]['ATcT'], 'ATcT', dic[key1][key2]))
+                        return dic[key1]['ATcT']
+            key2 = 'ANL0'
+            if key2 in dic[key1]:
+                logging.info('{} {}: {:.2f}  pulled from {} in heatform_db'.format(bas, key1, dic[key1][key2], key2))
+                return dic[key1][key2]
+        logging.info('Value for ' + str(bas) + ',' + str(key1) + ' not found -- ommitting its contribution')
 
-    return 0
+    return None
 
 def get_gaussian_zmat(filename):
     """
@@ -514,9 +531,9 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         
     else:     #mol is dictionary
         stoich = mol['stoich']
+
+    dic    = mol      
     
-    dic    = mol
-     
     optdir    = io.db_opt_path(optprog, optmeth,  optbas, None, mol)
     coordfile = io.join_path(optdir, mol + '.zmat')
     if io.check_file(coordfile):
@@ -570,7 +587,7 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
     """
     
     ### Check dictionary ###
-    from testdb import db
+    from heatform_db import db
     E, zpve = 0, 0
     zpvetype = 'zpve'
     
@@ -651,9 +668,13 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm,dbdir='./'):
    
     """
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0)  * ut.kj2au
-        e   =  find_E(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
-        E  -=  coefflist[i] * e
+        h   = nest_2_dic(bas,'delHf',  0)
+        if h is None:
+            h = 0
+        E  +=  coefflist[i] * h * ut.kj2au
+        e    =  find_E(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
+        E   -=  coefflist[i] * e
+
     return E
 
 def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
@@ -672,7 +693,22 @@ def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
    
     """
     for i,bas in enumerate(basis):
-        E  +=  coefflist[i] * nest_2_dic(bas,'delHf',  0) * ut.kj2au
+        bas = ob.get_slabel(bas)
+        smilesname = ob.get_smiles_filename(bas)
+        formula   = ob.get_formula(bas)
+        bas = bas.split('_')[0]
+        h  =  nest_2_dic(bas,'delHf',  0)
+        if h is None:
+            smilesdir = io.join_path(parameters['database'], formula, smilesname)
+            import os
+            rundir =  io.join_path(*[os.getcwd().split(parameters['database'])[0],smilesdir,parameters['qcdirectory']])
+            hoffile = io.join_path(*[rundir, formula + '.hofk'])
+            if io.check_file(hoffile):
+                h = float(io.read_file(hoffile).splitlines()[2].split()[0]) / ut.au2kcal / ut.kj2au
+                logging.info('{} {}: {:5f}  pulled from {}'.format(bas, 'delHf', h, rundir))
+            else:
+                h = 0
+        E  +=  coefflist[i] * h * ut.kj2au
         e    =  E_QTC(bas, opt, en, freq, parameters)
         if parameters['bac']:
             e += E_BAC(bas, parameters) / ut.au2kcal
@@ -791,9 +827,10 @@ def comp_coefficients(molform, basis='auto'):
     clist =  comp_coeff(mat,stoich)
     return clist, basis, basprint
 
+
 def E_BAC(bas, parameters):
     ### Check dictionary ###
-    from testdb import db
+    from heatform_db import db
     import qctools as qc
     import iotools as io
     slabel = qc.get_slabel(bas)
@@ -813,7 +850,7 @@ def E_BAC(bas, parameters):
 
 def E_QTC(bas, opt, en, freq, parameters):
     ### Check dictionary ###
-    from testdb import db
+    from heatform_db import db
     import qctools as qc
     import iotools as io
     natom = ob.get_natom(bas)
@@ -823,6 +860,7 @@ def E_QTC(bas, opt, en, freq, parameters):
     qckeyword = parameters['qckeyword']
     qlabel = qc.get_qlabel(qckeyword, calcindex)
     en, zpve, bac = 0., 0., 0.
+
     if 'energy' in parameters['all results'][slabel][qlabel]:
         en = parameters['all results'][slabel][qlabel]['energy']
     if en:
@@ -878,8 +916,12 @@ def main_keyword(s,parameters):
     enlevel   = None
     freqlevel = None
     molform = ob.get_formula(s)
-    clist, basis, basprint = comp_coefficients(molform, basis)
-
+   
+    if 'cbh' in basis[0]:
+        clist, basis, basprint = cbh_coefficients(s.split('_')[0], basis[0])
+    else:
+        clist, basis, basprint = comp_coefficients(molform, basis)
+ 
 #     lines =  ('\n___________________________________________________\n\n' +
 #               'HEAT OF FORMATION FOR: ' + s + ' (' + molform + ')' +
 #               '\nat ' + '/'.join(optlevel) + '//' + '/'.join(enlevel) + 
@@ -982,7 +1024,309 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
 
     return hf0k, basis
 
-       
+###CBH
+def get_balance(smiles, frags):
+    stoichs = {}
+    for frag in frags:
+       stoich = qc.get_atom_stoich(ob.get_formula(frag))
+       for atom in stoich:
+           if atom in stoichs:
+               stoichs[atom] += stoich[atom] * frags[frag]
+           else:
+               stoichs[atom]  = stoich[atom] * frags[frag]
+    stoich = qc.get_atom_stoich(ob.get_formula(smiles))
+    balance = {}
+    for atom in stoich:
+        if atom in stoichs:
+            balance[atom] = stoich[atom] - stoichs[atom]
+        else:
+            balance[atom] = stoich[atom] 
+    return balance
+
+def make_balanced(smiles, frags):
+    balance = get_balance(smiles, frags)
+    if 'C' in balance:
+        if balance['C'] != 0:
+            if not 'C' in frags:
+                frags['C'] = balance['C'] 
+            else:
+                frags['C'] += balance['C'] 
+    if 'N' in balance:
+        if balance['N'] != 0:
+            if not 'N' in frags:
+                frags['N'] = balance['N'] 
+            else:
+                frags['N'] += balance['N'] 
+    if 'O' in balance:
+        if balance['O'] != 0:
+            if not 'O' in frags:
+                frags['O'] = balance['O'] 
+            else:
+                frags['O'] = balance['O']
+
+    balance = get_balance(smiles, frags)
+    if 'H' in balance:
+        if balance['H'] != 0:
+            if not '[H][H]' in frags:
+                frags['[H][H]'] = balance['H'] / 2.
+            else:
+                frags['[H][H]'] += balance['H'] / 2.
+    return frags
+
+def isUnbalanced(balance):
+    bal = True
+    for atom in balance:
+       if abs(balance[atom]) > 0:
+           bal = False
+    if bal:
+       return False
+    return True
+
+def get_adj_mat(lines):
+    lines = lines.lower().replace('\n\n','\n')
+    lines = lines.splitlines()
+    rows = []
+    rad  = []
+    rads = []
+    startkey = 'molecular structure:'
+    endkey = 'z-matrix atom order:'
+    endkey2 = 'free radical'
+    save = False
+    for line in lines:
+        if line.startswith(endkey):
+            save = False
+        if line.startswith(endkey2):
+            save = False
+            if 'is' in line:
+                rad = line.split('site is ')[1]
+            elif 'are' in line:
+                rad = line.split('sites are ')[1].split()
+        if save:
+            rows.append(line)
+        if line.startswith(startkey):
+            save = True
+    
+    if rad:
+        for i, atom in enumerate(rows[0].split()[1:]):
+            if atom.strip() in rad:
+                rads.append(i)
+    atoms = qc.get_atom_list(rows[0])
+    
+    mat = []
+    for row in rows[1:]:
+        if row:
+            mat.append(row.split()[1:-1])
+    return atoms, mat, rads
+
+def bond_sum(mat, atoms, heavy, i):
+    bonds = 0
+    for j, col in enumerate(mat[i]):
+        if atoms[j] in heavy:
+            bonds += int(round(float(col)-0.5))
+    return bonds
+
+def lhs_rhs(frags):
+    rhs = {}
+    lhs = {}
+    for frag in frags:
+        if frags[frag] > 0:
+            rhs[frag] = frags[frag]
+        elif frags[frag] < 0:
+            lhs[frag] = - frags[frag]
+    return lhs, rhs
+
+def print_lhs_rhs(smiles, frags):
+    lhs, rhs = lhs_rhs(frags)
+    lhsprint = ob.get_formula(smiles)
+    rhsprint = ''
+    for frag in rhs:
+        if rhsprint:
+            rhsprint += ' +  {:.1f} {} '.format( rhs[frag], ob.get_formula(frag))
+        else:
+            rhsprint  = ' {:.1f} {} '.format( rhs[frag], ob.get_formula(frag))
+    for frag in lhs:
+            lhsprint += ' +  {:.1f} {} '.format( lhs[frag], ob.get_formula(frag))
+    return '{} --> {}'.format(lhsprint, rhsprint)
+
+def CBHzed(smiles, mat, atoms, heavy, bond, rads):
+    frags = {}
+    valence = {'C':4, 'O':2, 'N':3}
+    for i, row in enumerate(mat):
+       if atoms[i] in heavy:
+          val = valence[atoms[i]]
+          frag = ''
+          frag = atoms[i]
+          if i in rads:
+              val -= 1
+          saturate = ''
+          if val == 1:
+              saturate = 'H'
+          elif val > 1:
+              saturate = 'H{:g}'.format(val)
+          frag = '[{}{}]'.format(frag, saturate)
+          frag = ob.get_slabel(frag).split('_')[0]
+          if frag in frags:
+              frags[frag] += 1
+          else: 
+              frags[frag] = 1
+    
+    frags = make_balanced(smiles, frags)
+    return frags
+
+def CBHone(smiles, mat, atoms, heavy, bond, rads):
+    frags = {}
+    valence = {'C':4, 'O':2, 'N':3}
+    for i, row in enumerate(mat):
+        for j, col in enumerate(row):
+            if atoms[i] in heavy and atoms[j] in heavy:
+               if float(col) > 0:
+                   vali = valence[atoms[i]]
+                   valj = valence[atoms[j]]
+                   if i in rads:
+                       vali -= 1
+                   if j in rads:
+                       valj -= 1
+                   vali -= int(round(float(col)-0.5))
+                   valj -= int(round(float(col)-0.5))
+                   fragi = atoms[i]
+                   fragj = atoms[j]
+                   saturate = ''
+                   if vali == 1:
+                       saturate = 'H'
+                   elif vali > 1:
+                       saturate = 'H{:g}'.format(vali)
+                   fragi = '[{}{}]'.format(fragi, saturate)
+                   saturate = ''
+                   if valj == 1:
+                       saturate = 'H'
+                   elif valj > 1:
+                       saturate = 'H{:g}'.format(valj)
+                   fragj = '[{}{}]'.format(fragj, saturate)
+                   frag = fragi + bond[col] + fragj
+                   frag = ob.get_slabel(frag).split('_')[0]
+                   if frag in frags:
+                       frags[frag] += 1
+                   else: 
+                       frags[frag] = 1
+
+    frags = make_balanced(smiles, frags)
+    return frags
+
+def CBHtwo(smiles, mat, atoms, heavy, bond, rads):
+    frags = {}
+    fmat = square_mat(mat)
+    valence = {'C':4, 'O':2, 'N':3}
+    for i, row in enumerate(fmat):
+        if atoms[i] in heavy:
+            
+            vali = valence[atoms[i]]
+            fragi = atoms[i]
+            if i in rads:
+                vali -= 1
+            vali -= bond_sum(fmat, atoms, heavy, i)
+            saturate = ''
+            if vali == 1:
+                saturate = 'H'
+            elif vali > 1:
+                saturate = 'H{:g}'.format(vali)
+            fragi = '[{}{}]'.format(fragi, saturate)
+            saturate = ''
+            count = 0
+            frag = fragi
+            for j, col in enumerate(row):
+                if atoms[j] in heavy:
+                    if float(col) > 0:
+                        count += 1
+                        valj = valence[atoms[j]]
+                        if j in rads:
+                            valj -= 1
+                        valj -= int(round(float(col)-0.5))
+                        fragj = atoms[j]
+                        saturate = ''
+                        if valj == 1:
+                            saturate = 'H'
+                        elif valj > 1:
+                            saturate = 'H{:g}'.format(valj)
+                        fragj = '[{}{}]'.format(fragj, saturate)
+                        frag  += '(' + bond[col] + fragj + ')'
+                        vali = valence[atoms[i]]
+                        fragi = atoms[i]
+                        if i in rads:
+                            vali -= 1
+                        vali -= int(round(float(col)-0.5))
+                        saturate = ''
+                        if vali == 1:
+                            saturate = 'H'
+                        elif vali > 1:
+                            saturate = 'H{:g}'.format(vali)
+                        fragi = '[{}{}]'.format(fragi, saturate)
+                        subfrag = fragi +  bond[col] + fragj 
+                        if i < j:
+                            subfrag = ob.get_slabel(subfrag).split('_')[0]
+                            if subfrag in frags:
+                                frags[subfrag] -= 1
+                            else: 
+                                frags[subfrag] = -1
+            frag = ob.get_slabel(frag).split('_')[0]
+            if frag in frags:
+                frags[frag] += 1
+            else: 
+                frags[frag] = 1
+    frags = make_balanced(smiles, frags)
+    return frags
+
+def get_conns(i, axis, mat, atoms, heavy, bond):
+    fmat = square_mat(mat)
+    ret = atoms[i]
+    row = fmat[i]
+    for j, col in enumerate(row):
+        if j != axis and atoms[j] in heavy and float(col) > 0:
+             ret += '({0}{1})'.format(bond[col], atoms[j])
+    return ret
+
+def square_mat(mat):
+    import copy
+    fmat = copy.deepcopy(mat)
+    for i, row in enumerate(fmat):
+        for j, col in enumerate(fmat): 
+            if i == j:
+                fmat[i].append('0')
+            elif i < j:
+                fmat[i].append(mat[j][i])
+    return fmat    
+
+def cbh_coefficients(smiles, ref):
+    xyz = ob.get_xyz(smiles)
+    io.write_file(xyz,'x2z.xyz')
+    lines = qc.run_x2z('x2z.xyz', 'x2z')
+    atoms, mat, rads = get_adj_mat(lines)
+ 
+    heavy = ['C','O','N']
+    bond  = {'1':'','2':'=','3':'#','4':'$','1.5':':'}
+    #CBH0
+    msg = ''
+    if ref.lower() == 'cbh0':
+        frags = CBHzed(smiles, mat, atoms, heavy, bond, rads)
+    elif ref.lower() == 'cbh1':
+        frags = CBHone(smiles, mat, atoms, heavy, bond, rads)
+    elif ref.lower() == 'cbh2':
+        frags = CBHtwo(smiles, mat, atoms, heavy, bond, rads)
+
+    output = print_lhs_rhs(smiles, frags)
+    if isUnbalanced(get_balance(smiles, frags)):
+        output += '\nERROR: unbalanced fragmentation'
+    msg += output
+    msg += '\n'
+
+    fraglist = []
+    clist = []
+    for frag in frags:
+        fraglist.append(frag)
+        clist.append(frags[frag])
+    print msg
+    return clist, fraglist, msg
+
+      
 if __name__ == '__main__': 
     """
     Run heat of formation code
@@ -1004,7 +1348,7 @@ if __name__ == '__main__':
     parser.add_argument('-f','--freqlevel',       type=str,  default='optlevel')
     parser.add_argument('-e','--energylevel',     type=str,  default='optlevel')
 
-    parser.add_argument('-d','--database',           type=str, default='testdb')
+    parser.add_argument('-d','--database',           type=str, default='heatform_db')
     parser.add_argument('-s','--mol_not_smiles',            action='store_true')
     parser.add_argument('-r','--run_energy',                action='store_true')
     parser.add_argument('-a','--anharmonic',                action='store_true')

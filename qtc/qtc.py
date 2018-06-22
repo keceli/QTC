@@ -111,7 +111,7 @@ def get_args():
                         default=',',
                         help='The characther used for seperating different tasks in a qckeyword.')
     parser.add_argument('-B', '--bac', action='store_true',
-                        help='Generates a sorted list of species')
+                        help='Bond additivity correction using the bac.txt template file')
     parser.add_argument('-G', '--generate', action='store_true',
                         help='Generates a sorted list of species')
     parser.add_argument('-M', '--sortbymass', action='store_true',
@@ -145,6 +145,8 @@ def get_args():
                         help='Run in debug mode')
     parser.add_argument('--skippf', action='store_true',
                         help='use to skip pf input and output file generation when collecting thermo')
+    parser.add_argument('--norot', action='store_true',
+                        help='Turns off rotational pf input')
     parser.add_argument('--fix', type=int,
                         default=0,
                         help='If FIX > 0, interpolate negative energies in hindered potential input for mess')
@@ -707,7 +709,11 @@ def main(arg_update={}):
         for s in mylist:
             s = qc.get_slabel(s)
             formula = ob.get_formula(s)
-            _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['reference'].split(','))
+            ref = parameters['reference']
+            if  'cbh' in ref.lower():
+                _, basismolecules, _ = hf.cbh_coefficients(s.split('_')[0], ref)
+            else: 
+                _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['reference'].split(','))
             for basismol in basismolecules:
                 smi = qc.get_slabel(basismol)
                 if smi not in mylist:
