@@ -295,8 +295,9 @@ def gaussian_rotconsts(lines):
     ndof  = gaussian_nfreq(lines)
     if ndof < 2:
         rot = rot[1:]
-    if abs(float(rot[0])) < 0.000001:
-        rot = rot[1:]
+    if len(rot) > 0:
+         if abs(float(rot[0])) < 0.000001:
+             rot = rot[1:]
     return rot
  
 def gaussian_rotdists (lines):

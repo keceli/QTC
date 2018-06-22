@@ -271,7 +271,7 @@ def get_input(x, template, parameters):
             elif task == 'energy':
                 task = ''
             elif task == 'anharm':
-                task = 'freq=(anharm,vibrot)'
+                task = 'opt=(maxcyc=50,internal) freq=(anharm,vibrot)'
         elif package == 'molpro':
             if "QTC(EXTRA)" in inp:
                 if nopen == 0:
@@ -1914,18 +1914,23 @@ def get_gaussian_xmatrix(s,nfreq):
     line = lines[iline]
     if iline < 3:
         return 'Not found: {0}'.format(key)
-    while line.strip():
-        cols = line.split()
-        icol = int(cols[0])-1
-        for irow in range(icol,nfreq):
+    try:
+        while line.strip():
+            cols = line.split()
+            icol = int(cols[0])-1
+            for irow in range(icol,nfreq):
+                iline += 1
+                line = lines[iline]
+                cols = line.split()
+                ncol = len(cols) - 1
+                xmat[irow,icol:icol+ncol] = [float(num.replace('D','E')) for num in cols[1:]]
             iline += 1
             line = lines[iline]
-            cols = line.split()
-            ncol = len(cols) - 1
-            xmat[irow,icol:icol+ncol] = [float(num.replace('D','E')) for num in cols[1:]]
-        iline += 1
-        line = lines[iline]
-    return xmat.tolist()
+        xmat = xmat.tolist()
+    except:
+            logging.warning('Ignoring anharmonicities -- unexpected length of xmat')
+            xmat  = []
+    return xmat
 
 
 def get_gaussian_fundamentals(s,nfreq=None):
