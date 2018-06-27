@@ -570,7 +570,9 @@ def run(s):
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof
         parameters['all results'][slabel][qlabel]['heat of formation basis'] = hfset
-        parameters['all results'][slabel][qlabel]['heat of formation coeff'] = hfcoeff.tolist()
+        if not type(hfcoeff) == list:
+            hfcoeff = hfcoeff.tolist()
+        parameters['all results'][slabel][qlabel]['heat of formation coeff'] = hfcoeff
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
