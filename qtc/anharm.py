@@ -210,13 +210,14 @@ def anharm_freq(freqs,xmat):
     return anharms
 
 def mess_x(xmat):
-    
-    inp = ' Anharmonicities[1/cm]\n'
-    for i in range( len(xmat)):
-        for j in range(i+1):
-             inp += '   {:.3f}'.format(xmat[i][j])
-        inp += '\n'
-    inp += ' End\n'
+    inp = ''
+    if xmat:
+        inp = ' Anharmonicities[1/cm]\n'
+        for i in range( len(xmat)):
+            for j in range(i+1):
+                 inp += '   {:.3f}'.format(xmat[i][j])
+            inp += '\n'
+        inp += ' End\n'
     return inp
 
 def mess_fr(freqs):
@@ -272,15 +273,20 @@ def main(args, vibrots = None):
                     xmat[i] = xmat[i].split(',')
             elif io.check_file(anharmlog):
                 xmat = qc.get_gaussian_xmatrix(io.read_file(anharmlog),len(unproj))
-        for i in range(len(xmat)):
-            xmat[i][i] = float(xmat[i][i])
-            for j in range(i):
-                xmat[i][j] = float(xmat[i][j])
-                xmat[j][i] = xmat[i][j]
+
         modes     = find_hinfreqs(proj,unproj,b)
-        xmat      = remove_modes(xmat,modes)
+        if type(xmat) == list:
+            for i in range(len(xmat)):
+                xmat[i][i] = float(xmat[i][i])
+                for j in range(i):
+                    xmat[i][j] = float(xmat[i][j])
+                    xmat[j][i] = xmat[i][j]
+            xmat      = remove_modes(xmat,modes)
+            anfreq = anharm_freq(proj,xmat)
+        else:
+            xmat = []
+            anfreq = proj
         #proj, b   = get_freqs(eskproj)
-        anfreq = anharm_freq(proj,xmat)
         if vibrots:
             vibrots = remove_vibrots(vibrots, modes)
         return anfreq, mess_fr(anfreq),  xmat, mess_x(xmat), extra, vibrots

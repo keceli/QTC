@@ -298,6 +298,7 @@ def gaussian_rotconsts(lines):
     if len(rot) > 0:
          if abs(float(rot[0])) < 0.000001:
              rot = rot[1:]
+    rot = [ str(float(x) * ut.ghz2cm) for x in rot]
     return rot
  
 def gaussian_rotdists (lines):

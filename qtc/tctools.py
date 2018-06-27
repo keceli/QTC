@@ -615,6 +615,7 @@ def get_messpf_input(mol,parameters):
         if 'hindered potential' in results: 
             if  coreIsMd:
                 coreline  = '  Core MultiRotor\n'
+                coreline  += '  ForceQFactor\n'
                 hindlines = '     {}'.format('     '.join(results['hindered potential' ].splitlines(True)[3:]))
             else:
                 hindlines  = '   End\n'
@@ -634,21 +635,22 @@ def get_messpf_input(mol,parameters):
             for i in range( len(xmat)):
                 inp += '\t\t' + ' '.join([str(xmat[i][j]) for j in range(i+1)]) + '\n'
         if not coreIsMd:
-            if not parameters['norot']:
-                if len(rotconsts) > 0:
-                    inp += '      RotationalConstants[1/cm] '
-                    inp += ' '.join(rotconsts) + '\n'
-                if vibrots:
-                    vibrots = vibrots.splitlines(True)
-                    if len(freqs) == len(vibrots):
-                        inp += '      RovibrationalCouplings[1/cm]\n'
-                        inp += '\t   ' + '\t   '.join(vibrots) + '\n'
-                    else:
-                        logging.warning("Rotational Couplings length does not match freqs -- removed from pf.inp")
-                if len(rotdists) > 0:
-                    inp += '      RotationalDistortion[1/cm]\n'
-                    inp += '\t   ' + '\t   '.join(rotdists.splitlines(True)) + '\n'
-                    inp += '      End\n' ###   END CORE
+            if 'norot' in parameters:
+                if not parameters['norot']:
+                        #if len(rotconsts) > 0:
+                        #    inp += '      RotationalConstants[1/cm] '
+                        #    inp += ' '.join(rotconsts) + '\n'
+                    if vibrots:
+                        vibrots = vibrots.splitlines(True)
+                        if len(freqs) == len(vibrots):
+                            inp += '      RovibrationalCouplings[1/cm]\n'
+                            inp += '\t   ' + '\t   '.join(vibrots) + '\n'
+                        else:
+                            logging.warning("Rotational Couplings length does not match freqs -- removed from pf.inp")
+                    if len(rotdists) > 0:
+                        inp += '      RotationalDistortion[1/cm]\n'
+                        inp += '\t   ' + '\t   '.join(rotdists.splitlines(True)) + '\n'
+                        inp += '      End\n' ###   END CORE
             inp += hindlines  ###   END RRHO
         if not 'hindered potential' in results:
             inp += '   End\n'

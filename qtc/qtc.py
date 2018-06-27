@@ -570,9 +570,11 @@ def run(s):
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof
         parameters['all results'][slabel][qlabel]['heat of formation basis'] = hfset
+        parameters['all results'][slabel][qlabel]['heat of formation coeff'] = hfcoeff.tolist()
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
+        pfout   = ''
         if formula in ['XH2','XO2','XN2']: #Remove X to use the definided values
             logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
         else:
@@ -581,6 +583,7 @@ def run(s):
                 io.write_file(groupstext, 'new.groups')
             try:
                 hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
+                pfout = io.read_file('pf.dat')
             except Exception as e:
                 if parameters['debug']:
                     raise
@@ -592,6 +595,8 @@ def run(s):
         parameters['all results'][slabel][qlabel]['deltaH298'] = hof298   
         parameters['all results'][slabel][qlabel]['chemkin'] = chemkintext
         parameters['all results'][slabel][qlabel]['NASAPolynomial'] = rmgpoly
+        parameters['all results'][slabel][qlabel]['partition function'] = pfout
+     
     io.cd(cwd)
     return
 
