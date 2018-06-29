@@ -452,7 +452,8 @@ def run(s):
                     xyz = io.read_file(formula + '_initial.xyz').splitlines()[2:]
                     RPHt += 'geometry\n'
                     for i, line in enumerate( geolines.splitlines()[1:]):
-                        RPHt += '\t' + '\t'.join(line.split()[0:3]) + '\t' + '\t'.join(xyz[i].split()[1:]) + '\n'
+                        RPHt += '\t' + '\t'.join(line.split()[0:])+ '\n'
+                        #RPHt += '\t' + '\t'.join(line.split()[0:3]) + '\t' + '\t'.join(xyz[i].split()[1:]) + '\n'
                     RPHt += 'gradient' +  gradlines.split('Hessian')[0] + 'Hessian\n' + parameters['results']['Hessian']
                     parameters['results']['RPHt input'] = RPHt
                     RPHtfile = 'RPHt_input_data.dat'
@@ -570,9 +571,9 @@ def run(s):
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof
         parameters['all results'][slabel][qlabel]['heat of formation basis'] = hfset
-        if not type(hfcoeff) == list:
-            hfcoeff = hfcoeff.tolist()
-        parameters['all results'][slabel][qlabel]['heat of formation coeff'] = hfcoeff
+        #if not type(hfcoeff) == list:
+        #    hfcoeff = hfcoeff.tolist()
+        #parameters['all results'][slabel][qlabel]['heat of formation coeff'] = hfcoeff
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
