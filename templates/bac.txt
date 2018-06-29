@@ -1,6 +1,136 @@
-C-O(1) 0.2
-C-C(1) 0.3
-C-C(2) 0.1
-C-H(1) 0.05
-H-H(1) 0.01
-O-O(2) 0.1
+Formed from: [CH]_m2 ,[CH2]_m3 ,[CH2]_m1 ,[CH3]_m2 ,[OH]_m2 ,[CH2][CH]_m2 ,C=C_m1 ,[CH][O]_m2 ,C[CH2]_m2 ,C=O_m1 ,CC_m1 ,C[O]_m2 ,[CH2]O_m2 ,[O][O]_m3 ,CO_m1 ,O[O]_m2 ,OO_m1 ,[CH2]C#C_m2 ,[C][C][O]_m3 ,CC#C_m1 ,C1[CH][CH]1_m1 ,[CH2]C=C_m2 ,C=C=O_m1 ,CC=C_m1 ,[CH2]C=O_m2 ,C[C]=O_m2 ,O1[CH]C1_m2 ,O=C=O_m1 ,CC=O_m1 ,OC=C_m1 ,[CH2]CO_m2 ,OC=O_m1 ,CO[O]_m2 ,COO_m1 ,C=CC=C_m1 ,[CH2]C=C=O_m2 ,C/C=C/[CH2]_m2 ,C/C=C\[CH2]_m2 ,C=CC=O_m1 ,CCC=C_m1 ,[O]C=C=O_m2 ,[CH2]/C=C/O_m2 ,[CH2]/C=C\O_m2 ,C[CH]CC_m2 ,O=CC=O_m1 ,CCCC_m1 ,CCC=C_m1 ,[O]C=C=O_m2 ,CC(=O)[CH2]_m2 ,[CH2]/C=C/O_m2 ,[CH2]/C=C\O_m2 ,[O]CC=C_m2 ,C[CH]CC_m2 ,CCC[CH2]_m2 ,O=CC=O_m1 ,CCCC_m1 ,[O]OC=C_m2
+
+opt/b2plypd3/cc-pvtz/gaussian,freq/b2plypd3/cc-pvtz/gaussian,energy/ccsd(t)-f12/cc-pvtz-f12/molpro
+C-H(1)  -0.265
+H-O(1)  -0.402
+H-H(1)  0.333
+C-C(2)  -1.547
+C-O(2)  -1.590
+C-C(1)  -0.632
+C-O(1)  -0.875
+O-O(2)  -1.964
+O-O(1)  -1.173
+C-C(1.5)  -1.355
+C-C(2.5)  -1.739
+C-O(1.5)  -1.279
+C-C(3)  -2.567
+
+opt/b2plypd3/cc-pvtz/gaussian,freq/b2plypd3/cc-pvtz/gaussian,energy/mp2-f12/cc-pvtz-f12/molpro
+C-H(1)  0.438
+H-O(1)  5.498
+H-H(1)  -2.968
+C-C(2)  7.477
+C-O(2)  18.020
+C-C(1)  4.730
+C-O(1)  8.614
+O-O(2)  33.526
+O-O(1)  9.174
+C-C(1.5)  7.231
+C-C(2.5)  10.180
+C-O(1.5)  16.461
+C-C(3)  13.437
+
+opt/b2plypd3/cc-pvtz/gaussian,freq/b2plypd3/cc-pvtz/gaussian
+C-H(1)  0.350
+H-O(1)  -2.566
+H-H(1)  1.108
+C-C(2)  -1.330
+C-O(2)  -2.326
+C-C(1)  -1.063
+C-O(1)  -1.417
+O-O(2)  -1.438
+O-O(1)  -2.179
+C-C(1.5)  -0.618
+C-C(2.5)  0.086
+C-O(1.5)  -1.729
+C-C(3)  -1.528
+
+opt/b2plypd3/cc-pvtz/gaussian,freq/b2plypd3/cc-pvtz/gaussian,energy/ccsd(t)-f12/cc-pvdz-f12/molpro,energy/ccsd(t)-f12/cc-pvtz-f12/molpro,energy/mp2-f12/cc-pvdz-f12/molpro,energy/mp2-f12/cc-pvtz-f12/molpro,energy/mp2-f12/cc-pvqz-f12/molpro,composite/cbs_tzmqz/energy=e[2]+e[5]-e[4],composite/cbs_tzmqz/energy=e[3]+e[6]-e[5]
+C-H(1)  -0.276
+H-O(1)  -0.370
+H-H(1)  0.323
+C-C(2)  -1.538
+C-O(2)  -1.555
+C-C(1)  -0.641
+C-O(1)  -0.877
+O-O(2)  -1.975
+O-O(1)  -1.125
+C-C(1.5)  -1.313
+C-C(2.5)  -1.684
+C-O(1.5)  -1.290
+C-C(3)  -2.434
+
+opt/b2plypd3/cc-pvtz/gaussian,freq/b2plypd3/cc-pvtz/gaussian,energy/ccsd(t)-f12/cc-pvdz-f12/molpro
+C-H(1)  -0.342
+H-O(1)  -0.639
+H-H(1)  0.490
+C-C(2)  -1.967
+C-O(2)  -2.027
+C-C(1)  -0.957
+C-O(1)  -1.244
+O-O(2)  -2.212
+O-O(1)  -1.592
+C-C(1.5)  -1.790
+C-C(2.5)  -2.215
+C-O(1.5)  -1.674
+C-C(3)  -3.297
+
+opt/b2plypd3/cc-pvtz/gaussian,freq/b2plypd3/cc-pvtz/gaussian,energy/mp2-f12/cc-pvdz-f12/molpro
+C-H(1)  0.458
+H-O(1)  5.442
+H-H(1)  -2.950
+C-C(2)  7.472
+C-O(2)  18.198
+C-C(1)  4.739
+C-O(1)  8.582
+O-O(2)  33.673
+O-O(1)  9.239
+C-C(1.5)  7.215
+C-C(2.5)  10.194
+C-O(1.5)  16.579
+C-C(3)  13.400
+
+opt/b2plypd3/cc-pvtz/gaussian
+C-H(1)  0.417
+H-O(1)  -2.562
+H-H(1)  1.073
+C-C(2)  -0.925
+C-O(2)  -2.115
+C-C(1)  -1.074
+C-O(1)  -1.292
+O-O(2)  -1.356
+O-O(1)  -2.173
+C-C(1.5)  -0.345
+C-C(2.5)  0.408
+C-O(1.5)  -1.313
+C-C(3)  -0.927
+
+opt/b2plypd3/cc-pvtz/gaussian,freq/b2plypd3/cc-pvtz/gaussian,energy/ccsd(t)-f12/cc-pvdz-f12/molpro,energy/ccsd(t)-f12/cc-pvtz-f12/molpro,energy/mp2-f12/cc-pvdz-f12/molpro,energy/mp2-f12/cc-pvtz-f12/molpro,energy/mp2-f12/cc-pvqz-f12/molpro,composite/cbs_tzmqz/energy=e[2]+e[5]-e[4]
+C-H(1)  -0.362
+H-O(1)  -0.583
+H-H(1)  0.473
+C-C(2)  -1.962
+C-O(2)  -2.205
+C-C(1)  -0.966
+C-O(1)  -1.212
+O-O(2)  -2.360
+O-O(1)  -1.656
+C-C(1.5)  -1.775
+C-C(2.5)  -2.229
+C-O(1.5)  -1.792
+C-C(3)  -3.260
+
+opt/b2plypd3/cc-pvtz/gaussian,freq/b2plypd3/cc-pvtz/gaussian,energy/mp2-f12/cc-pvqz-f12/molpro
+C-H(1)  0.427
+H-O(1)  5.529
+H-H(1)  -2.978
+C-C(2)  7.487
+C-O(2)  18.055
+C-C(1)  4.721
+C-O(1)  8.612
+O-O(2)  33.515
+O-O(1)  9.222
+C-C(1.5)  7.272
+C-C(2.5)  10.234
+C-O(1.5)  16.449
+C-C(3)  13.569
