@@ -5,7 +5,7 @@ import numpy as np
 sys.path.insert(0, '/home/elliott/Packages/QTC/')
 import iotools as io
 import qctools as qc
-
+import logging
 def gauss_xmat(filename,natoms):
     """
     Retrieves the anharmonic constant matrix from Gaussian logfile 
@@ -211,7 +211,7 @@ def anharm_freq(freqs,xmat):
 
 def mess_x(xmat):
     inp = ''
-    if xmat:
+    if len(xmat) > 0:
         inp = ' Anharmonicities[1/cm]\n'
         for i in range( len(xmat)):
             for j in range(i+1):

@@ -271,7 +271,7 @@ def get_input(x, template, parameters):
             elif task == 'energy':
                 task = ''
             elif task == 'anharm':
-                task = 'opt=(maxcyc=50,internal) freq=(anharm,vibrot)'
+                task = 'opt=(maxcyc=50,internal) freq=(anharm,vibrot,readanharm)'
         elif package == 'molpro':
             if "QTC(EXTRA)" in inp:
                 if nopen == 0:
