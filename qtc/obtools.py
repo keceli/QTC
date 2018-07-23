@@ -16,7 +16,45 @@ This module is useful for a new user of Open Babel since it
 provides information on the functionalities and how to use them
 in python.
 """
-__updated__ = "2018-01-12"
+__updated__ = "2018-07-02"
+def get_periodic_table():
+    """
+    Return the periodic table as a list.
+    Includes elements with atomic number less than 55.
+    >>>pt = get_periodic_table()
+    >>>print(len(pt))
+    >>>55
+    """
+    pt = ['X' ,
+          'H' ,'He',
+          'Li','Be','B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
+          'Na','Mg','Al','Si','P' ,'S' ,'Cl','Ar'
+          'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+          'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe']
+    return pt
+
+
+def get_symbol(atomno):
+    """
+    Returns the element symbol for a given atomic number.
+    Returns 'X' for atomno=0
+    >>>print(get_symbol(1))
+    >>>H
+    """
+    pt = get_periodic_table()
+    return pt[atomno]
+
+
+def get_atomno(symbol):
+    """
+    Return the atomic number for a given element symbol.
+    >>>print(get_atomno('H')
+    >>>1
+    """
+    pt = get_periodic_table()
+    symbol = symbol.capitalize()
+    return pt.index(symbol)
+
 
 def get_format(s):
     """
@@ -1560,6 +1598,69 @@ def get_nelectron(x):
         n += a.GetAtomicNum()
     return n
 
+
+def get_atomic_masses(x):
+    """
+    Return number of electrons.
+    >>> get_atomic_masses('O')
+    [15.9994, 1.00794, 1.00794]
+    """
+    mol = get_mol(x)
+    natom = get_natom(mol)
+    masses = [0.0] * natom
+    for i in range(natom):
+        a = mol.OBMol.GetAtomById(i)
+        masses[i] = a.GetAtomicMass()
+    return masses
+
+def get_atomic_numbers(x):
+    """
+    Return number of electrons.
+    >>> get_atomic_numbers('O')
+    [8, 1, 1]
+    """
+    mol = get_mol(x)
+    natom = get_natom(mol)
+    numbers = [0] * natom
+    for i in range(natom):
+        a = mol.OBMol.GetAtomById(i)
+        numbers[i] = a.GetAtomicNum()
+    return numbers
+        
+
+def get_xyz_dictionary(x):
+    """
+    Given an xyz, return a dictinary with the following keys:
+    number_of_atoms
+    comment
+    coordinates
+    coordinates_unit
+    atom_symbols
+    atom_numbers
+    atom_masses
+    atom_masses_unit
+    """
+    d = {}
+    mol = get_mol(x,make3D=True)
+    xyz = get_xyz(mol)
+    lines = xyz.splitlines()
+    natom = get_natom(mol)
+    symbols = ['X']*natom
+    coordinates = [[0.0,0.0,0.0]]*natom
+    i = 0
+    for line in lines[2:]:
+        s, x, y, z = line.split()
+        symbols[i] = s
+        coordinates[i] = [float(x),float(y),float(z)]
+        i += 1
+    d['number_of_atoms'] = natom
+    d['coordinates'] = coordinates
+    d['coordinates_unit'] = 'Angstrom'
+    d['atom_symbols'] = symbols
+    d['atom_numbers'] = get_atomic_numbers(xyz)
+    d['atom_masses']  = get_atomic_masses(xyz)
+    d['atom_masses_unit'] = 'amu'
+    return d   
     
 def get_charge(x):
     """
