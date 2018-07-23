@@ -1,13 +1,13 @@
-# Quantum Thermo Chemistry (QTC) 
+# Quantum Thermochemistry Calculator 
 [![Build Status](https://travis-ci.org/keceli/QTC.svg?branch=master)](https://travis-ci.org/keceli/QTC)
 
 QTC includes modules that integrates open babel with quantum chemistry calculations and generates NASA polynomials in different formats.
 
 It depends on:
-  * Open Babel for cheminformatics (read/write chemical identifiers)
+  * [Open Babel](http://openbabel.org/) for cheminformatics 
   * MOPAC, NWChem, Gaussian, Molpro for quantum chemistry calculations
-  * MESS for calculating partititon function
-  * RMG for generating a species list important for combustion chemistry
+  * [MESS](https://github.com/PACChem/MESS) for calculating partititon function
+  * [RMG](https://github.com/ReactionMechanismGenerator/RMG-Py) for generating a species list important for combustion chemistry
   * PAC99, thermp for format conversions
 
 ## Installation
@@ -35,3 +35,16 @@ conda install -c mcs07 cirpy
 ```
 python src/qtc.py -i O -k 'opt/mp2/dz/nwchem' -Q
 ```
+
+## Acknowledgment
+
+This work was supported by the U.S. Department of Energy, Office of Basic Energy
+Sciences, Division of Chemical Sciences, Geosciences, and Biosciences under DOE
+Contract Number DE-AC02-06CH11357 as well as the Exascale Computing Project
+(ECP), Project Number: 17-SC-20-SC.  The ECP is a collaborative effort of two
+DOE organizations, the Office of Science and the National Nuclear Security
+Administration, responsible for the planning and preparation of a capable
+exascale ecosystem including software, applications, hardware, advanced system
+engineering, and early test bed platforms to support the nation's exascale
+computing imperative. 
+
