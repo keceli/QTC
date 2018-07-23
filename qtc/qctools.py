@@ -18,7 +18,7 @@ __authors__ = 'Murat Keceli, Sarah Elliott'
 
 def sort_species_list(slist, printinfo=False, byMass=False):
     """
-    Sorts a species list of smiles by number of rotors, electrons and atoms. 
+    Sorts a species list of smiles by number of rotors, electrons and atoms.
     Optionally, prints info on the list
     """
     tmplist= []
@@ -27,7 +27,7 @@ def sort_species_list(slist, printinfo=False, byMass=False):
         isomers = ob.get_isomers(s)
         if len(isomers) > 1:
             logging.info('{} isomers found for {} : {}'.format(len(isomers),s,isomers))
-        for isomer in isomers:     
+        for isomer in isomers:
             mol = ob.get_mol(isomer,make3D=True)
             nrotor = ob.get_nrotor(mol)
             nelec = ob.get_nelectron(mol)
@@ -190,16 +190,18 @@ def get_input(x, template, parameters):
     charge = parameters['charge']
     formula = parameters['formula']
     natom = parameters['natom']
-    geo = '\n'.join(xyz.splitlines()[2:natom+2]) 
-    #zmat = ob.get_zmat(mol)
-    x2zout = run_x2z(xyz, parameters['x2z'])
-    zmat =  get_x2z_zmat(x2zout)
+    geo = '\n'.join(xyz.splitlines()[2:natom+2])
+    try:
+        x2zout = run_x2z(xyz, parameters['x2z'])
+        zmat =  get_x2z_zmat(x2zout)
+    except:
+        zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     smiles = ob.get_smiles(mol)
     nelectron = ob.get_nelectron(mol)
-    package = parameters['qcpackage'] 
-    method  = parameters[ 'qcmethod'] 
+    package = parameters['qcpackage']
+    method  = parameters[ 'qcmethod']
     basis   = parameters[  'qcbasis']
     slabel  = parameters[   'slabel']
     nrotor  = parameters[   'nrotor']
@@ -378,7 +380,7 @@ def fix_qckeyword(keyword):
 
 def get_slabels_from_json(j):
     """
-    Builds a list of strings that contains slabels for 
+    Builds a list of strings that contains slabels for
     all species in json list.
     Needs to convert from unicode to string.
     """
@@ -1132,6 +1134,11 @@ def run(s, parameters, mult=None, trial=0):
                 parameters['qcexe'] = '{0}'.format(parameters['qchem'])
             elif package.startswith('mopac'):
                 parameters['qcexe'] = parameters['mopac']
+                mopacdir = io.get_path(parameters['mopac'],directory=True)
+                io.set_env_var('MOPAC_LICENSE',mopacdir)
+                ldpath= io.get_env('LD_LIBRARY_PATH')
+                ldpath = mopacdir + ':' + ldpath
+                io.set_env_var('LD_LIBRARY_PATH',ldpath)
             elif task.startswith('tors') or task.startswith('md'):
                 parameters['qcexe'] = parameters['torsscan']
             else:
@@ -1164,6 +1171,11 @@ def run(s, parameters, mult=None, trial=0):
                 command = parameters['qcexe'] + ' ' + inpfile + ' ' + outfile
                 logging.info('Running quantum chemistry calculation with {}'.format(command))
                 msg += io.execute(command)
+            outfile2 = inpfile + '.out'
+            ### MOPAC may create *.inp.out file depending on the version
+            if io.check_file(outfile2, timeout=1):
+                io.mv(outfile2,outfile)
+            ### 
             if io.check_file(outfile, timeout=1):
                 msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
                 out = io.read_file(outfile)
