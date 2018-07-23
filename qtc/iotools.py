@@ -1,17 +1,31 @@
 #!/usr/bin/env python
 """
-Contains IO and OS related tools.
+Module for I/O and OS related functions.
 Since python have different modules for various
 IO related functionalities, it is good to have
 a single module simplifying their usage.
-TODO: Add more doc tests.
 """
 import time
 import os
 from os.path import isfile
 import logging
-__updated__ = "2018-04-12"
-__author__  = "Murat Keceli"
+__updated__ = "2018-07-23"
+__authors__ = "Murat Keceli, Sarah Elliott"
+__license__ = """Copyright 2017-2018 Murat Keceli, Sarah Elliott"
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 
 def get_date():
     """
