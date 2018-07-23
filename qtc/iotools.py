@@ -405,6 +405,11 @@ def execute_old(exe,inp=None,out=None):
         msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, get_path(errfile))
     return msg
 
+def set_env_var(var,value):
+    import os
+    os.environ[var] = value
+    return
+
 
 def get_mpi_rank(default=0):
     """
@@ -412,10 +417,17 @@ def get_mpi_rank(default=0):
     """
     if os.getenv("PMI_RANK") is not None:
         rank = int(os.getenv("PMI_RANK"))
+    if os.getenv("PMI_ID") is not None:
+        rank = int(os.getenv("PMI_ID"))
     elif os.getenv("OMPI_COMM_WORLD_RANK") is not None:
         rank = int(os.getenv("OMPI_COMM_WORLD_RANK"))
     else:
-        rank = default
+        try:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+        except:
+            rank = default
     return rank
 
 
@@ -428,7 +440,12 @@ def get_mpi_size(default=1):
     elif os.getenv("OMPI_COMM_WORLD_SIZE") is not None:
         size = int(os.getenv("OMPI_COMM_WORLD_SIZE"))
     else:
-        size = int(default)
+        try:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+            size = comm.Get_size()
+        except:
+            size = default
     return size
 
 
@@ -491,7 +508,7 @@ def get_env(var,default=None):
     return val
 
 
-def execute(command, stdoutfile=None, stderrfile=None, merge=False):
+def execute(command, stdoutfile=None, stderrfile=None, merge=False, wait=True):
     """
     Executes a given command, and optionally write stderr and/or stdout.
     Parameters
@@ -523,8 +540,12 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False):
     msg = 'Running Popen with command: {0}\n'.format(commandstr)
     logging.debug(msg)
     msg =''
-    process = Popen(command, stdout=PIPE, stderr=PIPE)
-    out, err = process.communicate()
+    if wait:
+        process = Popen(command, stdout=PIPE, stderr=PIPE)
+        out, err = process.communicate()
+    else:
+        process = Popen(command, close_fds=True)
+        out, err = '',''
     if merge:
         if type(out) == str and type(err) == str:
             out += err
