@@ -100,7 +100,20 @@ def pwd():
     return os.getcwd()
 
 
-def find_files_recursive(directory, pattern):
+def find_files_recursive(directory, pattern='*'):
+    """
+    Return matched filenames list in a given directory (including subdirectories) for a given pattern
+    https://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python
+    """
+    import os, fnmatch
+    matches = []
+    for root, _, filenames in os.walk(directory):
+        for filename in fnmatch.filter(filenames, pattern):
+            matches.append(os.path.join(root, filename))
+    return matches
+
+       
+def yield_files_recursive(directory, pattern):
     """
     Yields files in a directory (including subdirectories) with a given pattern
     https://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python
@@ -111,7 +124,7 @@ def find_files_recursive(directory, pattern):
             if fnmatch.fnmatch(basename, pattern):
                 filename = os.path.join(root, basename)
                 yield filename
-                
+
 def find_files(directory,pattern):
     """
     Returns a list of files that matches the pattern in a given directory
@@ -127,8 +140,8 @@ def get_file_attributes(path):
     'path'  : absoulute_path,
     'owner' : file owner
     'group' : owner unix group name
-    'size'  : file size in bytes
-    'date'  : last modified date
+    'size_byte'  : file size in bytes
+    'modified'  : last modified date
     """
     from os import stat
     from pwd import getpwuid
@@ -142,7 +155,7 @@ def get_file_attributes(path):
     date = str(datetime.fromtimestamp(filestat.st_mtime))
     return {'path':path, 'owner': owner,'group':group,'size_byte':size,'modified':date}
 
-      
+
 def join_path(*paths):
     """
     Concatenes strings into a portable path using correct seperators.
@@ -158,6 +171,7 @@ def write_file(s, filename='newfile'):
     with open(filename, 'w') as f:
         f.write(s)
     return
+
 
 def append_file(s, filename='newfile'):
 
@@ -238,7 +252,7 @@ def check_file(filename, timeout=0, verbose=False):
 
 def check_dir(dirname, timeout=0):
     """
-    Returns True (False) if a file exists (doesn't exist).
+    Returns True (False) if a directory exists (doesn't exist).
     If timeout>0 is given, then checks file in a loop until
     timeout seconds pass.
     """
@@ -803,6 +817,83 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     if anzpve != None:
         db_store_sp_prop(str(anzpve), species,'anzpve', None, prog, method, basis, optprog, optmethod, optbasis)
     return 
+
+
+def get_split_value(text,keyword,last_match=False,split_opt=None,split_idx=0):
+    """
+    Parse text to return the value corresponding to the keyword and other options.
+    """
+    val =''
+    if last_match:
+        i = text.rfind(keyword)
+    else:
+        i = text.find(keyword)
+    if i > 0:
+        try:
+            line = text[i:].splitlines()[0]
+            val  = line.split(split_opt)[split_idx]
+        except:
+            logging.error('Error in get_split_value: cannot parse "{}"'.format(keyword))
+    else:
+        logging.error('Error in get_split_value: cannot find "{}"'.format(keyword))
+    return val
+
+
+def compress_data(data):
+    """
+    Return compressed data
+    """
+    import zlib
+    z = zlib.compress(data)
+    return z
+
+
+def decompress_data(z):
+    """
+    Return decompressed data
+    """
+    import zlib
+    data = zlib.decompress(z)
+    return data
+
+
+def zip_files(files, zipfilename, mode='a', compressed=True, fullpath=True):
+    """
+    Compress/archive a given list of files into a zip file.
+    The mode can be either write "w" or append "a".
+    Duplicates will be ommited in append mode.
+    """
+    import zipfile
+    if compressed:
+        compression=zipfile.ZIP_DEFLATED
+    else:
+        compression=zipfile.ZIP_STORED
+    with zipfile.ZipFile(zipfilename, mode=mode, compression=compression) as z:
+        if fullpath:
+            for f in files:
+                f = get_path(f)
+                if f[1:] not in z.namelist():
+                    z.write(f)
+        else:
+            for f in files:
+                if f not in z.namelist():
+                    z.write(f)
+    return
+
+
+def get_zip_info(zipfilename):
+    """
+    Get number of files and compressed and decompressed file sizes in bytes.
+    """
+    import zipfile
+    compress_size = 0
+    file_size     = 0
+    with zipfile.ZipFile(zipfilename,mode='r') as z:
+        for info in z.infolist():
+            compress_size += info.compress_size
+            file_size     += info.file_size
+    return len(z.infolist()),file_size, compress_size
+
 
 if __name__ == "__main__":
     import doctest
