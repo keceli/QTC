@@ -4,7 +4,7 @@ Contains IO and OS related tools.
 Since python have different modules for various
 IO related functionalities, it is good to have
 a single module simplifying their usage.
-TODO: Add unit tests. Seperate IO vs OS
+TODO: Add more doc tests.
 """
 import time
 import os
@@ -90,7 +90,7 @@ def mv(oldname,newname):
         os.rename(oldname,newname)
     except:
         logging.debug('Command "mv {0} {1}" failed' .format(oldname, newname))
-    return 
+    return
 
 def pwd():
     """
@@ -112,7 +112,7 @@ def find_files_recursive(directory, pattern='*'):
             matches.append(os.path.join(root, filename))
     return matches
 
-       
+
 def yield_files_recursive(directory, pattern):
     """
     Yields files in a directory (including subdirectories) with a given pattern
@@ -124,6 +124,7 @@ def yield_files_recursive(directory, pattern):
             if fnmatch.fnmatch(basename, pattern):
                 filename = os.path.join(root, basename)
                 yield filename
+
 
 def find_files(directory,pattern):
     """
@@ -418,6 +419,7 @@ def execute_old(exe,inp=None,out=None):
         write_file(errstr, errfile)
         msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, get_path(errfile))
     return msg
+
 
 def set_env_var(var,value):
     import os
