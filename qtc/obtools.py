@@ -1846,11 +1846,10 @@ def get_formats():
     Return available write formats in Open Babel.
     >>> for k, v in get_formats().items():
     ...     if 'z-matrix' in v.lower():
-    ...         print(v, k)
+    ...         print('found')
+    ...         break
     ...
-    ...
-    ('Gaussian Z-Matrix Input', 'gzmat')
-    ('Fenske-Hall Z-Matrix format', 'fh')
+    found
     """
     return pybel.outformats
 
