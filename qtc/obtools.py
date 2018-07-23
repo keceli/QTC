@@ -1,22 +1,36 @@
 #!/usr/bin/env python
+"""
+Module for simplifying and enhancing the usage of Open Babel.
+Open Babel is a tool-box mainly used for cheminformatics.
+It enables conversions among different chemical formats,
+such as inchi, smiles, xyz, zmat, etc
+and extract molecular information such as force field optimized geometry,
+spin, bonding information, conformers, etc.
+More info:  openbabel.org
+Documentation: http://openbabel.org/docs/current/index.html
+"""
 import pybel
 import openbabel
 import os
 import logging
+__updated__ = "2018-07-23"
+__authors__ = "Murat Keceli, Sarah Elliott, Stephen Klippenstein"
+__license__ = """Copyright 2017-2018 Murat Keceli, Sarah Elliott, Stephen Klippenstein"
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 """
-Module for simplifying and enhancing the usage of Open Babel.
-Open Babel is a tool-box mainly used for cheminformatics.
-It allows us to make conversions among different chemical formats,
-such as inchi, smiles, xyz, zmat, etc
-and extract molecular information such as force field optimized geometry,
-spin, bonding information, conformers, etc.
-More info on:  openbabel.org
-Documentation on: http://openbabel.org/docs/current/index.html
-This module is useful for a new user of Open Babel since it
-provides information on the functionalities and how to use them
-in python.
-"""
-__updated__ = "2018-07-02"
+
+
 def get_periodic_table():
     """
     Return the periodic table as a list.
