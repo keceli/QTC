@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/e nv python
 import argparse
 import iotools as io
 import obtools as ob
@@ -143,9 +143,9 @@ def get_args():
                         help='Anharmonic corrections')
     parser.add_argument('-D', '--debug', action='store_true',
                         help='Run in debug mode')
-    parser.add_argument('--skippf', action='store_true',
+    parser.add_argument('-S', '--skippf', action='store_true',
                         help='use to skip pf input and output file generation when collecting thermo')
-    parser.add_argument('--norot', action='store_true',
+    parser.add_argument('-N', '--norot', action='store_true',
                         help='Turns off rotational pf input')
     parser.add_argument('--fix', type=int,
                         default=0,
@@ -302,7 +302,7 @@ def run(s):
             logging.info('Overwriting the calculation...')
         elif task is 'composite':
             runqc = True
-            logging.info('Composite calculation...')            
+            logging.info('Composite calculation...')
         else:
             runqc = False
             parseqc = False
@@ -328,19 +328,21 @@ def run(s):
                 logging.debug("Runtime = {:15.3f} s".format(runtime))
                 if runtime > 1.0:
                     logging.info("Runtime = {:15.3f} s".format(runtime))
+                io.rm(runfile)
             elif task == 'composite':
                 qc.run_composite(parameters)
+                io.rm(runfile)
             elif qcpackage == 'qcscript':
                 geofile = formula + '.geo'
-                geo = ''.join(parameters['xyz'][2:natom+2]) 
+                geo = ''.join(parameters['xyz'][2:natom+2])
                 io.write_file(geo, geofile)
                 if io.check_file(geofile, 1):
                     qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
             elif parameters['qcmethod'] == 'given':
                 qc.use_given_hof(parameters)
+                io.rm(runfile)
             else:
                 logging.error('{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage,available_packages))
-            io.rm(runfile)
         except KeyboardInterrupt:
             logging.error('CTRL+C command...')
             logging.info('Deleting lock file {}'.format(io.get_path(runfile)))
@@ -442,7 +444,7 @@ def run(s):
                 for key in bonds:
                     bondstr += '{} x{}\n'.format(key, bonds[key])
                 io.write_file('{:.3f}\n{}'.format(bac, bondstr), formula + '.bac')
-                parameters['all results'][slabel][qlabel]['bac'] = bac                   
+                parameters['all results'][slabel][qlabel]['bac'] = bac
 ############################ BLUES specific
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
                 RPHtexe = '/lcrc/project/PACC/codes/EStokTP/exe/RPHt.exe'
@@ -565,7 +567,7 @@ def run(s):
             else:
                 hof, hfset = hf.main_keyword(s,parameters)
             hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
-            hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
+            hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset)
         io.write_file(hftxt,formula + '.hofk')
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
@@ -593,9 +595,9 @@ def run(s):
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error('Failed in chemkin polynomial generation')
-                logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))         
+                logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))
         parameters['results']['deltaH298'] = hof298
-        parameters['all results'][slabel][qlabel]['deltaH298'] = hof298   
+        parameters['all results'][slabel][qlabel]['deltaH298'] = hof298
         parameters['all results'][slabel][qlabel]['chemkin'] = chemkintext
         parameters['all results'][slabel][qlabel]['NASAPolynomial'] = rmgpoly
         parameters['all results'][slabel][qlabel]['partition function'] = pfout
@@ -634,14 +636,14 @@ def main(arg_update={}):
                 sys.exit()
         else:
             qtcruninfo = 'Running QTC...'
-    
-    endindex = parameters['last']   
+
+    endindex = parameters['last']
     parameters['all results'] = {}
     logfile = parameters['logfile']
     logindex = parameters['logindex']
     hostname = gethostname()
     if parameters['loglevel'] == -1:
-        if mpisize > 1:
+        if mpisize > 1 and mpirank > 0:
             loglevel = logging.ERROR
         else:
             loglevel = logging.INFO
@@ -712,7 +714,7 @@ def main(arg_update={}):
     init = timer()
     logging.info("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     runthermo = parameters['runthermo']
-    if runthermo: 
+    if runthermo:
         logging.info("QTC: Number of species       = {0}".format(len(mylist)))
         for s in mylist:
             s = qc.get_slabel(s)

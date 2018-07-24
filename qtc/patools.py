@@ -48,7 +48,7 @@ def gaussian_islinear(s):
         return True
     else:
         return False
-    
+
 def gaussian_natom(s):
     """
     NAtoms=     30 NQM=       30 NQMF=       0 NMMI=      0 NMMIF=      0
@@ -72,7 +72,7 @@ def gaussian_nfreq(s):
         nvdof = 3*natom - 6
     return nvdof
 
-  
+
 def gaussian_basisset(lines):
 
     bas = 'Standard basis:\s*(\S*)'
@@ -200,11 +200,14 @@ def gaussian_hessian(lines):
 
 def gaussian_zpve(lines):
 
-    zpve = 'Zero\-point\s*correction=\s*([\d,\.,\-]*)'
-    zpve = re.findall(zpve, lines)
-    if len(zpve) > 0:
-        return float(zpve[-1])
-    return 0.0 
+    key   = 'Zero\-point\s*correction=\s*([\d,\.,\-]*)'
+    found = re.findall(key, lines)
+    if len(found) > 0:
+        zpve = float(found[-1])
+    else:
+        zpve = None
+    return zpve 
+
 
 def gaussian_anzpve(lines):
     """
@@ -293,7 +296,7 @@ def gaussian_rotconstscent(lines):
     return constants
 
 def gaussian_rotconsts(lines):
-    rot = 'Rotational constants\s*\(GHZ\):\s*([\s,\d,\.,\-]*)'     
+    rot = 'Rotational constants\s*\(GHZ\):\s*([\s,\d,\.,\-]*)'
     rot = re.findall(rot,lines)
     if len(rot) > 0: 
         rot = rot[-1].split()
@@ -305,7 +308,7 @@ def gaussian_rotconsts(lines):
              rot = rot[1:]
     rot = [ str(float(x) * ut.ghz2cm) for x in rot]
     return rot
- 
+
 def gaussian_rotdists (lines):
     startkey = 'Quartic Centrifugal Distortion Constants Tau Prime'
     endkey   = 'Asymmetric Top Reduction'

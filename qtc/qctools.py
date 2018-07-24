@@ -18,7 +18,7 @@ __authors__ = 'Murat Keceli, Sarah Elliott'
 
 def sort_species_list(slist, printinfo=False, byMass=False):
     """
-    Sorts a species list of smiles by number of rotors, electrons and atoms. 
+    Sorts a species list of smiles by number of rotors, electrons and atoms.
     Optionally, prints info on the list
     """
     tmplist= []
@@ -27,7 +27,7 @@ def sort_species_list(slist, printinfo=False, byMass=False):
         isomers = ob.get_isomers(s)
         if len(isomers) > 1:
             logging.info('{} isomers found for {} : {}'.format(len(isomers),s,isomers))
-        for isomer in isomers:     
+        for isomer in isomers:
             mol = ob.get_mol(isomer,make3D=True)
             nrotor = ob.get_nrotor(mol)
             nelec = ob.get_nelectron(mol)
@@ -190,19 +190,17 @@ def get_input(x, template, parameters):
     charge = parameters['charge']
     formula = parameters['formula']
     natom = parameters['natom']
-    geo = '\n'.join(xyz.splitlines()[2:natom+2]) 
-    #zmat = ob.get_zmat(mol)
-    x2zout = run_x2z(xyz, parameters['x2z'])
-    if len(x2zout.splitlines()) > 3:
+    try:
+        x2zout = run_x2z(xyz, parameters['x2z'])
         zmat =  get_x2z_zmat(x2zout)
-    else:
+    except:
         zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     smiles = ob.get_smiles(mol)
     nelectron = ob.get_nelectron(mol)
-    package = parameters['qcpackage'] 
-    method  = parameters[ 'qcmethod'] 
+    package = parameters['qcpackage']
+    method  = parameters[ 'qcmethod']
     basis   = parameters[  'qcbasis']
     slabel  = parameters[   'slabel']
     nrotor  = parameters[   'nrotor']
@@ -381,7 +379,7 @@ def fix_qckeyword(keyword):
 
 def get_slabels_from_json(j):
     """
-    Builds a list of strings that contains slabels for 
+    Builds a list of strings that contains slabels for
     all species in json list.
     Needs to convert from unicode to string.
     """
@@ -822,6 +820,81 @@ def parse_output(s, formula, write=False):
     return d
 
 
+def get_output_data(out, package=None):
+    """
+    Parse the output text "out" and return a dictionary
+    with parsed results that can be exported as a json file.
+    """
+    data = {}
+    data['warnings'] = ['']
+    if package is None:
+        package = get_output_package(out)
+    if package == 'nwchem':
+        lines = out.splitlines()
+        data['method'] = get_nwchem_method(out)
+        data['calculation'] = get_nwchem_calculation(out)
+        data['xyz'] = get_nwchem_xyz(lines)
+        data['numberOfBasisFunctions'] = get_nwchem_nbasis(out)
+        energies = get_nwchem_energies(lines)
+        data['energy_hartree'] = energies[data['method']]
+        freqs = get_nwchem_frequencies(lines)
+        if len(freqs) > 0:
+            data['harmonicFrequencies_cm-1'] = freqs
+            data['zpve'] = get_zpve(data['harmonicFrequencies_cm-1'])
+            if any(freq < 0 for freq in freqs) < 0:
+                data['warnings'].append('Imaginary frequency dedected')
+        if data['energy_hartree']:
+            data['succesful'] = True
+        else:
+            data['succesful'] = False
+    elif package == 'molpro':
+        method, data['energy_hartree'] = pa.molpro_energy(out)
+        data['method'] = method.replace('\(','(').replace('\)',')')  #will figureout source of this later
+        data['zpve']   = pa.molpro_zpve(out)
+        data['xyz']    = pa.molpro_xyz(out)
+        data['calculation'] = pa.molpro_calc(out)
+        data['basis']  = pa.molpro_basisset(out)
+        data['zmat']   = pa.molpro_zmat(out)
+        data['hessian'] = pa.molpro_hessian(out)
+        data['harmonicFrequencies_cm-1'] = list(pa.molpro_freqs(out))
+        if data['energy_hartree']:
+            data['succesful'] = True
+        else:
+            data['succesful'] = False
+    elif package == 'gaussian':
+        data['method'], data['energy_hartree'] = pa.gaussian_energy(s)
+        data['zpve']           = pa.gaussian_zpve(s)
+        data['azpve']          = pa.gaussian_anzpve(s)
+        data['calculation'] = pa.gaussian_calc(s)
+        data['basis']  = pa.gaussian_basisset(s)
+        data['zmat']   = pa.gaussian_zmat(s)
+        data['xyz']     = pa.gaussian_xyz(s)
+        hessian        = pa.gaussian_hessian(s)
+        freqs          = list(pa.gaussian_freqs(s))
+        afreqs         = list(get_gaussian_fundamentals(s)[:,1])
+        if sum(afreqs) > 0:
+            xmat           = get_gaussian_xmatrix(s, get_gaussian_nfreq(s))
+            if type(xmat) == str:
+                xmat = []
+        else:
+            afreqs = []
+        if energy:
+            parsed = True
+    elif package == 'mopac':
+        data['method'] = 'SEMO'
+        energy = get_mopac_energy(s)
+        deltaH0 = get_mopac_deltaH0(s)
+        deltaH298 = get_mopac_deltaH298(s)
+        xyz = get_mopac_xyz(s)
+        freqs = get_mopac_freq(s)
+        zpve = get_mopac_zpe(s)
+        if energy:
+            parsed = True
+    else:
+        data['']
+    return data
+
+
 def get_zpve(freqs):
     """
     Return zpve in au for given freq in 1/cm.
@@ -1135,6 +1208,11 @@ def run(s, parameters, mult=None, trial=0):
                 parameters['qcexe'] = '{0}'.format(parameters['qchem'])
             elif package.startswith('mopac'):
                 parameters['qcexe'] = parameters['mopac']
+                mopacdir = io.get_path(parameters['mopac'],directory=True)
+                io.set_env_var('MOPAC_LICENSE',mopacdir)
+                ldpath= io.get_env('LD_LIBRARY_PATH')
+                ldpath = mopacdir + ':' + ldpath
+                io.set_env_var('LD_LIBRARY_PATH',ldpath)
             elif task.startswith('tors') or task.startswith('md'):
                 parameters['qcexe'] = parameters['torsscan']
             else:
@@ -1167,6 +1245,11 @@ def run(s, parameters, mult=None, trial=0):
                 command = parameters['qcexe'] + ' ' + inpfile + ' ' + outfile
                 logging.info('Running quantum chemistry calculation with {}'.format(command))
                 msg += io.execute(command)
+            outfile2 = inpfile + '.out'
+            ### MOPAC may create *.inp.out file depending on the version
+            if io.check_file(outfile2, timeout=1):
+                io.mv(outfile2,outfile)
+            ### 
             if io.check_file(outfile, timeout=1):
                 msg += ' Output file: "{0}"\n'.format(io.get_path(outfile))
                 out = io.read_file(outfile)
@@ -1682,21 +1765,82 @@ def get_output_package(out,filename=False):
     """
     if filename:
         out = io.read_file(out,aslines=False)
+    if "Gaussian(R)" in out:
+        p = 'gaussian'
     if "Normal termination of Gaussian" in out:
         p = 'gaussian'
     elif "== MOPAC DONE ==" in out:
         p = 'mopac'
-    elif "Straatsma" in out:
+    elif "Northwest Computational Chemistry Package" in out:
+        if "Straatsma" in out:
         p = 'nwchem'
-    elif "Variable memory released" in out:
+        else:
+            p = 'failed_nwchem'
+    elif "molpro" in out:
+        if "Variable memory released" in out:
         p = 'molpro'
+        else:
+            p = 'failed_molpro'
     elif "Task: Submitting EStokTP job" in out:
         p = 'torsscan'
-    elif "Thank you very much for using Q-Chem" in out:
-        p = 'qchem'
+    elif "Beta-scission bonds:" in out:
+        p = 'x2z'
+    elif "thermo properties for species" in out:
+        p = 'thermp'
     else:
         p = None
     return p
+
+
+def get_output_status(out,filename=False):
+    """
+    Returns the name of qc package if the calculation is successful.
+    Returns None if failed or unknown package.
+    """
+    p = 'NA'
+    s = 'NA'
+    m = ''
+    nchar = 512
+    if filename:
+        out = io.read_file(out,aslines=False)
+    if "Gaussian(R)" in out:
+        p = 'gaussian'
+        if "Normal termination of Gaussian" in out:
+            s = 'OK'
+        else:
+            s = 'FAILED'
+            m = out[-nchar:-1]
+    elif "MOPAC" in out:
+        p = 'mopac'
+        if "== MOPAC DONE ==" in out:
+            s = 'OK'
+        else:
+            s = 'FAILED'
+            m = out[-nchar:-1]
+    elif "Northwest Computational Chemistry Package" in out:
+        p = 'nwchem'
+        if "Straatsma" in out:
+            s = 'OK'
+        else:
+            s = 'FAILED'
+            m = out[-nchar:-1]
+    elif "PROGRAM SYSTEM MOLPRO" in out:
+        p = 'molpro'
+        if "Variable memory released" in out:
+            s = 'OK'
+        else:
+            s = 'FAILED'
+            m = out[-nchar:-1]
+    elif "Task: Submitting EStokTP job" in out:
+        p = 'torsscan'
+    elif "Beta-scission bonds:" in out:
+        p = 'x2z'
+    elif "thermo properties for species" in out:
+        p = 'thermp'
+    else:
+        p = None
+    return p, s, m
+
 
 
 def get_package(templatename):
