@@ -5,7 +5,7 @@ import numpy as np
 sys.path.insert(0, '/home/elliott/Packages/QTC/')
 import iotools as io
 import qctools as qc
-import logging
+
 def gauss_xmat(filename,natoms):
     """
     Retrieves the anharmonic constant matrix from Gaussian logfile 
@@ -101,7 +101,7 @@ def remove_modes(xmat,modes):
     """
     modes.sort()#reverse=True)
     modeindex = [mode-1 for mode in modes]
-    for index in modeindex:
+    for index in modeindex[::-1]:
         xmat = np.delete(xmat,index,0)
         xmat = np.delete(xmat,index,1)
     return xmat
@@ -210,14 +210,13 @@ def anharm_freq(freqs,xmat):
     return anharms
 
 def mess_x(xmat):
-    inp = ''
-    if len(xmat) > 0:
-        inp = ' Anharmonicities[1/cm]\n'
-        for i in range( len(xmat)):
-            for j in range(i+1):
-                 inp += '   {:.3f}'.format(xmat[i][j])
-            inp += '\n'
-        inp += ' End\n'
+    
+    inp = ' Anharmonicities[1/cm]\n'
+    for i in range( len(xmat)):
+        for j in range(i+1):
+             inp += '   {:.3f}'.format(xmat[i][j])
+        inp += '\n'
+    inp += ' End\n'
     return inp
 
 def mess_fr(freqs):
@@ -273,20 +272,15 @@ def main(args, vibrots = None):
                     xmat[i] = xmat[i].split(',')
             elif io.check_file(anharmlog):
                 xmat = qc.get_gaussian_xmatrix(io.read_file(anharmlog),len(unproj))
-
+        for i in range(len(xmat)):
+            xmat[i][i] = float(xmat[i][i])
+            for j in range(i):
+                xmat[i][j] = float(xmat[i][j])
+                xmat[j][i] = xmat[i][j]
         modes     = find_hinfreqs(proj,unproj,b)
-        if type(xmat) == list:
-            for i in range(len(xmat)):
-                xmat[i][i] = float(xmat[i][i])
-                for j in range(i):
-                    xmat[i][j] = float(xmat[i][j])
-                    xmat[j][i] = xmat[i][j]
-            xmat      = remove_modes(xmat,modes)
-            anfreq = anharm_freq(proj,xmat)
-        else:
-            xmat = []
-            anfreq = proj
+        xmat      = remove_modes(xmat,modes)
         #proj, b   = get_freqs(eskproj)
+        anfreq = anharm_freq(proj,xmat)
         if vibrots:
             vibrots = remove_vibrots(vibrots, modes)
         return anfreq, mess_fr(anfreq),  xmat, mess_x(xmat), extra, vibrots
@@ -311,7 +305,7 @@ def main(args, vibrots = None):
             xmat      = remove_modes(xmat,modes)
             proj, b   = get_freqs(eskproj)
             anfreq = anharm_freq(proj,xmat)
-            return anfreq, mess_fr(anfreq), xmat, mess_x(xmat), extra
+            return anfreq, mess_fr(anfreq), xmat, mess_x(xmat), extra, vibrots
     return 
 
 if __name__ == '__main__':
