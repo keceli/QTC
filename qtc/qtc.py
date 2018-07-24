@@ -811,9 +811,14 @@ def main(arg_update={}):
         for i,s in enumerate(mylist):
             sresults = parameters['all results'][qc.get_slabel(s)]
             for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
+                zpve = 0.
+                if 'azpve' in qcresultval:
+                    zpve = qcresultval['azpve']
+                elif 'zpve' in qcresultval:
+                    zpve = qcresultval['zpve']
                 runpath = qcresultval['path'].split('/database/')[-1]
                 out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
-                        str(i+1), qc.get_slabel(s), qcresultval['energy'],qcresultval['zpve'],runpath)
+                        str(i+1), qc.get_slabel(s), qcresultval['energy'],zpve,runpath)
         logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:

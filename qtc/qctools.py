@@ -193,7 +193,10 @@ def get_input(x, template, parameters):
     geo = '\n'.join(xyz.splitlines()[2:natom+2]) 
     #zmat = ob.get_zmat(mol)
     x2zout = run_x2z(xyz, parameters['x2z'])
-    zmat =  get_x2z_zmat(x2zout)
+    if len(x2zout.splitlines()) > 3:
+        zmat =  get_x2z_zmat(x2zout)
+    else:
+        zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     smiles = ob.get_smiles(mol)
@@ -1267,6 +1270,17 @@ def run_x2z(xyz,exe='x2z', getinfo=False, outputfile=None):
     if err:
         logging.info('STDOUT for x2z:\n {}'.format(out))
         logging.error('STDERR for x2z:\n {}'.format(err))
+        try:
+            if getinfo:
+                x2zinfo = get_x2z_info(out)
+                result = x2zinfo
+            else:
+                result = out
+            if outputfile:
+                io.write_file(out, outputfile)
+            return result
+        except:
+            return ''
     else:
         if getinfo:
             x2zinfo = get_x2z_info(out)
