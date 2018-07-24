@@ -99,6 +99,20 @@ def pwd():
     import os
     return os.getcwd()
 
+def read_xyzdir(s, xyzdir):
+    """ 
+    Reads xyz from xyzdir 
+    """
+    import obtools as ob
+    xyz = ''
+    slabel = ob.get_slabel(s)
+    xyzfile = '{}{}{}.xyz'.format(xyzdir,os.path.sep,ob.get_smiles_filename(slabel))
+    if check_file(xyzfile):
+       xyz = read_file(xyzfile)
+    elif check_file(xyzfile.split('_m')[0] + '_m1.xyz'):
+       
+       xyz = read_file(xyzfile.split('_m')[0] + '_m1.xyz')
+    return xyz
 
 def find_files_recursive(directory, pattern):
     """
@@ -584,7 +598,9 @@ def db_head_path(db_location=None):
     if db_location == 'test':
         return '/home/elliott/testdirectory/'
     if db_location == None:
-        return '/lcrc/project/PACC/databases/qtc_database/'
+        #return '/lcrc/project/PACC/databases/qtc_database/'
+        return '/lcrc/project/PACC/databases/torsscan_database/'
+        #return '/home/elliott/testdirectory/'
     else:
         return fix_path(db_location)
 
@@ -729,6 +745,7 @@ def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, 
         directory =  db_head_path(db_location)
     else:
         directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+    print directory
     if check_file(join_path(directory, smiles + '.' + typ)):
         return read_file(join_path(directory, smiles + '.' + typ))
     return 
@@ -759,7 +776,7 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     xyz    =  pa.xyz(     lines) 
     geo    =  pa.geo(     lines) 
     freqs  =  pa.freqs(lines)
-    
+
     if prog == None or method == None or basis == None:
         logging.debug('Parsing error, check lines')
         return 
