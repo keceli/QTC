@@ -548,6 +548,8 @@ def get_messpf_input(mol,parameters):
     posfreqs = []
     zpe = 0
     rotdists = ''
+    scale = 0
+    scaletype = None
     vibrots = None
     emax = 500 #kcal/mol, not sure
     if 'azpve' in results:
@@ -583,6 +585,10 @@ def get_messpf_input(mol,parameters):
         elif 'afreqs' in results:
             freqs = results['afreqs']
         #xmat = anharm.mess_x(xmat)
+    if 'scale' in parameters:
+        scale = parameters['scale']
+    if 'scaletype' in parameters:
+        scaletype = parameters['scaletype']
 
     coreIsMd = False
     if  'hindered potential' in results:
@@ -615,11 +621,24 @@ def get_messpf_input(mol,parameters):
         if 'hindered potential' in results: 
             if  coreIsMd:
                 coreline  = '  Core MultiRotor\n'
-                coreline  += '  ForceQFactor\n'
                 hindlines = '     {}'.format('     '.join(results['hindered potential' ].splitlines(True)[3:]))
             else:
                 hindlines  = '   End\n'
-                hindlines += '  {}'.format('  '.join(results['hindered potential' ].splitlines(True)))
+                hindpot = results['hindered potential']
+                if scale and scaletype:
+                     if scaletype.startswith('h'):
+                         hindpot = hindpot.split('Potential[kcal/mol]')
+                         if len(hindpot) > 1:
+                             for h, pot in enumerate(hindpot[1:]):
+                                 pot, end = pot.split('End')
+                                 num = pot.split()[0] 
+                                 pot = pot.split()[1:]
+                                 newpot = ' {}\n    '.format(num)
+                                 for val in pot:
+                                     newpot += '   {:.3f}'.format(float(scale) * float(val))
+                                 hindpot[h+1] = newpot + '\n End' + end
+                         hindpot = 'Potential[kcal/mol]'.join(hindpot)
+                hindlines += '  {}'.format('  '.join(hindpot.splitlines(True)))
         inp += coreline
         inp += '      InterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
         inp += '      SymmetryFactor {0}\n'.format(sym)
@@ -629,28 +648,30 @@ def get_messpf_input(mol,parameters):
         if len(freqs) > 0:
             inp += '      Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
             inp += '      ' + ' '.join([str(x) for x in freqs]) + '\n'
+        if scaletype and scale:
+            if 'f' in scaletype:
+                inp += '      FrequencyScalingFactor {:.4f}\n'.format(scale)
         #anharmonics
         if len(xmat) > 0:
             inp += '      Anharmonicities[1/cm]\n'
             for i in range( len(xmat)):
                 inp += '\t\t' + ' '.join([str(xmat[i][j]) for j in range(i+1)]) + '\n'
         if not coreIsMd:
-            if 'norot' in parameters:
-                if not parameters['norot']:
-                        #if len(rotconsts) > 0:
-                        #    inp += '      RotationalConstants[1/cm] '
-                        #    inp += ' '.join(rotconsts) + '\n'
-                    if vibrots:
-                        vibrots = vibrots.splitlines(True)
-                        if len(freqs) == len(vibrots):
-                            inp += '      RovibrationalCouplings[1/cm]\n'
-                            inp += '\t   ' + '\t   '.join(vibrots) + '\n'
-                        else:
-                            logging.warning("Rotational Couplings length does not match freqs -- removed from pf.inp")
-                    if len(rotdists) > 0:
-                        inp += '      RotationalDistortion[1/cm]\n'
-                        inp += '\t   ' + '\t   '.join(rotdists.splitlines(True)) + '\n'
-                        inp += '      End\n' ###   END CORE
+            if not parameters['norot']:
+                #if len(rotconsts) > 0:
+                #    inp += '      RotationalConstants[1/cm] '
+                #    inp += ' '.join(rotconsts) + '\n'
+                if vibrots:
+                    vibrots = vibrots.splitlines(True)
+                    if len(freqs) == len(vibrots):
+                        inp += '      RovibrationalCouplings[1/cm]\n'
+                        inp += '\t   ' + '\t   '.join(vibrots) + '\n'
+                    else:
+                        logging.warning("Rotational Couplings length does not match freqs -- removed from pf.inp")
+                if len(rotdists) > 0:
+                    inp += '      RotationalDistortion[1/cm]\n'
+                    inp += '\t   ' + '\t   '.join(rotdists.splitlines(True)) + '\n'
+                    inp += '      End\n' ###   END CORE
             inp += hindlines  ###   END RRHO
         if not 'hindered potential' in results:
             inp += '   End\n'
@@ -826,7 +847,7 @@ def write_chemkin_polynomial(mol, parameters):
         hof298 = pa.get_298(lines)
         logging.info('delHf(298) = {0} kcal/mol'.format(hof298))
     else:
-        logging.error('Failed to crete thermp.out')
+        logging.error('Failed to create thermp.out')
     c97file = formula + '.c97'
     if io.check_file(c97file):
         c97text  = io.read_file(c97file)
