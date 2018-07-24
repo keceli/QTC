@@ -1,5 +1,6 @@
-#!/usr/bin/e nv python
+#!/usr/bin/env python
 import argparse
+import collections
 import iotools as io
 import obtools as ob
 import qctools as qc
@@ -11,6 +12,7 @@ import pprint
 import sys
 import os
 import logging
+import numpy as np
 from patools import energy
 from timeit import default_timer as timer
 __updated__ = "2018-03-03"
@@ -73,7 +75,7 @@ def get_args():
                         default='',
                         help='Keyword string that defines quantum chemistry calculations i.e.: "opt/ccsd/cc-pvdz/gaussian,energy/ccsd/cc-pvtz/nwchem,extrapolation/cbs/energy=0.3*E0+0.7*E1" Note that each calculation is separated by a comma (,) and calculations are defined by TASK/METHOD/BASIS/PACKAGE. TASK can be opt, freq, anharm,extrapolation.METHOD and BASIS are simply copied into quantum chemistry input file as defined in the templates folder. PACKAGE can be gaussian, molpro or nwchem')
     parser.add_argument('-t', '--qctemplate', type=str,
-                        default='',
+                        default='/home/elliott/Packages/QTC/templates',
                         help='Path for the templates directory. Templates have a specific format for filenames. See qtc/templates.')
     parser.add_argument('-l', '--loglevel', type=int,
                         default=-1,
@@ -143,10 +145,14 @@ def get_args():
                         help='Anharmonic corrections')
     parser.add_argument('-D', '--debug', action='store_true',
                         help='Run in debug mode')
-    parser.add_argument('-S', '--skippf', action='store_true',
+    parser.add_argument('--skippf', action='store_true',
                         help='use to skip pf input and output file generation when collecting thermo')
-    parser.add_argument('-N', '--norot', action='store_true',
+    parser.add_argument('--getBAC', action='store_true',
+                        help='calculate the parameters for a BAC')
+    parser.add_argument('--norot', action='store_true',
                         help='Turns off rotational pf input')
+    parser.add_argument('--uncertainty', type=str, default='',
+                        help='use to generate uncertainty analysis')
     parser.add_argument('--fix', type=int,
                         default=0,
                         help='If FIX > 0, interpolate negative energies in hindered potential input for mess')
@@ -255,6 +261,7 @@ def run(s):
     parameters['qcoutput'] = qcoutput
     if parameters['qctemplate']:
         parameters['qctemplate'] = io.get_path(parameters['qctemplate'])
+        parameters['bacdirectory'] = parameters['qctemplate']
     if io.check_dir(parameters['qctemplate']):
         pass
     else:
@@ -302,7 +309,7 @@ def run(s):
             logging.info('Overwriting the calculation...')
         elif task is 'composite':
             runqc = True
-            logging.info('Composite calculation...')
+            logging.info('Composite calculation...')            
         else:
             runqc = False
             parseqc = False
@@ -328,21 +335,19 @@ def run(s):
                 logging.debug("Runtime = {:15.3f} s".format(runtime))
                 if runtime > 1.0:
                     logging.info("Runtime = {:15.3f} s".format(runtime))
-                io.rm(runfile)
             elif task == 'composite':
                 qc.run_composite(parameters)
-                io.rm(runfile)
             elif qcpackage == 'qcscript':
                 geofile = formula + '.geo'
-                geo = ''.join(parameters['xyz'][2:natom+2])
+                geo = ''.join(parameters['xyz'][2:natom+2]) 
                 io.write_file(geo, geofile)
                 if io.check_file(geofile, 1):
                     qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
             elif parameters['qcmethod'] == 'given':
                 qc.use_given_hof(parameters)
-                io.rm(runfile)
             else:
                 logging.error('{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage,available_packages))
+            io.rm(runfile)
         except KeyboardInterrupt:
             logging.error('CTRL+C command...')
             logging.info('Deleting lock file {}'.format(io.get_path(runfile)))
@@ -425,26 +430,6 @@ def run(s):
                     logging.error('Cannot find xyz, optimization failed')
                     parameters['break'] = True
                     runthermo = False
-            if parameters['bac']:
-                x2zinp = ''
-                if io.check_file(formula + '.xyz') :
-                    x2zinp = (formula + '.xyz')
-                elif 'xyz' in parameters['results'] and natom > 1:
-                    x2zinp = parameters['results']['xyz']
-                logging.info('Running x2z for BAC bonds')
-                if x2zinp:
-                    try:
-                        x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
-                        bonds =  qc.get_x2z_bonds(x2zout)
-                        logging.info('Bonds found = {}'.format(bonds))
-                    except:
-                        logging.error('x2z run failed, no bonds will be corrected')
-                bac  = qc.get_bac(parameters, bonds)
-                bondstr = ''
-                for key in bonds:
-                    bondstr += '{} x{}\n'.format(key, bonds[key])
-                io.write_file('{:.3f}\n{}'.format(bac, bondstr), formula + '.bac')
-                parameters['all results'][slabel][qlabel]['bac'] = bac
 ############################ BLUES specific
             if 'Hessian' in parameters['results'] and 'RPHt input' in parameters['results']:
                 RPHtexe = '/lcrc/project/PACC/codes/EStokTP/exe/RPHt.exe'
@@ -483,7 +468,30 @@ def run(s):
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
-    parameters['all results'][slabel][qlabel]['energy'] = float('nan')
+        if parameters['bac']:
+            bonds = {}
+            x2zinp = ''
+            if io.check_file(formula + '.xyz') :
+                x2zinp = (formula + '.xyz')
+            elif 'xyz' in parameters['results'] and natom > 1:
+                x2zinp = parameters['results']['xyz']
+            logging.info('Running x2z for BAC bonds')
+            if x2zinp and natom > 1:
+                try:
+                    x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
+                    bonds =  qc.get_x2z_bonds(x2zout)
+                    logging.info('Bonds found = {}'.format(bonds))
+                except:
+                    logging.error('x2z run failed, no bonds will be corrected')
+            else:
+               bonds = {}
+            bac  = hf.calc_bac(parameters, bonds, parameters['qlabel'])
+            bondstr = ''
+            for key in bonds:
+                bondstr += '{} x{}\n'.format(key, bonds[key])
+            io.write_file('{:.3f}\n{}'.format(bac, bondstr), formula + '.bac')
+            parameters['all results'][slabel][qlabel]['bac'] = bac                   
+        parameters['all results'][slabel][qlabel]['energy'] = float('nan')
     if 'zpve' in parameters['results']:
         parameters['all results'][slabel][qlabel]['zpve'] = parameters['results']['zpve']   
     else:
@@ -528,6 +536,8 @@ def run(s):
     bonds = True
     if runthermo:
         sym = parameters['symm']
+        hfcoeff = []
+        hfset = []
         if sym:
             pass
         else:
@@ -542,7 +552,7 @@ def run(s):
                 elif 'xyz' in parameters['results'] and natom > 1:
                     x2zinp = parameters['results']['xyz']
                 logging.info('Running x2z for symmetry number')
-                if x2zinp:
+                if x2zinp and natom > 1:
                     try:
                         x2zout = qc.run_x2z(x2zinp, parameters['x2z'])
                         sym = qc.get_x2z_sym(x2zout) 
@@ -552,6 +562,7 @@ def run(s):
                     except:
                         logging.error('x2z run failed, sym. number is set to 1. Probably a failed xyz')
                 else:
+                    bonds = {}
                     logging.error('xyz file cannot be found')
         parameters['results']['sym'] = sym
         hof = parameters['hof']
@@ -565,17 +576,17 @@ def run(s):
                 hfset = 'Definition'
                 logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
             else:
-                hof, hfset = hf.main_keyword(s,parameters)
+                hof, hfset, hfcoeff = hf.main_keyword(s,parameters)
             hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
-            hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset)
+            hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         io.write_file(hftxt,formula + '.hofk')
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof
         parameters['all results'][slabel][qlabel]['heat of formation basis'] = hfset
-        #if not type(hfcoeff) == list:
-        #    hfcoeff = hfcoeff.tolist()
-        #parameters['all results'][slabel][qlabel]['heat of formation coeff'] = hfcoeff
+        if not type(hfcoeff) == list:
+            hfcoeff = hfcoeff.tolist()
+        parameters['all results'][slabel][qlabel]['heat of formation coeff'] = hfcoeff
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
@@ -588,16 +599,86 @@ def run(s):
                 io.write_file(groupstext, 'new.groups')
             try:
                 hof298, chemkintext, rmgpoly = tc.write_chemkin_polynomial(mol, parameters)
-                pfout = io.read_file('pf.dat')
+                if io.check_file('pf.dat'):
+                    pfout = io.read_file('pf.dat')
+                else:
+                    pfout = ''
+                if parameters['uncertainty']:
+                   io.mkdir('uncertainty')
+                   io.cd('uncertainty')
+                   uncertainty = parameters['uncertainty'].split(',')
+                   for uncert in uncertainty:
+                       uncert = uncert.split('-')
+                       if len(uncert) > 2:
+                           typ,lscale, hscale = uncert
+                       elif(len(uncert) > 1):
+                           typ,lscale = uncert
+                       else:
+                           typ = uncert[0]
+                       types = {'f':'freqs','h':'hindered potential'}
+                       if typ[0].lower() in types:
+                           if types[typ[0].lower()] in parameters['results']:
+                               lscale = float(lscale)
+                               hscale = float(hscale)
+                               scales = np.arange(lscale,hscale,(hscale-lscale) / 9)
+                               scales = np.append(scales,scales[-1] +(hscale-lscale) / 9)
+                               for scale in scales:
+                                   parameters['scale'] = scale
+                                   parameters['scaletype'] = typ
+                                   io.mkdir('scale{}_{:.3f}'.format(typ,scale))
+                                   io.cd('scale{}_{:.3f}'.format(typ,scale))
+                                   if not io.check_file('new.groups'):
+                                       groupstext = tc.get_new_groups()
+                                       io.write_file(groupstext, 'new.groups')
+                                   _, tempchemkintext,_ = tc.write_chemkin_polynomial(mol, parameters)
+                                   parameters['all results'][slabel][qlabel]['scalechemkin_{}-{:.3f}'.format(typ,scale)] = tempchemkintext
+                                   parameters['scaletype'] = None
+                                   io.cd('..')
+                       elif typ.lower().startswith('q'):
+                           if pfout:
+                               dof = 3*natom - 6
+                               if 'moltype' in parameters:
+                                  if parameters['moltype'].lower() == 'linear':
+                                      dof += 1
+                               c = float(lscale)
+                               io.mkdir('scale{}_{:.3f}'.format(typ,c))
+                               io.cd('scale{}_{:.3f}'.format(typ,c))
+                               hdr = '\n'.join(pfout.splitlines()[:2])
+                               pfnew = pfout.splitlines()[2:]
+                               for l, line in enumerate(pfnew):
+                                   T, zeroth, first, second = line.split()
+                                   T, zeroth, first, second = float(T), float(zeroth), float(first), float(second)
+                                   newzeroth = zeroth + dof * np.log(1 + c * T / 1000)
+                                   newfirst = first + dof / (1000 / c + T)
+                                   newsecond = second + dof / (1000 /c + T )**2
+                                   pfnew[l] = '{:3.1f}\t{:.4f}\t{:.8f}\t{:.5e}'.format(T, newzeroth, newfirst, newsecond)
+                               pfnew = hdr + '\n' + '\n'.join(pfnew)
+                               io.write_file(pfnew, 'pf.dat')
+                               if not io.check_file('new.groups'):
+                                   groupstext = tc.get_new_groups()
+                                   io.write_file(groupstext, 'new.groups')
+                               skippf = parameters['skippf']
+                               parameters['skippf'] = True
+                               _, tempchemkintext,_ = tc.write_chemkin_polynomial(mol, parameters)
+                               parameters['skippf'] = skippf
+                               parameters['all results'][slabel][qlabel]['scalechemkin_{}-{:.3f}'.format(typ,c)] = tempchemkintext
+                               parameters['scaletype'] = None
+                               io.cd('..')
+                           else:
+                               logging.info('Cannot scale Q, no pf.dat in {}'.format(os.path.sep.join(io.pwd().split(os.path.sep)[:-1])))
+                       else:
+                           logging.info('Invalid uncertainty analysis type {}'.format(typ))
+                       io.cd('..')
+                   parameters['scale'] = 0
             except Exception as e:
                 if parameters['debug']:
                     raise
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error('Failed in chemkin polynomial generation')
-                logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))
+                logging.error('Exception {}: {} {} {}'.format(e, exc_type, fname, exc_tb.tb_lineno))         
         parameters['results']['deltaH298'] = hof298
-        parameters['all results'][slabel][qlabel]['deltaH298'] = hof298
+        parameters['all results'][slabel][qlabel]['deltaH298'] = hof298   
         parameters['all results'][slabel][qlabel]['chemkin'] = chemkintext
         parameters['all results'][slabel][qlabel]['NASAPolynomial'] = rmgpoly
         parameters['all results'][slabel][qlabel]['partition function'] = pfout
@@ -616,7 +697,8 @@ def main(arg_update={}):
     mpisize = io.get_mpi_size(default=1)
     start  = timer()
     args = get_args()
-    parameters = vars(args)
+    parameters = collections.OrderedDict()
+    parameters.update(vars(args))
     qcnproc = parameters['qcnproc']
     beginindex = parameters['first']
     if parameters['swift']:
@@ -636,14 +718,15 @@ def main(arg_update={}):
                 sys.exit()
         else:
             qtcruninfo = 'Running QTC...'
-
-    endindex = parameters['last']
-    parameters['all results'] = {}
+    
+    endindex = parameters['last']   
+    parameters['all results'] = collections.OrderedDict()
     logfile = parameters['logfile']
     logindex = parameters['logindex']
     hostname = gethostname()
+    loglevel = logging.INFO
     if parameters['loglevel'] == -1:
-        if mpisize > 1 and mpirank > 0:
+        if mpisize > 1:
             loglevel = logging.ERROR
         else:
             loglevel = logging.INFO
@@ -653,7 +736,7 @@ def main(arg_update={}):
         loglevel = logging.WARNING
     elif parameters['loglevel'] == 2:
         loglevel = logging.INFO
-    elif parameters['loglevel'] == 3:
+    elif parameters['loglevel'] > 2:
         loglevel = logging.DEBUG
     if parameters['debug']:
         loglevel = logging.DEBUG
@@ -675,7 +758,6 @@ def main(arg_update={}):
         logging.basicConfig(format='%(levelname)s%(message)s', filename=logfile, level=loglevel)
     for key in arg_update:
         parameters[key] = arg_update[key]
-
     logging.info(__logo__)
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))
     logging.info("QTC: Last update             = {0}".format(__updated__))
@@ -683,6 +765,8 @@ def main(arg_update={}):
     logging.info(qtcruninfo)
     logging.info('QTC: Given arguments         =')
     for param in parameters:
+        if not hasattr(args, param):
+            setattr(args, param, {})
         logging.info('                             --{0:20s}\t{1}'.format(param, getattr(args, param)))
     if parameters['qckeyword']:
         parameters['qckeyword'] = qc.fix_qckeyword(parameters['qckeyword'])
@@ -693,7 +777,8 @@ def main(arg_update={}):
     parameters['number_of_calculations'] = ncalc
     parameters['optlevel'] = 'sp' #TODO
     templatedir = parameters['qctemplate']
-
+    if not os.path.sep in parameters['xyzdir']:
+        parameters['xyzdir'] = io.join_path(*[io.pwd(),parameters['xyzdir']])
     inp = args.input
     jsonfile = args.jsoninput
     jlist = []
@@ -714,22 +799,27 @@ def main(arg_update={}):
     init = timer()
     logging.info("QTC: Initialization time (s) = {0:.2f}".format(init-start))
     runthermo = parameters['runthermo']
-    if runthermo:
+    if runthermo: 
         logging.info("QTC: Number of species       = {0}".format(len(mylist)))
+        molbasis = []
         for s in mylist:
             s = qc.get_slabel(s)
             formula = ob.get_formula(s)
             ref = parameters['reference']
             if  'cbh' in ref.lower():
-                _, basismolecules, _ = hf.cbh_coefficients(s.split('_')[0], ref)
+                _, basismolecules, _ = hf.cbh_coefficients(s.split('_')[0], ref, parameters)
             else: 
                 _, basismolecules, _ = hf.comp_coefficients(formula, basis=parameters['reference'].split(','))
             for basismol in basismolecules:
                 smi = qc.get_slabel(basismol)
+                molbasis.append(basismol)
                 if smi not in mylist:
                     msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
                     mylist = [smi] + mylist
                     logging.info(msg)
+        molbasis = set(molbasis)
+        molbasis = '\n{}'.format('\n'.join(molbasis))
+        logging.info('QTC: Species required for ref{}{}'.format(ref, molbasis))
         logging.info("QTC: Number of species required for thermo= {0}".format(len(mylist)))
     if parameters['generate']:
         mylist = qc.sort_species_list(mylist, printinfo=True)
@@ -813,14 +903,13 @@ def main(arg_update={}):
         for i,s in enumerate(mylist):
             sresults = parameters['all results'][qc.get_slabel(s)]
             for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
-                zpve = 0.
-                if 'azpve' in qcresultval:
-                    zpve = qcresultval['azpve']
-                elif 'zpve' in qcresultval:
-                    zpve = qcresultval['zpve']
                 runpath = qcresultval['path'].split('/database/')[-1]
+                if not 'energy' in qcresultval:
+                    qcresultval['energy'] = float('NaN') 
+                if not 'zpve' in qcresultval:
+                    qcresultval['zpve'] = float('NaN') 
                 out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
-                        str(i+1), qc.get_slabel(s), qcresultval['energy'],zpve,runpath)
+                        str(i+1), qc.get_slabel(s), qcresultval['energy'],qcresultval['zpve'],runpath)
         logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
@@ -837,6 +926,10 @@ def main(arg_update={}):
                     else:
                         out += s + '  not included in ckin because there is no pf output for ' + qcresultkey  + '\n'
             logging.info(out)
+            out = ''
+            if parameters['getBAC']:
+                out += hf.get_bac(parameters, mylist, 0, 10)
+                logging.info(out)
             ckinfile = 'chemkin_' + parameters['logfile'] + get_date_time("_%y%m%d_%H%M%S") + '.txt'
             ckinfile = io.get_unique_filename(ckinfile)
             io.write_file(ckin,ckinfile)
