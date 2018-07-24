@@ -265,6 +265,8 @@ def get_isomers(s):
     nslash   = s2.count('/') + s2.count('\\')
     nchiral  = s2.count('@')
     mult = None
+    if nslash == 0 and nchiral == 0:
+        s2 = s
     if '_m' in s:
         mult = get_mult(s)
         s3 = get_slabel(s2,mult)
