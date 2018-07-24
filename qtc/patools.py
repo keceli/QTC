@@ -109,10 +109,16 @@ def gaussian_energy(lines,method=''):
     #    return (method,float(energ[-1].replace('D','E').replace('\n','').replace(' ','')))
         return (method,float(energ[-1].replace('\n','').replace(' ','')))
     else:
+        lines = lines.strip().replace('\n','').replace(' ','')
         if 'anharm' in lines:
-            energ = 'HF=\s*([\d,\-,\.,D,\+]*)'
+            energ = 'MP2=\s*([\d,\-,\.,D,\+]*)'
             energ = re.findall(energ,lines)
-            return (method, float(energ[-1].replace('D','E')))
+            if energ:
+                return (method, float(energ[-1].replace('D','E')))
+            else:
+                energ = 'HF=\s*([\d,\-,\.,D,\+]*)'
+                energ = re.findall(energ,lines)
+                return (method, float(energ[-1].replace('D','E')))
        # energ = '(\S+)\s*A\.U\.'
         energ = 'E\([u,U,r,R]*' + method + '\)\s*=\s*([\d,\-,\.,D,\+]*)'
         energ = re.findall(energ,lines)
@@ -185,6 +191,7 @@ def gaussian_freqs(lines):
 def gaussian_hessian(lines):
     startkey = 'Force constants in Cartesian coordinates:'
     endkey   = 'Force constants in internal coordinates:'
+    lines= lines.split('Harmonic vibro-rotational analysis')[-1]
     lines = lines.splitlines()
     sline = io.get_line_number(startkey,lines=lines)
     eline = io.get_line_number(endkey,lines=lines)
@@ -298,7 +305,6 @@ def gaussian_rotconsts(lines):
     if len(rot) > 0:
          if abs(float(rot[0])) < 0.000001:
              rot = rot[1:]
-    rot = [ str(float(x) * ut.ghz2cm) for x in rot]
     return rot
  
 def gaussian_rotdists (lines):
