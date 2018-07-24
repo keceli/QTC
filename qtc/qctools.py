@@ -113,6 +113,8 @@ def add_species_info(s, parameters):
             x2z_out = run_x2z(xyzfile, parameters['x2z'])
             nrotor = get_x2z_nrotor(x2z_out)
             nmethyl = get_x2z_nmethyl(x2z_out)
+            x2zinfo = get_x2z_info(x2z_out)
+            parameters['moltype'] = x2zinfo['moltype']
             parameters['nallrotor']  = nrotor 
             parameters['nrotor']  = nrotor - nmethyl
             parameters['nmethyl'] = nmethyl
@@ -193,7 +195,10 @@ def get_input(x, template, parameters):
     geo = '\n'.join(xyz.splitlines()[2:natom+2]) 
     #zmat = ob.get_zmat(mol)
     x2zout = run_x2z(xyz, parameters['x2z'])
-    zmat =  get_x2z_zmat(x2zout)
+    if x2zout:
+        zmat =  get_x2z_zmat(x2zout)
+    else:
+        zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
     smiles = ob.get_smiles(mol)
@@ -265,7 +270,7 @@ def get_input(x, template, parameters):
             elif task == 'optfreq':
                 task = 'opt=(maxcyc=50,internal) freq'
             elif task == 'optanharm':
-                task = 'opt=(maxcyc=50,internal) freq=(anharm,vibrot)'
+                task = 'opt=(maxcyc=50,internal) freq=(anharm,vibrot,readanharm)'
             elif task == 'freq':
                 task = 'freq'
             elif task == 'energy':
@@ -1257,6 +1262,7 @@ def run_x2z(xyz,exe='x2z', getinfo=False, outputfile=None):
     Runs Yury's x2z, and returns the output text as a string (default) or 
     if getinfo is True returns a dictionary with parsed information.
     """
+    result = ''
     if io.check_file(xyz):
         inp = xyz
     else:
@@ -1398,32 +1404,33 @@ def get_x2z_zmat(out):
     zmat = ''
     atoms = []
     measure = []
-    props, lines = out.split('Z-Matrix:\n')
-    #zmatrix connectivity
-    lines = lines.split('\n')
-    for i,line in enumerate(lines):
-        if line == '':
-            break
-        atoms.append('  '.join(line.rstrip('\n').replace(' ','').split(',')))     #Main part of ZMAT
-    zmat += '\n'.join(atoms)
-    #zmatrix parameters
-    for j in range(i+1,len(lines)):
-        if lines[j]:
-            if 'const' in lines[j].lower() or 'Rot' in lines[j] or 'Beta' in lines[j]:
+    if out:
+        props, lines = out.lower().split('z-matrix:\n')
+        #zmatrix connectivity
+        lines = lines.split('\n')
+        for i,line in enumerate(lines):
+            if line == '':
                 break
-        measure.extend(lines[j].replace('=',' ').rstrip('\n').split())   #Gets parameters
-    measure = np.array(measure)                     
-    if  (len(measure)%2 != 0):
-        measure = measure[:-1]
-    measure = measure.reshape( len(measure)/2, 2)      #Puts measurements into two columns
-    for angle in measure:
-        if 'R' in angle[0]:
-            angle[1] = str(float(angle[1]) * 0.529177) #bohr to angstrom 
-        angle[1] = '{:.4f}'.format(float(angle[1]))
-    measure = measure.tolist()
-    for i, meas in enumerate(measure): 
-        measure[i] = ' = '.join(measure[i])    
-    zmat += '\nVariables:\n' + '\n'.join(measure) 
+            atoms.append('  '.join(line.rstrip('\n').replace(' ','').split(',')))     #Main part of ZMAT
+        zmat += '\n'.join(atoms)
+        #zmatrix parameters
+        for j in range(i+1,len(lines)):
+            if lines[j]:
+                if 'const' in lines[j].lower() or 'rot' in lines[j] or 'beta' in lines[j]:
+                    break
+            measure.extend(lines[j].replace('=',' ').rstrip('\n').split())   #Gets parameters
+        measure = np.array(measure)                     
+        if  (len(measure)%2 != 0):
+            measure = measure[:-1]
+        measure = measure.reshape( len(measure)/2, 2)      #Puts measurements into two columns
+        for angle in measure:
+            if 'r' in angle[0].lower():
+                angle[1] = str(float(angle[1]) * 0.529177) #bohr to angstrom 
+            angle[1] = '{:.4f}'.format(float(angle[1]))
+        measure = measure.tolist()
+        for i, meas in enumerate(measure): 
+            measure[i] = ' = '.join(measure[i])    
+        zmat += '\nVariables:\n' + '\n'.join(measure) 
     return zmat
 
 def get_x2z_bonds(out):
@@ -1452,7 +1459,7 @@ def get_x2z_bonds(out):
         if line == '':
             break
         for j, typ in enumerate(line.split()[1:-1]):
-            if int(typ) > 0:
+            if float(typ) > 0.0:
                 bonded = sorted([atoms[i], atoms[j]])
                 bond = '{0}-{2}({1})'.format(bonded[0],typ,bonded[1])
                 if bond in bonds:
@@ -1520,6 +1527,7 @@ def get_x2z_info(out):
     x2zinfo['nsym'] = -1
     x2zinfo['nrotor'] = 0
     x2zinfo['nresonance'] = 0
+    x2zinfo['bonds'] = get_x2z_bonds(out)
     x2zinfo['zmat'] = get_x2z_zmat(out)
     x2zinfo['nmethyl'] = get_x2z_nmethyl(out)
     x2zinfo['bonds'] = get_x2z_bonds(out)
@@ -1552,26 +1560,6 @@ def get_x2z_info(out):
                     x2zinfo['nresonance'] = int(item)
     return x2zinfo                
 
-
-def get_bac(parameters, bonds):
-    """
-    Given a set of bonds, calculate the bond additivity correction
-    using a  template specified in parameters
-    """
-    bacfile = parameters['qctemplate'] +'/bac.txt'
-    bacfile = io.read_file(bacfile).splitlines()
-    bacdic  = {}
-    for line in bacfile:
-        line = line.split()
-        if len(line) > 1:
-            bacdic[line[0]] = float(line[1])
-    correction = 0.
-    for key in bonds:
-        if key in bacdic:
-            correction += bonds[key] * bacdic[key] 
-        else:
-            print '{} bond has no correction'.format(key)
-    return correction
 
 def get_ob_info(s):
     """
