@@ -1,32 +1,84 @@
 #!/usr/bin/env python
+"""
+Module for simplifying and enhancing the usage of Open Babel.
+Open Babel is a tool-box mainly used for cheminformatics.
+It enables conversions among different chemical formats,
+such as inchi, smiles, xyz, zmat, etc
+and extract molecular information such as force field optimized geometry,
+spin, bonding information, conformers, etc.
+More info:  openbabel.org
+Documentation: http://openbabel.org/docs/current/index.html
+"""
 import pybel
 import openbabel
 import os
 import logging
+__updated__ = "2018-07-23"
+__authors__ = "Murat Keceli, Sarah Elliott, Stephen Klippenstein"
+__license__ = """Copyright 2017-2018 Murat Keceli, Sarah Elliott, Stephen Klippenstein"
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 """
-Module for simplifying and enhancing the usage of Open Babel.
-Open Babel is a tool-box mainly used for cheminformatics.
-It allows us to make conversions among different chemical formats,
-such as inchi, smiles, xyz, zmat, etc
-and extract molecular information such as force field optimized geometry,
-spin, bonding information, conformers, etc.
-More info on:  openbabel.org
-Documentation on: http://openbabel.org/docs/current/index.html
-This module is useful for a new user of Open Babel since it
-provides information on the functionalities and how to use them
-in python.
-"""
-__updated__ = "2018-01-12"
+
+
+def get_periodic_table():
+    """
+    Return the periodic table as a list.
+    Includes elements with atomic number less than 55.
+    >>> pt = get_periodic_table()
+    >>> print(len(pt))
+    54
+    """
+    pt = ['X' ,
+          'H' ,'He',
+          'Li','Be','B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
+          'Na','Mg','Al','Si','P' ,'S' ,'Cl','Ar'
+          'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+          'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe']
+    return pt
+
+
+def get_symbol(atomno):
+    """
+    Returns the element symbol for a given atomic number.
+    Returns 'X' for atomno=0
+    >>> print(get_symbol(1))
+    H
+    """
+    pt = get_periodic_table()
+    return pt[atomno]
+
+
+def get_atomno(symbol):
+    """
+    Return the atomic number for a given element symbol.
+    >>> print(get_atomno('H'))
+    1
+    """
+    pt = get_periodic_table()
+    symbol = symbol.capitalize()
+    return pt.index(symbol)
+
 
 def get_format(s):
     """
     Returns the Open Babel format of the given string.
     Note: It is primitive, distinguishes only xyz, smiles, inchi formats.
-    >>> print get_format('C')
+    >>> print(get_format('C'))
     smi
-    >>> print get_format('InChI=1S/H2O/h1H2')
+    >>> print(get_format('InChI=1S/H2O/h1H2'))
     inchi
-    >>> print get_format(get_xyz('C'))
+    >>> print(get_format(get_xyz('C')))
     xyz
     """
     frm = 'unknown'
@@ -52,14 +104,14 @@ def get_mol(s, make3D=False, mult=None):
     """
     Returns open-babel mol object from a given slabel, smiles string 
     >>> mol = get_mol('[O][O]')
-    >>> print mol.formula
+    >>> print(mol.formula)
     O2
-    >>> print mol.spin
+    >>> print(mol.spin)
     3
     >>> mol = get_mol('InChI=1S/H2O/h1H2')
-    >>> print mol.formula
+    >>> print(mol.formula)
     H2O
-    >>> print mol.spin
+    >>> print(mol.spin)
     1
     """
     import pybel
@@ -75,7 +127,7 @@ def get_mol(s, make3D=False, mult=None):
         elif '_m' in s and len(s.splitlines()) == 1:
             s, mult = s.split('_m')
             mol = set_mult(s,int(mult))
-        else:   
+        else:
             frm = get_format(s)
             mol = pybel.readstring(frm, s)
     else:
@@ -84,7 +136,7 @@ def get_mol(s, make3D=False, mult=None):
     if make3D and mol.dim < 3:
         mol.make3D()
     if mult:
-        mol.OBMol.SetTotalSpinMultiplicity(int(mult))       
+        mol.OBMol.SetTotalSpinMultiplicity(int(mult))
     return mol
     
     
@@ -1562,7 +1614,71 @@ def get_nelectron(x):
         n += a.GetAtomicNum()
     return n
 
-    
+
+def get_atomic_masses(x):
+    """
+    Return number of electrons.
+    >>> get_atomic_masses('O')
+    [15.9994, 1.00794, 1.00794]
+    """
+    mol = get_mol(x)
+    natom = get_natom(mol)
+    masses = [0.0] * natom
+    for i in range(natom):
+        a = mol.OBMol.GetAtomById(i)
+        masses[i] = a.GetAtomicMass()
+    return masses
+
+def get_atomic_numbers(x):
+    """
+    Return number of electrons.
+    >>> get_atomic_numbers('O')
+    [8, 1, 1]
+    """
+    mol = get_mol(x)
+    natom = get_natom(mol)
+    numbers = [0] * natom
+    for i in range(natom):
+        a = mol.OBMol.GetAtomById(i)
+        numbers[i] = a.GetAtomicNum()
+    return numbers
+        
+
+def get_xyz_dictionary(x):
+    """
+    Given an xyz, return a dictinary with the following keys:
+    number_of_atoms
+    comment
+    coordinates
+    coordinates_unit
+    atom_symbols
+    atom_numbers
+    atom_masses
+    atom_masses_unit
+    """
+    d = {}
+    mol = get_mol(x,make3D=True)
+    xyz = get_xyz(mol)
+    lines = xyz.splitlines()
+    natom = get_natom(mol)
+    symbols = ['X']*natom
+    coordinates = [[0.0,0.0,0.0]]*natom
+    i = 0
+    for line in lines[2:]:
+        s, x, y, z = line.split()
+        symbols[i] = s
+        coordinates[i] = [float(x),float(y),float(z)]
+        i += 1
+    d['number_of_atoms'] = natom
+    d['coordinates'] = coordinates
+    d['coordinates_unit'] = 'Angstrom'
+    d['atom_symbols'] = symbols
+    d['atom_numbers'] = get_atomic_numbers(xyz)
+    d['atom_masses']  = get_atomic_masses(xyz)
+    d['atom_masses_unit'] = 'amu'
+    return d
+
+
 def get_charge(x):
     """
     Return charge.
@@ -1575,8 +1691,8 @@ def get_mass(x):
     """
     Return exact mass of mol.
     >>> mol = get_mol('CC')
-    >>> get_exactmass(mol)
-    30.046950191999997
+    >>> print(int(get_mass(mol)))
+    30
     """
     mol = get_mol(x, make3D=True)
     return mol.exactmass
@@ -1585,7 +1701,7 @@ def get_weight(x):
     """
     Return molecular weight  of mol.
     >>> mol = get_mol('CC')
-    >>> get_molwt(mol)
+    >>> get_weight(mol)
     30.069040000000008
     """
     mol = get_mol(x, make3D=True)
@@ -1597,7 +1713,7 @@ def get_xyz(x):
     Note: xyz coordinates are not deterministic.
     Each run gives a different set of coordinates.
     >>> mol = get_mol('CCCC')
-    >>> print get_xyz(mol).splitlines()[0]
+    >>> print(get_xyz(mol).splitlines()[0])
     14
     """
     mol = get_mol(x, make3D=True)
@@ -1636,7 +1752,7 @@ def get_zmat(x, qchem=False):
     """
     Returns internal coordinates as as string suitable for Gaussian zmat input.
     Note: zmat coordinates are deterministic.
-    >>> print get_zmat('C')
+    >>> print(get_zmat('C'))
     C
     H  1  r2
     H  1  r3  2  a3
@@ -1670,7 +1786,7 @@ def get_mop(x, keys='pm3 precise nosym threads=1 opt'):
     Note: For doctest I had to escape newline characters \n as \\n
     Since it gives EOL error.
     >>> xyz = "2\\n \\n H 0. 0. 0.\\n H 0. 0. 0.9\\n  \\n"
-    >>> print get_mop(xyz)
+    >>> print(get_mop(xyz))
     pm3 precise nosym threads=1 opt
     <BLANKLINE>
     <BLANKLINE>
@@ -1723,7 +1839,7 @@ def get_unique_path(x, mult=0, method=''):
     """
     Returns a portable unique path based on inchikey for database directory.
     >>> import os
-    >>> if os.path.sep == '/': print get_unique_path('C',method='pm6')
+    >>> if os.path.sep == '/': print(get_unique_path('C',method='pm6'))
     database/C/C/CH4/VNWKTOKETHGBQD-UHFFFAOYSA-N1/pm6
     """
     import iotools as io
@@ -1743,11 +1859,10 @@ def get_formats():
     Return available write formats in Open Babel.
     >>> for k, v in get_formats().items():
     ...     if 'z-matrix' in v.lower():
-    ...         print v, k
+    ...         print('found')
+    ...         break
     ...
-    ...
-    Gaussian Z-Matrix Input gzmat
-    Fenske-Hall Z-Matrix format fh
+    found
     """
     return pybel.outformats
 
@@ -1807,13 +1922,13 @@ def get_smiles_path(x, mult=0, db= 'database'):
 def get_smiles(x):
     """
     Returns open-babel canonical smiles.
-    >>> print get_smiles('O')
+    >>> print(get_smiles('O'))
     O
-    >>> print get_smiles('[H][O][H]')
+    >>> print(get_smiles('[H][O][H]'))
     O
-    >>> print get_smiles('O-O')
+    >>> print(get_smiles('O-O'))
     OO
-    >>> print get_smiles('[O]=[O]')
+    >>> print(get_smiles('[O]=[O]'))
     O=O
     """
     mol = get_mol(x)
@@ -1943,7 +2058,7 @@ def fetch_IUPAC_name(s):
     """
     Return IUPAC name for a given smiles or inchi string.
     Requires cirpy module and internet connection
-    >>> print fetch_IUPAC_name('C=O')
+    >>> print(fetch_IUPAC_name('C=O'))
     FORMALDEHYDE
     """
     try:
