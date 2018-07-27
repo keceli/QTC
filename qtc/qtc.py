@@ -75,7 +75,7 @@ def get_args():
                         default='',
                         help='Keyword string that defines quantum chemistry calculations i.e.: "opt/ccsd/cc-pvdz/gaussian,energy/ccsd/cc-pvtz/nwchem,extrapolation/cbs/energy=0.3*E0+0.7*E1" Note that each calculation is separated by a comma (,) and calculations are defined by TASK/METHOD/BASIS/PACKAGE. TASK can be opt, freq, anharm,extrapolation.METHOD and BASIS are simply copied into quantum chemistry input file as defined in the templates folder. PACKAGE can be gaussian, molpro or nwchem')
     parser.add_argument('-t', '--qctemplate', type=str,
-                        default='',
+                        default='/home/elliott/Packages/QTC/templates',
                         help='Path for the templates directory. Templates have a specific format for filenames. See qtc/templates.')
     parser.add_argument('-l', '--loglevel', type=int,
                         default=-1,
@@ -471,7 +471,6 @@ def run(s):
                 logging.error('Cannot run thermo')
                 runthermo = False
         parameters['all results'][slabel][qlabel]['energy'] = float('nan')
-
         if parameters['bac']:
             bonds = {}
             x2zinp = ''
@@ -607,6 +606,10 @@ def run(s):
                     pfout = io.read_file('pf.dat')
                 else:
                     pfout = ''
+                ####STILL WORKING ON NEXT SECTION (SENSITIVITY/UNCERTAINTY DATA)
+                ##(1) Scale HoF
+                ##(2) Fix DoF to rovibrational from vibrational for QMCPSI, and set c etc
+                ##(3) Scale Vibs should affect HoF
                 if parameters['uncertainty']:
                    io.mkdir('uncertainty')
                    io.cd('uncertainty')
@@ -674,6 +677,7 @@ def run(s):
                            logging.info('Invalid uncertainty analysis type {}'.format(typ))
                        io.cd('..')
                    parameters['scale'] = 0
+                   #######END UNCERTAINTY SECTION
             except Exception as e:
                 if parameters['debug']:
                     raise

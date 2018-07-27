@@ -717,7 +717,9 @@ def db_head_path(db_location=None):
     if db_location == 'test':
         return '/home/elliott/testdirectory/'
     if db_location == None:
-        return '/lcrc/project/PACC/databases/qtc_database/'
+        #return '/lcrc/project/PACC/databases/qtc_database/'
+        return '/lcrc/project/PACC/databases/torsscan_database/'
+        #return '/home/elliott/testdirectory/'
     else:
         return fix_path(db_location)
 
@@ -862,6 +864,7 @@ def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, 
         directory =  db_head_path(db_location)
     else:
         directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+    print directory
     if check_file(join_path(directory, smiles + '.' + typ)):
         return read_file(join_path(directory, smiles + '.' + typ))
     return 

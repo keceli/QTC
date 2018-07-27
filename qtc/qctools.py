@@ -1521,7 +1521,7 @@ def get_x2z_zmat(out):
             measure = measure[:-1]
         measure = measure.reshape( len(measure)/2, 2)      #Puts measurements into two columns
         for angle in measure:
-            if 'r' in angle[0]:
+            if 'r' in angle[0].lower():
                 angle[1] = str(float(angle[1]) * 0.529177) #bohr to angstrom 
             angle[1] = '{:.4f}'.format(float(angle[1]))
         measure = measure.tolist()
