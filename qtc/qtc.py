@@ -75,7 +75,7 @@ def get_args():
                         default='',
                         help='Keyword string that defines quantum chemistry calculations i.e.: "opt/ccsd/cc-pvdz/gaussian,energy/ccsd/cc-pvtz/nwchem,extrapolation/cbs/energy=0.3*E0+0.7*E1" Note that each calculation is separated by a comma (,) and calculations are defined by TASK/METHOD/BASIS/PACKAGE. TASK can be opt, freq, anharm,extrapolation.METHOD and BASIS are simply copied into quantum chemistry input file as defined in the templates folder. PACKAGE can be gaussian, molpro or nwchem')
     parser.add_argument('-t', '--qctemplate', type=str,
-                        default='/home/elliott/Packages/QTC/templates',
+                        default='',
                         help='Path for the templates directory. Templates have a specific format for filenames. See qtc/templates.')
     parser.add_argument('-l', '--loglevel', type=int,
                         default=-1,
@@ -149,7 +149,7 @@ def get_args():
                         help='use to skip pf input and output file generation when collecting thermo')
     parser.add_argument('--getBAC', action='store_true',
                         help='calculate the parameters for a BAC')
-    parser.add_argument('--norot', action='store_true',
+    parser.add_argument('-N', '--norot', action='store_true',
                         help='Turns off rotational pf input')
     parser.add_argument('--uncertainty', type=str, default='',
                         help='use to generate uncertainty analysis')
@@ -335,8 +335,10 @@ def run(s):
                 logging.debug("Runtime = {:15.3f} s".format(runtime))
                 if runtime > 1.0:
                     logging.info("Runtime = {:15.3f} s".format(runtime))
+                io.rm(runfile)
             elif task == 'composite':
                 qc.run_composite(parameters)
+                io.rm(runfile)
             elif qcpackage == 'qcscript':
                 geofile = formula + '.geo'
                 geo = ''.join(parameters['xyz'][2:natom+2]) 
@@ -345,9 +347,9 @@ def run(s):
                     qc.run_qcscript(qcscript, parameters['qctemplate'], geofile, mult)
             elif parameters['qcmethod'] == 'given':
                 qc.use_given_hof(parameters)
+                io.rm(runfile)
             else:
                 logging.error('{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage,available_packages))
-            io.rm(runfile)
         except KeyboardInterrupt:
             logging.error('CTRL+C command...')
             logging.info('Deleting lock file {}'.format(io.get_path(runfile)))
@@ -468,6 +470,8 @@ def run(s):
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
+        parameters['all results'][slabel][qlabel]['energy'] = float('nan')
+
         if parameters['bac']:
             bonds = {}
             x2zinp = ''
@@ -726,7 +730,7 @@ def main(arg_update={}):
     hostname = gethostname()
     loglevel = logging.INFO
     if parameters['loglevel'] == -1:
-        if mpisize > 1:
+        if mpisize > 1  and mpirank > 0:
             loglevel = logging.ERROR
         else:
             loglevel = logging.INFO
@@ -904,12 +908,15 @@ def main(arg_update={}):
             sresults = parameters['all results'][qc.get_slabel(s)]
             for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
                 runpath = qcresultval['path'].split('/database/')[-1]
+                zpve = 0.
+                if 'azpve' in qcresultval:
+                    zpve = qcresultval['azpve']
+                elif 'zpve' in qcresultval:
+                    zpve = qcresultval['zpve']
                 if not 'energy' in qcresultval:
                     qcresultval['energy'] = float('NaN') 
-                if not 'zpve' in qcresultval:
-                    qcresultval['zpve'] = float('NaN') 
                 out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
-                        str(i+1), qc.get_slabel(s), qcresultval['energy'],qcresultval['zpve'],runpath)
+                        str(i+1), qc.get_slabel(s), qcresultval['energy'],zpve,runpath)
         logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
