@@ -1,6 +1,6 @@
 # Quantum Thermochemistry Calculator 
 [![Build Status](https://travis-ci.org/keceli/QTC.svg?branch=master)](https://travis-ci.org/keceli/QTC)
-[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/keceli/QTC/master?filepath=https%3A%2F%2Fgithub.com%2Fkeceli%2FQTC%2Fblob%2Fmaster%2Fnotebooks%2Ftutorial.ipynb)
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/keceli/QTC/master?filepath=notebooks%2Ftutorial.ipynb)
 
 QTC includes modules that integrates open babel with quantum chemistry calculations and generates NASA polynomials in different formats.
 
