@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Module for simplifying and enhancing the usage of Open Babel.
 Open Babel is a tool-box mainly used for cheminformatics.
@@ -102,7 +101,7 @@ def get_format(s):
 
 def get_mol(s, make3D=False, mult=None):
     """
-    Returns open-babel mol object from a given slabel, smiles string 
+    Returns open-babel mol object from a given slabel, smiles string
     >>> mol = get_mol('[O][O]')
     >>> print(mol.formula)
     O2
@@ -138,8 +137,8 @@ def get_mol(s, make3D=False, mult=None):
     if mult:
         mol.OBMol.SetTotalSpinMultiplicity(int(mult))
     return mol
-    
-    
+
+
 def get_multiplicity(s):
     """
     Returns the spin multiplicity (2S+1) of the molecule, where S is the
@@ -175,6 +174,7 @@ def get_mult(s):
         mult = mol.spin
     return int(mult)
 
+
 def get_symm(s):
     """
     Returns the symmetry factor specified in the smiles input string
@@ -191,6 +191,7 @@ def get_symm(s):
                 logging.debug('Symmetry format problem, get_symm failed in s.split for s= {}'.format(s))
     return sym
 
+
 def get_smileshof(s):
     """
     Returns the heat of formation at 0k specified in the smiles input string
@@ -204,6 +205,7 @@ def get_smileshof(s):
             except:
                 logging.debug('Energy format problem, get_smileshof failed in s.split for s= {}'.format(s))
     return ene
+
 
 def get_slabel(s,mult=None):
     """
@@ -225,9 +227,10 @@ def get_slabel(s,mult=None):
         mult = get_multiplicity(s)
     return s + '_m' + str(mult)
 
+
 def get_ent(s):
     """
-    Return 1 if there is no enantiomer and 2 if there is based on 
+    Return 1 if there is no enantiomer and 2 if there is based on
     @ sign appearing in the smiles
     """
     sites = 0
@@ -298,6 +301,7 @@ def get_isomers_old(s):
             logging.debug("Multiplicity {} assigned by open babel for {}".format(mult, s))
             isomers = [slabel]
     return isomers
+
 
 def get_isomers(s):
     """
@@ -1329,7 +1333,7 @@ def get_isomers(s):
         spp17 = get_smiles(xyz17)
         if spp17 != spp0 and spp17 != spp1 and spp17 != spp2 and spp17 != spp3 and spp17 != spp4 and spp17 != spp5 and spp17 != spp6 and spp17 != spp7:
             if spp17 != spp8 and spp17 != spp9 and spp17 != spp10 and spp17 != spp11 and spp17 != spp12 and spp17 != spp13 and spp17 != spp14 and spp17 != spp15:
-                if spp17 != spp16: 
+                if spp17 != spp16:
                     if mult:
                         spp17m = get_slabel(spp17, mult)
                     isomers.append(spp17m)
@@ -1600,7 +1604,8 @@ def get_nrotor(x):
     else:
         mol = get_mol(x)
     return mol.OBMol.NumRotors()
-    
+
+
 def get_nelectron(x):
     """
     Return number of electrons.
@@ -1629,6 +1634,7 @@ def get_atomic_masses(x):
         masses[i] = a.GetAtomicMass()
     return masses
 
+
 def get_atomic_numbers(x):
     """
     Return number of electrons.
@@ -1642,7 +1648,7 @@ def get_atomic_numbers(x):
         a = mol.OBMol.GetAtomById(i)
         numbers[i] = a.GetAtomicNum()
     return numbers
-        
+
 
 def get_xyz_dictionary(x):
     """
@@ -1687,6 +1693,7 @@ def get_charge(x):
     mol = get_mol(x, make3D=True)
     return mol.OBMol.GetTotalCharge()
 
+
 def get_mass(x):
     """
     Return exact mass of mol.
@@ -1697,6 +1704,7 @@ def get_mass(x):
     mol = get_mol(x, make3D=True)
     return mol.exactmass
 
+
 def get_weight(x):
     """
     Return molecular weight  of mol.
@@ -1706,6 +1714,7 @@ def get_weight(x):
     """
     mol = get_mol(x, make3D=True)
     return mol.molwt
+
 
 def get_xyz(x):
     """
@@ -1775,7 +1784,7 @@ def get_zmat(x, qchem=False):
         zmat = mol.write('fh').splitlines()[2:]
         zmat[0] = zmat[0].split()[0]
         zmat = '\n'.join(zmat)
-    else: 
+    else:
         zmat =  '\n'.join(mol.write('gzmat').splitlines()[5:])
     return zmat
 
@@ -1842,7 +1851,7 @@ def get_unique_path(x, mult=0, method=''):
     >>> if os.path.sep == '/': print(get_unique_path('C',method='pm6'))
     database/C/C/CH4/VNWKTOKETHGBQD-UHFFFAOYSA-N1/pm6
     """
-    from . import iotools as io
+    import os
     mol = get_mol(x, make3D=True)
     if mult == 0:
         mult = mol.spin
@@ -1851,7 +1860,7 @@ def get_unique_path(x, mult=0, method=''):
     elements_noH = get_formula(mol, stoichiometry=False, hydrogens=False)
     uniquekey = get_inchi_key(mol, mult)
     dirs = 'database', elements_noH, formula_noH, formula, uniquekey, method
-    return io.join_path(*dirs)
+    return os.path.join(*dirs)
 
 
 def get_formats():
@@ -1869,7 +1878,7 @@ def get_formats():
 
 def get_smiles_mult(slabel):
     """
-    Splits slabel into smiles and multiplicity and returns them as 
+    Splits slabel into smiles and multiplicity and returns them as
     a string and an integer, respectively.
     """
     smi = slabel
@@ -1889,7 +1898,7 @@ def get_smiles_mult(slabel):
 def get_smiles_path(x, mult=0, db= 'database'):
     """
     Returns a smiles based path for database directory.
-    Note that smiles strings are not unique. Even the 
+    Note that smiles strings are not unique. Even the
     canonical smiles strings are unique only for the same
     code that generates the smiles string.
     """
@@ -1913,7 +1922,7 @@ def get_smiles_path(x, mult=0, db= 'database'):
     formula = get_formula(s)
 #    formula_noH = get_formula(s, stoichiometry=True, hydrogens=False)
 #    elements_noH = get_formula(s, stoichiometry=False, hydrogens=False)
-    s = get_smiles_filename(s)    
+    s = get_smiles_filename(s)
 #    dirs = db, elements_noH, formula_noH, formula, s
     dirs = db, formula, s
     return io.join_path(*dirs)
@@ -1943,7 +1952,7 @@ def get_smiles_filename(x):
     such as \/:*?"<>|(). Not sure if all these characters appear, but here
     they are replaced by an underscore, '_' followed by:
     """
-    if isinstance(x, pybel.Molecule):    
+    if isinstance(x, pybel.Molecule):
         s = x.write(format='can').strip().split()[0]
     elif isinstance(x, str):
         if '_e' in x:
@@ -1958,18 +1967,17 @@ def get_smiles_filename(x):
     #s = s.replace('=','_e_')
     s = s.replace(':', '_i_')
     s = s.replace('|', '_j_')
-    s = s.replace('\\', '_k_') 
+    s = s.replace('\\', '_k_')
     s = s.replace('/', '_l_')
     s = s.replace('(', '_p_')
     s = s.replace(')', '_q_')
     s = s.replace('*', '_s_')
+    s = s.replace('$', '_S_')
     s = s.replace('#', '_t_')
     s = s.replace('<', '_v_')
     s = s.replace('>', '_y_')
     s = s.replace('@@', '_aa_')
     s = s.replace('@', '_a_')
-
-
     return s
 
 
@@ -1981,6 +1989,7 @@ def smiles2formula(filename):
         formula = get_formula(mol)
         s += '{0} {1}\n'.format(mol,  formula)
     return s
+
 
 def get_coordinates_array(xyz):
     """
@@ -2018,67 +2027,77 @@ def set_xyz(x, coords):
     mol.OBMol.SetCoordinates(openbabel.double_array(coords))
     return mol
 
-
-def fetch_smiles(s):
-    """
-    Returns the smiles string for a given chemical name.
-    Requires cirpy module and internet connection
-    >>> fetch_smiles('methane')
-    'C'
-    """
-    try:
-        import cirpy
-    except:
-        r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
-        return    
-    if cirpy:
+try:
+    import cirpy
+except:
+    r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
+    cirpy=None
+    pass
+if cirpy:
+    def fetch_smiles(s):
+        """
+        Returns the smiles string for a given chemical name.
+        Requires cirpy module and internet connection
+        >>> fetch_smiles('methane')
+        'C'
+        """
         return cirpy.resolve(s, 'smiles')
-    else:
-        return None
-    
-    
-def fetch_inchi(s):
-    """
-    Returns the smiles string for a given chemical name.
-    Requires cirpy module and internet connection
-    >>> fetch_inchi('methane')
-    'InChI=1/CH4/h1H4'
-    """
-    try:
-        import cirpy
-    except:
-        r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
-        return
-    if cirpy:
-        r = cirpy.resolve(s, 'inchi')  
-    return r
-        
 
-def fetch_IUPAC_name(s):
-    """
-    Return IUPAC name for a given smiles or inchi string.
-    Requires cirpy module and internet connection
-    >>> print(fetch_IUPAC_name('C=O'))
-    FORMALDEHYDE
-    """
-    try:
-        import cirpy
-    except:
-        r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
-        return    
-    frm = get_format(s)
-    if frm == 'smi':
-        name = cirpy.resolve(s, 'iupac_name', resolvers=['smiles'])
-    elif frm == 'inchi':
-        name = cirpy.resolve(s, 'iupac_name', resolvers=['inchi'])
-    elif frm == 'xyz':
-        mol = get_mol(s)
-        name = cirpy.resolve(mol.write('inchi').strip(), 'iupac_name', resolvers=['inchi'])
-    else:
-        name = None
-    return name
 
-    
+    def fetch_inchi(s):
+        """
+        Returns the smiles string for a given chemical name.
+        Requires cirpy module and internet connection
+        >>> fetch_inchi('methane')
+        'InChI=1/CH4/h1H4'
+        """
+        return  cirpy.resolve(s, 'inchi')
+
+
+    def fetch_IUPAC_name(s):
+        """
+        Return IUPAC name for a given smiles or inchi string.
+        Requires cirpy module and internet connection
+        >>> print(fetch_IUPAC_name('C=O'))
+        FORMALDEHYDE
+        """
+        frm = get_format(s)
+        if frm == 'smi':
+            name = cirpy.resolve(s, 'iupac_name', resolvers=['smiles'])
+        elif frm == 'inchi':
+            name = cirpy.resolve(s, 'iupac_name', resolvers=['inchi'])
+        elif frm == 'xyz':
+            mol = get_mol(s)
+            name = cirpy.resolve(mol.write('inchi').strip(), 'iupac_name', resolvers=['inchi'])
+        else:
+            name = None
+        return name
+
+def get_ase_atoms_input(x):
+    """
+    Return atomic symbols and coordinates that can be used as inputs
+    for ASE Atoms constructor.
+    >>> symbols, coords = get_ase_atoms_input('C')
+    >>> 'C' in symbols
+    True
+    >>> print(len(symbols))
+    5
+    >>> print(len(coords[0]))
+    3
+    >>> print(len(coords))
+    5
+    """
+    xyz = get_xyz(x)
+    lines = xyz.splitlines()
+    n = int(lines[0])
+    symbols = ['X']*n
+    coords = [[0., 0., 0.]]*n
+    for i, line in enumerate(lines[2:2+n]):
+        items = line.split()
+        symbols[i] = items[0]
+        coords[i] = [float(c) for c in items[1:4]]
+    return symbols, coords
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod(verbose=True)
