@@ -64,9 +64,9 @@ def rmrf(dname):
     """
     import shutil
     try:
-        shutil.rmtree(dname,ignore_errors=True)
+        shutil.rmtree(dname, ignore_errors=True)
     except OSError as e:
-        logging.error("Error in deleting {}: {}" % (dname,e.strerror))
+        logging.error("Error in deleting {}: {}" % (dname, e.strerror))
     return
 
 
@@ -93,16 +93,16 @@ def cd(path):
     return
 
 
-def mv(oldname,newname):
+def mv(oldname, newname):
     """
     Renames or moves a file
     """
     import os
     try:
-        os.rename(oldname,newname)
+        os.rename(oldname, newname)
     except:
         logging.debug('Command "mv {0} {1}" failed' .format(oldname, newname))
-    return 
+    return
 
 def pwd():
     """
@@ -112,17 +112,17 @@ def pwd():
     return os.getcwd()
 
 def read_xyzdir(s, xyzdir):
-    """ 
-    Reads xyz from xyzdir 
     """
-    import obtools as ob
+    Reads xyz from xyzdir
+    """
+    from . import obtools as ob
     xyz = ''
     slabel = ob.get_slabel(s)
-    xyzfile = '{}{}{}.xyz'.format(xyzdir,os.path.sep,ob.get_smiles_filename(slabel))
+    xyzfile = '{}{}{}.xyz'.format(xyzdir, os.path.sep, ob.get_smiles_filename(slabel))
     if check_file(xyzfile):
        xyz = read_file(xyzfile)
     elif check_file(xyzfile.split('_m')[0] + '_m1.xyz'):
-       
+
        xyz = read_file(xyzfile.split('_m')[0] + '_m1.xyz')
     return xyz
 
@@ -148,9 +148,9 @@ def yield_files_recursive(directory, pattern):
         for basename in files:
             if fnmatch.fnmatch(basename, pattern):
                 filename = os.path.join(root, basename)
-                yield filename    
-            
-def find_files(directory,pattern):
+                yield filename
+
+def find_files(directory, pattern):
     """
     Returns a list of files that matches the pattern in a given directory
     """
@@ -180,7 +180,7 @@ def get_file_attributes(path):
     date = str(datetime.fromtimestamp(filestat.st_mtime))
     return {'path':path, 'owner': owner,'group':group,'size_byte':size,'modified':date}
 
-      
+
 def join_path(*paths):
     """
     Concatenes strings into a portable path using correct seperators.
@@ -226,7 +226,7 @@ def get_unique_filename(fname):
     """
     counter = 1
     uname = fname
-    while check_file(uname,timeout=0.01): 
+    while check_file(uname, timeout=0.01):
         uname = fname + '_' + str(counter)
         counter += 1
     return uname
@@ -236,20 +236,20 @@ def fix_path(s):
     """
     Returns a path with problematic characters replaced by safer ones.
     """
-    s = s.replace('[','_b_')
-    s = s.replace(']','_d_')
+    s = s.replace('[', '_b_')
+    s = s.replace(']', '_d_')
     #s = s.replace('=','_e_')
-    s = s.replace(':','_i_')
-    s = s.replace('|','_j_')
-    s = s.replace('\\','_k_') 
+    s = s.replace(':', '_i_')
+    s = s.replace('|', '_j_')
+    s = s.replace('\\', '_k_')
     #s = s.replace('/','_l_')
-    s = s.replace('(','_p_')
-    s = s.replace(')','_q_')
-    s = s.replace('*','_s_')
-    s = s.replace('#','_t_')
-    s = s.replace('<','_v_')
-    s = s.replace('>','_y_')
-    s = s.replace('?','_z_')
+    s = s.replace('(', '_p_')
+    s = s.replace(')', '_q_')
+    s = s.replace('*', '_s_')
+    s = s.replace('#', '_t_')
+    s = s.replace('<', '_v_')
+    s = s.replace('>', '_y_')
+    s = s.replace('?', '_z_')
     return s
 
 
@@ -312,7 +312,7 @@ def cp(source, target):
     return
 
 
-def symlink(source,linkname):
+def symlink(source, linkname):
     """
     Create a symbolic link. (works only on unix based systems)
     """
@@ -320,7 +320,7 @@ def symlink(source,linkname):
         logging.debug('Target link {} exists, not creating a new one'.format(linkname))
     else:
         try:
-            os.symlink(source,linkname)
+            os.symlink(source, linkname)
         except Exception as e:
             logging.warning('Symlink exception caught: {}'.format(e))
     return
@@ -392,7 +392,7 @@ def read_list(listfile):
     Skips blank lines.
     """
     with open(listfile, 'r') as f:
-        lines = filter(None, ((line.rstrip()) for line in f))
+        lines = [_f for _f in ((line.rstrip()) for line in f) if _f]
     return lines
 
 
@@ -423,7 +423,7 @@ def execute_old(exe,inp=None,out=None):
     if not check_exe(exe):
         return 'Executable "{0}" not found.\n'.format(exe)
     if inp:
-        if not check_file(inp,1):
+        if not check_file(inp, 1):
             return 'Input file "{0}" not found.\n'.format(get_path(inp))
     if inp and out:
         process = Popen([exe, inp, out], stdout=PIPE, stderr=PIPE)
@@ -443,7 +443,7 @@ def execute_old(exe,inp=None,out=None):
         msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, get_path(errfile))
     return msg
 
-def set_env_var(var,value):
+def set_env_var(var, value):
     import os
     os.environ[var] = value
     return
@@ -490,7 +490,7 @@ def get_mpi_local_rank(default=0):
     """
     Return mpi local rank as an integer if defined as an environment variable
     https://www.open-mpi.org/faq/?category=running#mpi-environmental-variables
-    The relative rank of this process on this node within its job. 
+    The relative rank of this process on this node within its job.
     For example, if four processes in a job share a node, they will each be given a local rank ranging from 0 to 3.
     """
     if os.getenv("OMPI_COMM_WORLD_LOCAL_RANK") is not None:
@@ -504,7 +504,7 @@ def get_mpi_local_size(default=1):
     """
     Return mpi local size as an integer if defined as an environment variable
     https://www.open-mpi.org/faq/?category=running#mpi-environmental-variables
-    The number of processes on this node within its job. 
+    The number of processes on this node within its job.
     """
     if os.getenv("OMPI_COMM_WORLD_LOCAL_SIZE") is not None:
         size = int(os.getenv("OMPI_COMM_WORLD_LOCAL_SIZE"))
@@ -553,23 +553,23 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False, wait=True):
     command: List of strings, where a command line is seperated into words.
     stderrfile: None or a string for a file name to write stderr
     stdoutfile: None or a string for a file name to write stdout
-    
+
     Returns
     ---------
     If stdoutfile:
         A string describing the success or failure of the calculation
     Else:
         stdout
-        
+
     Doctest
-    ---------    
+    ---------
     >>> io.execute(['echo','this works'])
-    'this works\n'     
+    'this works\n'
     >>> io.execute('echo this also works')
-    'this also works\n'     
+    'this also works\n'
     """
     from subprocess import Popen, PIPE
-    if type(command) == str:
+    if isinstance(command, str):
         commandstr = command
         command = command.split()
     else:
@@ -582,23 +582,23 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False, wait=True):
         out, err = process.communicate()
     else:
         process = Popen(command, close_fds=True)
-        out, err = '',''
+        out, err = '', ''
     if merge:
-        if type(out) == str and type(err) == str:
+        if isinstance(out, str) and isinstance(err, str):
             out += err
     if out is None or out == '':
         pass
     else:
         if stdoutfile:
-            write_file(out,stdoutfile)
+            write_file(out, stdoutfile)
             msg += 'STDOUT is appended to {0}\n'.format(stdoutfile)
         else:
-            msg += 'STDOUT:\n{0}\n'.format(out)  
+            msg += 'STDOUT:\n{0}\n'.format(out)
     if err is None or err == '':
         pass
     else:
         if stderrfile:
-            write_file(err, stderrfile)      
+            write_file(err, stderrfile)
             msg += 'STDERR file:\n"{0}"\n'.format(get_path(err))
         else:
             msg += 'STDERR:\n{0}\n'.format(err)
@@ -611,20 +611,20 @@ def get_stdout_stderr(command):
     Parameters
     ----------
     command: A string or a list of strings, where a command line is seperated into words.
-    
+
     Returns
     ---------
     stdout, stderr
-        
+
     Doctest
-    ---------    
+    ---------
     >>> get_stdout_stderr(['echo','this works'])
-    'this works\n'     
+    'this works\n'
     >>> get_stdout_stderr('echo this also works')
-    'this also works\n'     
+    'this also works\n'
     """
     from subprocess import Popen, PIPE
-    if type(command) == str:
+    if isinstance(command, str):
         commandstr = command
         command = command.split()
     else:
@@ -703,11 +703,11 @@ def get_zip_info(zipfilename):
     import zipfile
     compress_size = 0
     file_size     = 0
-    with zipfile.ZipFile(zipfilename,mode='r') as z:
+    with zipfile.ZipFile(zipfilename, mode='r') as z:
         for info in z.infolist():
             compress_size += info.compress_size
             file_size     += info.file_size
-    return len(z.infolist()),file_size, compress_size
+    return len(z.infolist()), file_size, compress_size
 
 
 def db_head_path(db_location=None):
@@ -728,7 +728,7 @@ def db_smiles_path(smiles, db_location = None):
     """
     Returns the path for a smiles molecule in a database
     """
-    import obtools as ob
+    from . import obtools as ob
     mol = ob.get_mol(smiles)
     directory = ob.get_smiles_path(mol)
     if db_location == None:
@@ -758,7 +758,7 @@ def db_opt_path(prog, method, basis, db_location=None, smiles=None):
         directory = db_smiles_path(smiles, db_location)
     if method == None:
         return join_path(directory, 'sp/')
-    return join_path(directory, prog_meth_bas_path(prog, method, basis)).replace('(','_').replace(')','_')
+    return join_path(directory, prog_meth_bas_path(prog, method, basis)).replace('(', '_').replace(')', '_')
 
 
 def db_sp_path(prog, method, basis, db_location=None, smiles=None, optprog=None, optmethod=None, optbasis=None):
@@ -774,7 +774,7 @@ def db_sp_path(prog, method, basis, db_location=None, smiles=None, optprog=None,
         if optprog == None:
             return db_head_path(db_location)
         return directory
-    return join_path(directory, prog_meth_bas_path(prog,method,basis)).replace('(','_').replace(')','_')
+    return join_path(directory, prog_meth_bas_path(prog, method, basis)).replace('(', '_').replace(')', '_')
 
 
 def db_store_opt_prop(s, smiles, typ='zmat', db_location=None, prog=None, method=None, basis=None):
@@ -806,15 +806,15 @@ def db_get_opt_prop(smiles, typ='zmat', db_location=None, prog=None, method=None
         directory =  db_opt_path(prog, method, basis, db_location, smiles)
     if check_file(join_path(directory, smiles + '.' + typ)):
         return read_file(join_path(directory, smiles + '.' + typ))
-    return 
+    return
 
 def db_store_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
     """
-    Store a property s of type typ (energy = ene,  freqs = hrm, projected freqs = phrm, 
+    Store a property s of type typ (energy = ene,  freqs = hrm, projected freqs = phrm,
     anharmonic freqs = anhrm, proj anharms = panhrm, rotational constants =rc, zero-point
-    vibrational energy = zpve)  in the single point level of 
-    directory for a smiles molecule for the optprog, optmethod, and optbasis of 
-    optimization and prog, method, and basis single point if all specified 
+    vibrational energy = zpve)  in the single point level of
+    directory for a smiles molecule for the optprog, optmethod, and optbasis of
+    optimization and prog, method, and basis single point if all specified
     (db_location None will get pacc directory)
     OR
     Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
@@ -825,16 +825,16 @@ def db_store_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=N
         directory = db_sp_path(prog, method, basis, db_location, smiles, prog, method, basis)
     else:
         directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
-    mkdir(directory) 
+    mkdir(directory)
     write_file(s, join_path(directory, smiles + '.' + typ))
-    return 
-    
+    return
+
 def db_append_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
     """
-    Append a property s of type typ (energy = ene,  freqs = fr, projected freqs = pfr, 
-    anharmonic freqs = anfr, proj anharms = anpfr)  in the single point level of 
-    directory for a smiles molecule for the optprog, optmethod, and optbasis of 
-    optimization and prog, method, and basis single point if all specified 
+    Append a property s of type typ (energy = ene,  freqs = fr, projected freqs = pfr,
+    anharmonic freqs = anfr, proj anharms = anpfr)  in the single point level of
+    directory for a smiles molecule for the optprog, optmethod, and optbasis of
+    optimization and prog, method, and basis single point if all specified
     (db_location None will get pacc directory)
     OR
     Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
@@ -846,15 +846,15 @@ def db_append_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=
     else:
         directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
 
-    mkdir(directory) 
+    mkdir(directory)
     append_file(s, join_path(directory, smiles + '.' + typ))
-    return 
+    return
 def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
     """
-    Get a prop of type typ (energy = ene,  freqs = fr, projected freqs = pfr, 
-    anharmonic freqs = anfr, proj anharms = anpfr)  in the single point level of 
-    directory for a smiles molecule for the optprog, optmethod, and optbasis of 
-    optimization and prog, method, and basis single point if all specified 
+    Get a prop of type typ (energy = ene,  freqs = fr, projected freqs = pfr,
+    anharmonic freqs = anfr, proj anharms = anpfr)  in the single point level of
+    directory for a smiles molecule for the optprog, optmethod, and optbasis of
+    optimization and prog, method, and basis single point if all specified
     (db_location None will get pacc directory)
     OR
     Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
@@ -864,26 +864,25 @@ def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, 
         directory =  db_head_path(db_location)
     else:
         directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
-    print directory
     if check_file(join_path(directory, smiles + '.' + typ)):
         return read_file(join_path(directory, smiles + '.' + typ))
-    return 
+    return
 
 def db_logfile_dir(db_location, smiles=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
     """
-    Returns the path where logfiles should be stored for a computation 
+    Returns the path where logfiles should be stored for a computation
     """
     directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
-    mkdir(join_path(directory, 'logfiles/')) 
+    mkdir(join_path(directory, 'logfiles/'))
     return  join_path(directory, 'logfiles/')
 
 def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
-    """ 
+    """
     For a smiles species and the lines of a logfile will parse and store prog, method, basis
-    energy, zmat, xyz, and freqs. 
+    energy, zmat, xyz, and freqs.
     TODO: anharmonic, projected frequencies
     """
-    import patools as pa
+    from . import patools as pa
 
     prog   =  pa.get_prog(lines)
     method =  pa.method(  lines).lower().lstrip('r')
@@ -891,14 +890,14 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     energy =  pa.energy(lines) [1]
     zpve   =  pa.zpve(lines)
     anzpve   =  pa.anzpve(lines)
-    zmat   =  pa.zmat(    lines)     
-    xyz    =  pa.xyz(     lines) 
-    geo    =  pa.geo(     lines) 
+    zmat   =  pa.zmat(    lines)
+    xyz    =  pa.xyz(     lines)
+    geo    =  pa.geo(     lines)
     freqs  =  pa.freqs(lines)
 
     if prog == None or method == None or basis == None:
         logging.debug('Parsing error, check lines')
-        return 
+        return
     if optprog == None:
        optprog, optmethod, optbasis = prog, method, basis
     if zmat != None:
@@ -914,10 +913,10 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
         freqs  = ', '.join(freq for freq in freqs[::-1])
         db_store_sp_prop(freqs,  species, 'hrm', None, prog, method, basis, optprog, optmethod, optbasis)
     if zpve != None:
-        db_store_sp_prop(str( zpve),  species,'zpve', None, prog, method, basis, optprog, optmethod, optbasis)
+        db_store_sp_prop(str( zpve),  species, 'zpve', None, prog, method, basis, optprog, optmethod, optbasis)
     if anzpve != None:
-        db_store_sp_prop(str(anzpve), species,'anzpve', None, prog, method, basis, optprog, optmethod, optbasis)
-    return 
+        db_store_sp_prop(str(anzpve), species, 'anzpve', None, prog, method, basis, optprog, optmethod, optbasis)
+    return
 
 if __name__ == "__main__":
     import doctest

@@ -39,12 +39,12 @@ def get_periodic_table():
     >>> print(len(pt))
     54
     """
-    pt = ['X' ,
-          'H' ,'He',
-          'Li','Be','B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
-          'Na','Mg','Al','Si','P' ,'S' ,'Cl','Ar'
-          'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
-          'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe']
+    pt = ['X',
+          'H', 'He',
+          'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
+          'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar'
+          'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr',
+          'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe']
     return pt
 
 
@@ -115,18 +115,18 @@ def get_mol(s, make3D=False, mult=None):
     1
     """
     import pybel
-    if type(s) is pybel.Molecule:
+    if isinstance(s, pybel.Molecule):
         mol = s
-    elif type(s) is str or 'unicode' in str(type(s)):
+    elif isinstance(s, str) or 'unicode' in str(type(s)):
         if '_e' in s:
             s, ene = s.split('_e')
         if '_s' in s:
             s, symm = s.split('_s')
         if s.endswith('.xyz'):
-            mol = pybel.readfile('xyz', s).next()
+            mol = next(pybel.readfile('xyz', s))
         elif '_m' in s and len(s.splitlines()) == 1:
             s, mult = s.split('_m')
-            mol = set_mult(s,int(mult))
+            mol = set_mult(s, int(mult))
         else:
             frm = get_format(s)
             mol = pybel.readstring(frm, s)
@@ -160,7 +160,7 @@ def get_mult(s):
     Returns spin multiplicity as an integer for a given smiles or inchi string
     """
     mult = None
-    if type(s) is str:
+    if isinstance(s, str):
         if '_m' in s:
             try:
                 mult = s.split('_m')[-1]
@@ -171,7 +171,7 @@ def get_mult(s):
             except:
                 logging.debug('Multiplicity format problem, get_mult failed in s.split for s= {}'.format(s))
     if mult is None:
-        mol = get_mol(s,make3D=False)
+        mol = get_mol(s, make3D=False)
         mult = mol.spin
     return int(mult)
 
@@ -180,7 +180,7 @@ def get_symm(s):
     Returns the symmetry factor specified in the smiles input string
     """
     sym = None
-    if type(s) is str:
+    if isinstance(s, str):
         if '_s' in s:
             try:
                 sym = s.split('_s')[-1]
@@ -196,7 +196,7 @@ def get_smileshof(s):
     Returns the heat of formation at 0k specified in the smiles input string
     """
     ene = None
-    if type(s) is str:
+    if isinstance(s, str):
         if '_e' in s:
             try:
                 ene = s.split('_e')[-1]
@@ -259,20 +259,20 @@ def get_isomers_old(s):
     mult = None
     if '_m' in s:
         mult = get_mult(s)
-        s2 = get_slabel(s2,mult)
+        s2 = get_slabel(s2, mult)
     if s.strip() == s2.strip():
         pass
     else:
-        logging.debug("SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s,s2))
+        logging.debug("SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s, s2))
     isomers = [s2]
     if ndouble > 1:
-        logging.debug('{0} double bonds in {1}'.format(ndouble,s))
+        logging.debug('{0} double bonds in {1}'.format(ndouble, s))
         logging.debug('Can only work with one double bond')
     elif ndouble == 1 and nslash > 1:
         logging.debug('One double bond and a stereocenter found in {0}'.format(s))
         if nslash > 3:
             logging.debug('More than 3 slashes {} --> {}'.format(s, s2))
-        left,right = s2.split('=')
+        left, right = s2.split('=')
         newright = ''
         for char in right:
             if char == '/':
@@ -284,18 +284,18 @@ def get_isomers_old(s):
             newright += newchar
         news = left + '=' + newright
         if mult:
-            slabel = get_slabel(news,mult)
-            news = get_slabel(news,mult)
+            slabel = get_slabel(news, mult)
+            news = get_slabel(news, mult)
         isomers.append(news)
     if nchiral > 0:
-        logging.debug('{0} chiral centers in {1}'.format(nchiral,s))
+        logging.debug('{0} chiral centers in {1}'.format(nchiral, s))
     if len(isomers)==1:
         if '_m' in s:
             isomers = [s]
         else:
             mult = get_mult(s)
-            slabel = get_slabel(s,mult)
-            logging.debug("Multiplicity {} assigned by open babel for {}".format(mult,s))
+            slabel = get_slabel(s, mult)
+            logging.debug("Multiplicity {} assigned by open babel for {}".format(mult, s))
             isomers = [slabel]
     return isomers
 
@@ -321,13 +321,13 @@ def get_isomers(s):
         s2 = s
     if '_m' in s:
         mult = get_mult(s)
-        s3 = get_slabel(s2,mult)
+        s3 = get_slabel(s2, mult)
 #   isomers = [s2]
     if s.strip() == s3.strip():
         pass
     else:
-        logging.debug("SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s,s2))
-    segments = re.split('\\\\|/',s2)
+        logging.debug("SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s, s2))
+    segments = re.split('\\\\|/', s2)
     if nslash == 1:
        sp0 = ''
        sp0 += segments[0]
@@ -1170,18 +1170,18 @@ def get_isomers(s):
        sp31 += '\\'
        sp31 += segments[6]
     if nslash > 6:
-        logging.debug('{0} slashes in {1}'.format(nslash,s))
+        logging.debug('{0} slashes in {1}'.format(nslash, s))
         logging.debug('Can only work with 6 or fewer slashes')
     if '_m' in s:
         mult = get_mult(s)
-        s3 = get_slabel(s2,mult)
+        s3 = get_slabel(s2, mult)
     if nslash  == 0:
         isomers = [s3]
     if nslash  > 0:
         xyz0 = get_xyz(sp0)
         spp0 = get_smiles(xyz0)
         if mult:
-            spp0m = get_slabel(spp0,mult)
+            spp0m = get_slabel(spp0, mult)
         isomers = [spp0m]
         logging.debug("spp0 {}".format(spp0m))
 
@@ -1189,7 +1189,7 @@ def get_isomers(s):
         spp1 = get_smiles(xyz1)
         if spp1 != spp0:
             if mult:
-                spp1m = get_slabel(spp1,mult)
+                spp1m = get_slabel(spp1, mult)
             isomers.append(spp1m)
             logging.debug("spp1 {}".format(spp1m))
 
@@ -1198,7 +1198,7 @@ def get_isomers(s):
         spp2 = get_smiles(xyz2)
         if spp2 != spp0 and spp2 != spp1:
             if mult:
-                spp2m = get_slabel(spp2,mult)
+                spp2m = get_slabel(spp2, mult)
             isomers.append(spp2m)
             logging.debug("spp2 {}".format(spp2m))
 
@@ -1206,7 +1206,7 @@ def get_isomers(s):
         spp3 = get_smiles(xyz3)
         if spp3 != spp0 and spp3 != spp1 and spp3 != spp2:
             if mult:
-                spp3m = get_slabel(spp3,mult)
+                spp3m = get_slabel(spp3, mult)
             isomers.append(spp3m)
             logging.debug("spp3 {}".format(spp3m))
 
@@ -1215,7 +1215,7 @@ def get_isomers(s):
         spp4 = get_smiles(xyz4)
         if spp4 != spp0 and spp4 != spp1 and spp4 != spp2 and spp4 != spp3:
             if mult:
-                spp4m = get_slabel(spp4,mult)
+                spp4m = get_slabel(spp4, mult)
             isomers.append(spp4m)
             logging.debug("spp4 {}".format(spp4m))
 
@@ -1223,7 +1223,7 @@ def get_isomers(s):
         spp5 = get_smiles(xyz5)
         if spp5 != spp0 and spp5 != spp1 and spp5 != spp2 and spp5 != spp3 and spp5 != spp4:
             if mult:
-                spp5m = get_slabel(spp5,mult)
+                spp5m = get_slabel(spp5, mult)
             isomers.append(spp5m)
             logging.debug("spp5 {}".format(spp5m))
 
@@ -1231,7 +1231,7 @@ def get_isomers(s):
         spp6 = get_smiles(xyz6)
         if spp6 != spp0 and spp6 != spp1 and spp6 != spp2 and spp6 != spp3 and spp6 != spp4 and spp6 != spp5:
             if mult:
-                spp6m = get_slabel(spp6,mult)
+                spp6m = get_slabel(spp6, mult)
             isomers.append(spp6m)
             logging.debug("spp6 {}".format(spp6m))
 
@@ -1239,7 +1239,7 @@ def get_isomers(s):
         spp7 = get_smiles(xyz7)
         if spp7 != spp0 and spp7 != spp1 and spp7 != spp2 and spp7 != spp3 and spp7 != spp4 and spp7 != spp5 and spp7 != spp6:
             if mult:
-                spp7m = get_slabel(spp7,mult)
+                spp7m = get_slabel(spp7, mult)
             isomers.append(spp7m)
             logging.debug("spp7 {}".format(spp7m))
 
@@ -1248,7 +1248,7 @@ def get_isomers(s):
         spp8 = get_smiles(xyz8)
         if spp8 != spp0 and spp8 != spp1 and spp8 != spp2 and spp8 != spp3 and spp8 != spp4 and spp8 != spp5 and spp8 != spp6 and spp8 != spp7:
             if mult:
-                spp8m = get_slabel(spp8,mult)
+                spp8m = get_slabel(spp8, mult)
             isomers.append(spp8m)
             logging.debug("spp8 {}".format(spp8m))
 
@@ -1257,7 +1257,7 @@ def get_isomers(s):
         if spp9 != spp0 and spp9 != spp1 and spp9 != spp2 and spp9 != spp3 and spp9 != spp4 and spp9 != spp5 and spp9 != spp6 and spp9 != spp7:
             if spp9 != spp8:
                 if mult:
-                    spp9m = get_slabel(spp9,mult)
+                    spp9m = get_slabel(spp9, mult)
                 isomers.append(spp9m)
                 logging.debug("spp9 {}".format(spp9m))
 
@@ -1266,7 +1266,7 @@ def get_isomers(s):
         if spp10 != spp0 and spp10 != spp1 and spp10 != spp2 and spp10 != spp3 and spp10 != spp4 and spp10 != spp5 and spp10 != spp6 and spp10 != spp7:
             if spp10 != spp8 and spp10 != spp9:
                 if mult:
-                    spp10m = get_slabel(spp10,mult)
+                    spp10m = get_slabel(spp10, mult)
                 isomers.append(spp10m)
                 logging.debug("spp10 {}".format(spp10m))
 
@@ -1275,7 +1275,7 @@ def get_isomers(s):
         if spp11 != spp0 and spp11 != spp1 and spp11 != spp2 and spp11 != spp3 and spp11 != spp4 and spp11 != spp5 and spp11 != spp6 and spp11 != spp7:
             if spp11 != spp8 and spp11 != spp9 and spp11 != spp10:
                 if mult:
-                    spp11m = get_slabel(spp11,mult)
+                    spp11m = get_slabel(spp11, mult)
                 isomers.append(spp11m)
                 logging.debug("spp11 {}".format(spp11m))
 
@@ -1284,7 +1284,7 @@ def get_isomers(s):
         if spp12 != spp0 and spp12 != spp1 and spp12 != spp2 and spp12 != spp3 and spp12 != spp4 and spp12 != spp5 and spp12 != spp6 and spp12 != spp7:
             if spp12 != spp8 and spp12 != spp9 and spp12 != spp10 and spp12 != spp11:
                 if mult:
-                    spp12m = get_slabel(spp12,mult)
+                    spp12m = get_slabel(spp12, mult)
                 isomers.append(spp12m)
                 logging.debug("spp12 {}".format(spp12m))
 
@@ -1293,7 +1293,7 @@ def get_isomers(s):
         if spp13 != spp0 and spp13 != spp1 and spp13 != spp2 and spp13 != spp3 and spp13 != spp4 and spp13 != spp5 and spp13 != spp6 and spp13 != spp7:
             if spp13 != spp8 and spp13 != spp9 and spp13 != spp10 and spp13 != spp11 and spp13 != spp12:
                 if mult:
-                    spp13m = get_slabel(spp13,mult)
+                    spp13m = get_slabel(spp13, mult)
                 isomers.append(spp13m)
                 logging.debug("spp13 {}".format(spp13m))
 
@@ -1302,7 +1302,7 @@ def get_isomers(s):
         if spp14 != spp0 and spp14 != spp1 and spp14 != spp2 and spp14 != spp3 and spp14 != spp4 and spp14 != spp5 and spp14 != spp6 and spp14 != spp7:
             if spp14 != spp8 and spp14 != spp9 and spp14 != spp10 and spp14 != spp11 and spp14 != spp12 and spp14 != spp13:
                 if mult:
-                    spp14m = get_slabel(spp14,mult)
+                    spp14m = get_slabel(spp14, mult)
                 isomers.append(spp14m)
                 logging.debug("spp14 {}".format(spp14m))
 
@@ -1311,7 +1311,7 @@ def get_isomers(s):
         if spp15 != spp0 and spp15 != spp1 and spp15 != spp2 and spp15 != spp3 and spp15 != spp4 and spp15 != spp5 and spp15 != spp6 and spp15 != spp7:
             if spp15 != spp8 and spp15 != spp9 and spp15 != spp10 and spp15 != spp11 and spp15 != spp12 and spp15 != spp13 and spp15 != spp14:
                 if mult:
-                    spp15m = get_slabel(spp15,mult)
+                    spp15m = get_slabel(spp15, mult)
                 isomers.append(spp15m)
                 logging.debug("spp15 {}".format(spp15m))
 
@@ -1321,7 +1321,7 @@ def get_isomers(s):
         if spp16 != spp0 and spp16 != spp1 and spp16 != spp2 and spp16 != spp3 and spp16 != spp4 and spp16 != spp5 and spp16 != spp6 and spp16 != spp7:
             if spp16 != spp8 and spp16 != spp9 and spp16 != spp10 and spp16 != spp11 and spp16 != spp12 and spp16 != spp13 and spp16 != spp14 and spp16 != spp15:
                 if mult:
-                    spp16m = get_slabel(spp16,mult)
+                    spp16m = get_slabel(spp16, mult)
                 isomers.append(spp16m)
                 logging.debug("spp16 {}".format(spp16m))
 
@@ -1331,7 +1331,7 @@ def get_isomers(s):
             if spp17 != spp8 and spp17 != spp9 and spp17 != spp10 and spp17 != spp11 and spp17 != spp12 and spp17 != spp13 and spp17 != spp14 and spp17 != spp15:
                 if spp17 != spp16: 
                     if mult:
-                        spp17m = get_slabel(spp17,mult)
+                        spp17m = get_slabel(spp17, mult)
                     isomers.append(spp17m)
                     logging.debug("spp17 {}".format(spp17m))
 
@@ -1341,7 +1341,7 @@ def get_isomers(s):
             if spp18 != spp8 and spp18 != spp9 and spp18 != spp10 and spp18 != spp11 and spp18 != spp12 and spp18 != spp13 and spp18 != spp14 and spp18 != spp15:
                 if spp18 != spp16 and spp18 != spp17:
                     if mult:
-                        spp18m = get_slabel(spp18,mult)
+                        spp18m = get_slabel(spp18, mult)
                     isomers.append(spp18m)
                     logging.debug("spp18 {}".format(spp18m))
 
@@ -1351,7 +1351,7 @@ def get_isomers(s):
             if spp19 != spp8 and spp19 != spp9 and spp19 != spp10 and spp19 != spp11 and spp19 != spp12 and spp19 != spp13 and spp19 != spp14 and spp19 != spp15:
                 if spp19 != spp16 and spp19 != spp17 and spp19 != spp18:
                     if mult:
-                        spp19m = get_slabel(spp19,mult)
+                        spp19m = get_slabel(spp19, mult)
                     isomers.append(spp19m)
                     logging.debug("spp19 {}".format(spp19m))
 
@@ -1361,7 +1361,7 @@ def get_isomers(s):
             if spp20 != spp8 and spp20 != spp9 and spp20 != spp10 and spp20 != spp11 and spp20 != spp12 and spp20 != spp13 and spp20 != spp14 and spp20 != spp15:
                 if spp20 != spp16 and spp20 != spp17 and spp20 != spp18 and spp20 != spp19:
                     if mult:
-                        spp20m = get_slabel(spp20,mult)
+                        spp20m = get_slabel(spp20, mult)
                     isomers.append(spp20m)
                     logging.debug("spp20 {}".format(spp20m))
 
@@ -1371,7 +1371,7 @@ def get_isomers(s):
             if spp21 != spp8 and spp21 != spp9 and spp21 != spp10 and spp21 != spp11 and spp21 != spp12 and spp21 != spp13 and spp21 != spp14 and spp21 != spp15:
                 if spp21 != spp16 and spp21 != spp17 and spp21 != spp18 and spp21 != spp19 and spp21 != spp20:
                     if mult:
-                        spp21m = get_slabel(spp21,mult)
+                        spp21m = get_slabel(spp21, mult)
                     isomers.append(spp21m)
                     logging.debug("spp21 {}".format(spp21m))
 
@@ -1381,7 +1381,7 @@ def get_isomers(s):
             if spp22 != spp8 and spp22 != spp9 and spp22 != spp10 and spp22 != spp11 and spp22 != spp12 and spp22 != spp13 and spp22 != spp14 and spp22 != spp15:
                 if spp22 != spp16 and spp22 != spp17 and spp22 != spp18 and spp22 != spp19 and spp22 != spp20 and spp22 != spp21:
                     if mult:
-                        spp22m = get_slabel(spp22,mult)
+                        spp22m = get_slabel(spp22, mult)
                     isomers.append(spp22m)
                     logging.debug("spp22 {}".format(spp22m))
 
@@ -1391,7 +1391,7 @@ def get_isomers(s):
             if spp23 != spp8 and spp23 != spp9 and spp23 != spp10 and spp23 != spp11 and spp23 != spp12 and spp23 != spp13 and spp23 != spp14 and spp23 != spp15:
                 if spp23 != spp16 and spp23 != spp17 and spp23 != spp18 and spp23 != spp19 and spp23 != spp20 and spp23 != spp21 and spp23 != spp22:
                     if mult:
-                        spp23m = get_slabel(spp23,mult)
+                        spp23m = get_slabel(spp23, mult)
                     isomers.append(spp23m)
                     logging.debug("spp23 {}".format(spp23m))
 
@@ -1401,7 +1401,7 @@ def get_isomers(s):
             if spp24 != spp8 and spp24 != spp9 and spp24 != spp10 and spp24 != spp11 and spp24 != spp12 and spp24 != spp13 and spp24 != spp14 and spp24 != spp15:
                 if spp24 != spp16 and spp24 != spp17 and spp24 != spp18 and spp24 != spp19 and spp24 != spp20 and spp24 != spp21 and spp24 != spp22 and spp24 != spp23:
                     if mult:
-                        spp24m = get_slabel(spp24,mult)
+                        spp24m = get_slabel(spp24, mult)
                     isomers.append(spp24m)
                     logging.debug("spp24 {}".format(spp24m))
 
@@ -1412,7 +1412,7 @@ def get_isomers(s):
                 if spp25 != spp16 and spp25 != spp17 and spp25 != spp18 and spp25 != spp19 and spp25 != spp20 and spp25 != spp21 and spp25 != spp22 and spp25 != spp23:
                     if spp25 != spp24:
                         if mult:
-                            spp25m = get_slabel(spp25,mult)
+                            spp25m = get_slabel(spp25, mult)
                         isomers.append(spp25m)
                         logging.debug("spp25 {}".format(spp25m))
 
@@ -1423,7 +1423,7 @@ def get_isomers(s):
                 if spp26 != spp16 and spp26 != spp17 and spp26 != spp18 and spp26 != spp19 and spp26 != spp20 and spp26 != spp21 and spp26 != spp22 and spp26 != spp23:
                     if spp26 != spp24 and spp26 != spp25:
                         if mult:
-                            spp26m = get_slabel(spp26,mult)
+                            spp26m = get_slabel(spp26, mult)
                         isomers.append(spp26m)
                         logging.debug("spp26 {}".format(spp26m))
 
@@ -1434,7 +1434,7 @@ def get_isomers(s):
                 if spp27 != spp16 and spp27 != spp17 and spp27 != spp18 and spp27 != spp19 and spp27 != spp20 and spp27 != spp21 and spp27 != spp22 and spp27 != spp23:
                     if spp27 != spp24 and spp27 != spp25 and spp27 != spp26:
                         if mult:
-                            spp27m = get_slabel(spp27,mult)
+                            spp27m = get_slabel(spp27, mult)
                         isomers.append(spp27m)
                         logging.debug("spp27 {}".format(spp27m))
 
@@ -1445,7 +1445,7 @@ def get_isomers(s):
                 if spp28 != spp16 and spp28 != spp17 and spp28 != spp18 and spp28 != spp19 and spp28 != spp20 and spp28 != spp21 and spp28 != spp22 and spp28 != spp23:
                     if spp28 != spp24 and spp28 != spp25 and spp28 != spp26 and spp28 != spp27:
                         if mult:
-                            spp28m = get_slabel(spp28,mult)
+                            spp28m = get_slabel(spp28, mult)
                         isomers.append(spp28m)
                         logging.debug("spp28 {}".format(spp28m))
 
@@ -1456,7 +1456,7 @@ def get_isomers(s):
                 if spp29 != spp16 and spp29 != spp17 and spp29 != spp18 and spp29 != spp19 and spp29 != spp20 and spp29 != spp21 and spp29 != spp22 and spp29 != spp23:
                     if spp29 != spp24 and spp29 != spp25 and spp29 != spp26 and spp29 != spp27 and spp29 != spp28:
                         if mult:
-                            spp29m = get_slabel(spp29,mult)
+                            spp29m = get_slabel(spp29, mult)
                         isomers.append(spp29m)
                         logging.debug("spp29 {}".format(spp29m))
 
@@ -1467,7 +1467,7 @@ def get_isomers(s):
                 if spp30 != spp16 and spp30 != spp17 and spp30 != spp18 and spp30 != spp19 and spp30 != spp20 and spp30 != spp21 and spp30 != spp22 and spp30 != spp23:
                     if spp30 != spp24 and spp30 != spp25 and spp30 != spp26 and spp30 != spp27 and spp30 != spp28 and spp30 != spp29:
                         if mult:
-                            spp30m = get_slabel(spp30,mult)
+                            spp30m = get_slabel(spp30, mult)
                         isomers.append(spp30m)
                         logging.debug("spp30 {}".format(spp30m))
 
@@ -1478,21 +1478,21 @@ def get_isomers(s):
                 if spp31 != spp16 and spp31 != spp17 and spp31 != spp18 and spp31 != spp19 and spp31 != spp20 and spp31 != spp21 and spp31 != spp22 and spp31 != spp23:
                     if spp31 != spp24 and spp31 != spp25 and spp31 != spp26 and spp31 != spp27 and spp31 != spp28 and spp31 != spp29:
                         if mult:
-                            spp31m = get_slabel(spp31,mult)
+                            spp31m = get_slabel(spp31, mult)
                         isomers.append(spp31m)
                         logging.debug("spp31 {}".format(spp31m))
 
     if nchiral > 0:
-        logging.debug('{0} chiral centers in {1}'.format(nchiral,s))
+        logging.debug('{0} chiral centers in {1}'.format(nchiral, s))
     if len(isomers)==1:
         if '_m' in s:
             #isomers = [s]
             isomers = [get_slabel(isomers[0])]
         else:
             mult = get_mult(s)
-            slabel = get_slabel(isomer[0],mult)
+            slabel = get_slabel(isomer[0], mult)
             #slabel = get_slabel(s,mult)
-            logging.debug("Multiplicity {} assigned by open babel for {}".format(mult,s))
+            logging.debug("Multiplicity {} assigned by open babel for {}".format(mult, s))
             isomers = [slabel]
     return isomers
 
@@ -1503,7 +1503,7 @@ def write_isomers_list(listfile):
     The filename for the list is required as the input.
     The filename of the new file is returned.
     """
-    import iotools as io
+    from . import iotools as io
     slist = io.read_list(listfile)
     newlist = ''
     for s in slist:
@@ -1511,7 +1511,7 @@ def write_isomers_list(listfile):
         for isomer in isomers:
             newlist += '{}\n'.format(isomer)
     newfilename = listfile.split('.')[0] + '_isomers.txt'
-    io.write_file(newlist,filename=newfilename)
+    io.write_file(newlist, filename=newfilename)
     return newfilename
 
 
@@ -1573,7 +1573,7 @@ def get_natom(x):
     >>> [get_natom(mol) for mol in mols]
     [4, 9, 2, 3]
     """
-    mol = get_mol(x,make3D=True)
+    mol = get_mol(x, make3D=True)
     return len(mol.atoms)
 
 
@@ -1587,7 +1587,7 @@ def get_natom_heavy(x):
     >>> [get_natom_heavy(mol) for mol in mols]
     [1, 3, 2, 1]
     """
-    mol = get_mol(x,make3D=True)
+    mol = get_mol(x, make3D=True)
     return mol.OBMol.NumHvyAtoms()
 
 
@@ -1595,8 +1595,8 @@ def get_nrotor(x):
     """
     Return number of rotors.
     """
-    if type(x) == str:
-        mol = get_mol(x,make3D=True)
+    if isinstance(x, str):
+        mol = get_mol(x, make3D=True)
     else:
         mol = get_mol(x)
     return mol.OBMol.NumRotors()
@@ -1657,17 +1657,17 @@ def get_xyz_dictionary(x):
     atom_masses_unit
     """
     d = {}
-    mol = get_mol(x,make3D=True)
+    mol = get_mol(x, make3D=True)
     xyz = get_xyz(mol)
     lines = xyz.splitlines()
     natom = get_natom(mol)
     symbols = ['X']*natom
-    coordinates = [[0.0,0.0,0.0]]*natom
+    coordinates = [[0.0, 0.0, 0.0]]*natom
     i = 0
     for line in lines[2:]:
         s, x, y, z = line.split()
         symbols[i] = s
-        coordinates[i] = [float(x),float(y),float(z)]
+        coordinates[i] = [float(x), float(y), float(z)]
         i += 1
     d['number_of_atoms'] = natom
     d['coordinates'] = coordinates
@@ -1725,7 +1725,7 @@ def get_molpro_mol(logfile):
     Returns xyz file from molpro logfile.
     """
     import pybel
-    return pybel.readfile('mpo',logfile).next()
+    return next(pybel.readfile('mpo', logfile))
 
 
 def get_gaussian_mol(logfile):
@@ -1733,7 +1733,7 @@ def get_gaussian_mol(logfile):
     Returns mol file from gaussian logfile.
     """
     import pybel
-    return pybel.readfile('g09',logfile).next()
+    return next(pybel.readfile('g09', logfile))
 
 
 def get_geo(x):
@@ -1842,7 +1842,7 @@ def get_unique_path(x, mult=0, method=''):
     >>> if os.path.sep == '/': print(get_unique_path('C',method='pm6'))
     database/C/C/CH4/VNWKTOKETHGBQD-UHFFFAOYSA-N1/pm6
     """
-    import iotools as io
+    from . import iotools as io
     mol = get_mol(x, make3D=True)
     if mult == 0:
         mult = mol.spin
@@ -1893,13 +1893,13 @@ def get_smiles_path(x, mult=0, db= 'database'):
     canonical smiles strings are unique only for the same
     code that generates the smiles string.
     """
-    import iotools as io
-    if type(x) is pybel.Molecule:
+    from . import iotools as io
+    if isinstance(x, pybel.Molecule):
         if mult == 0:
             mult = x.spin
         s = x.write(format='can').strip().split()[0]
         s = s + '_m' + str(mult)
-    elif type(x) is str:
+    elif isinstance(x, str):
         if '_e' in x:
             x = x.split('_e')[0]
         if '_s' in x:
@@ -1943,9 +1943,9 @@ def get_smiles_filename(x):
     such as \/:*?"<>|(). Not sure if all these characters appear, but here
     they are replaced by an underscore, '_' followed by:
     """
-    if type(x) is pybel.Molecule:    
+    if isinstance(x, pybel.Molecule):    
         s = x.write(format='can').strip().split()[0]
-    elif type(x) is str:
+    elif isinstance(x, str):
         if '_e' in x:
            x, ene = x.split('_e')
         if '_s' in x:
@@ -1953,28 +1953,28 @@ def get_smiles_filename(x):
         s = x
     else:
         s = ''
-    s = s.replace('[','_b_')
-    s = s.replace(']','_d_')
+    s = s.replace('[', '_b_')
+    s = s.replace(']', '_d_')
     #s = s.replace('=','_e_')
-    s = s.replace(':','_i_')
-    s = s.replace('|','_j_')
-    s = s.replace('\\','_k_') 
-    s = s.replace('/','_l_')
-    s = s.replace('(','_p_')
-    s = s.replace(')','_q_')
-    s = s.replace('*','_s_')
-    s = s.replace('#','_t_')
-    s = s.replace('<','_v_')
-    s = s.replace('>','_y_')
-    s = s.replace('@@','_aa_')
-    s = s.replace('@','_a_')
+    s = s.replace(':', '_i_')
+    s = s.replace('|', '_j_')
+    s = s.replace('\\', '_k_') 
+    s = s.replace('/', '_l_')
+    s = s.replace('(', '_p_')
+    s = s.replace(')', '_q_')
+    s = s.replace('*', '_s_')
+    s = s.replace('#', '_t_')
+    s = s.replace('<', '_v_')
+    s = s.replace('>', '_y_')
+    s = s.replace('@@', '_aa_')
+    s = s.replace('@', '_a_')
 
 
     return s
 
 
 def smiles2formula(filename):
-    import iotools as io
+    from . import iotools as io
     mols = io.read_list(filename)
     s = ''
     for mol in mols:
@@ -1997,7 +1997,7 @@ def get_coordinates_array(xyz):
     return coords
 
 
-def set_mult(x,mult):
+def set_mult(x, mult):
     """
     Sets the total spin multiplicity.
     """
@@ -2008,7 +2008,7 @@ def set_mult(x,mult):
     return mol
 
 
-def set_xyz(x,coords):
+def set_xyz(x, coords):
     """
     Parameters:
     mol : Open babel mol object, or anything that can be converted to mol object with get_mol.
@@ -2032,7 +2032,7 @@ def fetch_smiles(s):
         r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
         return    
     if cirpy:
-        return cirpy.resolve(s,'smiles')
+        return cirpy.resolve(s, 'smiles')
     else:
         return None
     
@@ -2050,7 +2050,7 @@ def fetch_inchi(s):
         r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
         return
     if cirpy:
-        r = cirpy.resolve(s,'inchi')  
+        r = cirpy.resolve(s, 'inchi')  
     return r
         
 
@@ -2068,12 +2068,12 @@ def fetch_IUPAC_name(s):
         return    
     frm = get_format(s)
     if frm == 'smi':
-        name = cirpy.resolve(s,'iupac_name',resolvers=['smiles'])
+        name = cirpy.resolve(s, 'iupac_name', resolvers=['smiles'])
     elif frm == 'inchi':
-        name = cirpy.resolve(s,'iupac_name',resolvers=['inchi'])
+        name = cirpy.resolve(s, 'iupac_name', resolvers=['inchi'])
     elif frm == 'xyz':
         mol = get_mol(s)
-        name = cirpy.resolve(mol.write('inchi').strip(),'iupac_name',resolvers=['inchi'])
+        name = cirpy.resolve(mol.write('inchi').strip(), 'iupac_name', resolvers=['inchi'])
     else:
         name = None
     return name

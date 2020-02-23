@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 import argparse
 import collections
-import iotools as io
-import obtools as ob
-import qctools as qc
-import tctools as tc
-import unittools as ut
-import dbtools as db
-import heatform as hf
+from . import iotools as io
+from . import obtools as ob
+from . import qctools as qc
+from . import tctools as tc
+from . import unittools as ut
+from . import dbtools as db
+from . import heatform as hf
 import pprint
 import sys
 import os
 import logging
 import numpy as np
-from patools import energy
+from .patools import energy
 from timeit import default_timer as timer
 __updated__ = "2018-03-03"
 __authors__ = 'Murat Keceli, Sarah Elliott'
@@ -84,7 +84,7 @@ def get_args():
                         default= 'none',
                         help='Log file prefix, use none for logging to STDOUT, include DATE if you want a date stamp')
     parser.add_argument('-s', '--scratch', type=str,
-                        default=io.get_env('TMPDIR',default='/tmp'),
+                        default=io.get_env('TMPDIR', default='/tmp'),
                         help='Scratch directory. If not given checks TMPDIR env. variable, if not defined uses /tmp.')
     parser.add_argument('-x', '--xyzdir', type=str,
                         default= 'xyz',
@@ -248,11 +248,11 @@ def run(s):
     parameters['all results'][slabel].update({qlabel:{}})
     parameters['qlabel'] = qlabel
     parameters['slabel'] = slabel
-    parameters['tmpdir']  = io.join_path(*[scratch,ob.get_smiles_filename(s)])
+    parameters['tmpdir']  = io.join_path(*[scratch, ob.get_smiles_filename(s)])
     results = parameters['results']
     smilesname = ob.get_smiles_filename(s)
     smilesdir = io.join_path(parameters['database'], formula, smilesname)
-    rundir  = io.join_path(*[smilesdir,parameters['qcdirectory']])
+    rundir  = io.join_path(*[smilesdir, parameters['qcdirectory']])
     qcpackage = parameters['qcpackage']
     qcscript = io.get_path(parameters['qcscript'])
     qcoutput = formula + '.out'
@@ -265,7 +265,7 @@ def run(s):
     if io.check_dir(parameters['qctemplate']):
         pass
     else:
-        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'],'templates'])
+        parameters['qctemplate'] = io.join_path(*[parameters['qtcdirectory'], 'templates'])
     if not parameters['qckeyword']:
         runqc = False
         parseqc = False
@@ -301,7 +301,7 @@ def run(s):
     else:
         logging.error('I/O error, {0} directory not found.\n'.format(rundir))
         return -1
-    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian','qchem']
+    available_packages=['nwchem', 'molpro', 'mopac', 'gaussian', 'qchem']
     runfile = 'RUNNING.tmp'
     if io.check_file(runfile):
         if over:
@@ -316,7 +316,7 @@ def run(s):
             runthermo = False
             if 'opt' in task:
                 parameters['break'] = True
-            logging.warning('Skipping calculation since it is already running. Use -O {1}.{2} to overwrite or delete "{0}" file'.format(io.get_path(runfile),parameters['mol_index'],calcindex))
+            logging.warning('Skipping calculation since it is already running. Use -O {1}.{2} to overwrite or delete "{0}" file'.format(io.get_path(runfile), parameters['mol_index'], calcindex))
     elif ignore and task is not 'composite':
         runqc = False
     if task is 'composite':
@@ -349,7 +349,7 @@ def run(s):
                 qc.use_given_hof(parameters)
                 io.rm(runfile)
             else:
-                logging.error('{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage,available_packages))
+                logging.error('{0} package not implemented.\nAvailable packages are {1}'.format(qcpackage, available_packages))
         except KeyboardInterrupt:
             logging.error('CTRL+C command...')
             logging.info('Deleting lock file {}'.format(io.get_path(runfile)))
@@ -368,7 +368,7 @@ def run(s):
         logging.info('Parsing output...')
         if parameters['qctask'] == 'composite':
             enefile = formula + '.ene'
-            if io.check_file(enefile,0,True):
+            if io.check_file(enefile, 0, True):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
             else:
@@ -379,14 +379,14 @@ def run(s):
                     logging.debug('No energy file "{0}".\n'.format(enefile))
         elif parameters['qcmethod'] == 'given':
             enefile = formula + '.ene'
-            if io.check_file(enefile,0,True):
+            if io.check_file(enefile, 0, True):
                 energy = float(io.read_file(enefile).strip())
                 parameters['results']['energy'] = energy
-        elif io.check_file(qcoutput, timeout=1,verbose=False):
+        elif io.check_file(qcoutput, timeout=1, verbose=False):
             out = io.read_file(qcoutput, aslines=False)
             if qc.check_output(out):
                 try:
-                    results = qc.parse_output(out,formula,parameters['writefiles'])
+                    results = qc.parse_output(out, formula, parameters['writefiles'])
                 except Exception as e:
                     if 'opt' in task:
                         parameters['break'] = True
@@ -397,7 +397,7 @@ def run(s):
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         logging.error('Exception {}: {} {} {}'.format( e, exc_type, fname, exc_tb.tb_lineno))        
-                for key in results.keys():
+                for key in list(results.keys()):
                     val = results[key]
                     if hasattr(val, '__iter__'):
                         if len(list(val))>0:
@@ -426,7 +426,7 @@ def run(s):
                     parameters['xyz'] = final_xyz
                     mol = ob.get_mol(final_xyz)
                 else:
-                    logging.error('InChI mismatch: \n{} --> \n{}'.format(inchi,inchifinal))
+                    logging.error('InChI mismatch: \n{} --> \n{}'.format(inchi, inchifinal))
             else:
                 if 'opt' in task:
                     logging.error('Cannot find xyz, optimization failed')
@@ -448,7 +448,7 @@ def run(s):
                     RPHtfile = 'RPHt_input_data.dat'
                 if io.check_file(RPHtexe):
                     if not task.startswith('tors') and not task.startswith('md'):
-                        io.write_file(RPHt,RPHtfile)
+                        io.write_file(RPHt, RPHtfile)
                         io.execute(RPHtexe  + ' ' + RPHtfile)
                     #if io.check_file( 'hrproj_freq.dat'):
                     if io.check_file( 'me_files/reac1_fr.me'):
@@ -466,7 +466,7 @@ def run(s):
         else:
             if 'opt' in task:
                 parameters['break'] = True
-            logging.error('Output file "{0}" not found in {1}.'.format(qcoutput,io.pwd()))
+            logging.error('Output file "{0}" not found in {1}.'.format(qcoutput, io.pwd()))
             if runthermo:
                 logging.error('Cannot run thermo')
                 runthermo = False
@@ -501,10 +501,10 @@ def run(s):
         parameters['all results'][slabel][qlabel]['zpve'] = 0.0
     parameters['all results'][slabel][qlabel]['path'] = rundir   
     if 'hindered potential' in parameters['results'] and (task.startswith('tors') or task.startswith('md')):
-        tc.get_hindered_potential(parameters['results']['hindered potential'],report=parameters['debug'])
+        tc.get_hindered_potential(parameters['results']['hindered potential'], report=parameters['debug'])
         
     #parameters['all results'][slabel]['mol_index'] = parameters['mol_index']  
-    for key in results.keys():
+    for key in list(results.keys()):
         val = results[key]
         if hasattr(val, '__iter__'):
             if len(list(val))>0:
@@ -512,14 +512,14 @@ def run(s):
                 if 'freqs' in key:
                     floatfreqs = sorted([float(freq) for freq in results[key]])
                     parameters['freqdir'] = parameters['qcdirectory']
-                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in floatfreqs]))
+                    logging.info('{:10s} = {}'.format(key, ['{:6.1f}'.format(freq) for freq in floatfreqs]))
                     if any(freq < 0 for freq in floatfreqs) and runthermo:
                         runthermo = False
                         logging.error('Cannot run thermo')
                 if 'pfreqs' in key:
                     floatfreqs = sorted([float(freq) for freq in results[key]])
                     parameters['freqdir'] = parameters['qcdirectory']
-                    logging.info('{:10s} = {}'.format(key,['{:6.1f}'.format(freq) for freq in floatfreqs]))
+                    logging.info('{:10s} = {}'.format(key, ['{:6.1f}'.format(freq) for freq in floatfreqs]))
                     if any(freq < 0 for freq in floatfreqs) and runthermo:
                         runthermo = False
                         logging.error('Cannot run thermo')
@@ -528,7 +528,7 @@ def run(s):
             if val:
                 parameters['all results'][slabel][qlabel].update({key: results[key]})
                 if key == 'energy' or 'zpve' in key:
-                    logging.info('{:10s} = {:10.8f}'.format(key,results[key]))
+                    logging.info('{:10s} = {:10.8f}'.format(key, results[key]))
     parameters['results']['deltaH0'] = float('nan')
     parameters['all results'][slabel][qlabel]['deltaH0'] = float('nan')   
     parameters['results']['deltaH298'] = float('nan')
@@ -574,27 +574,27 @@ def run(s):
             hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
         else:
-            if formula in ['XH2','XO2','XN2']: #Remove X to use the definided values
+            if formula in ['XH2', 'XO2', 'XN2']: #Remove X to use the definided values
                 hof = 0.
                 hfset = 'Definition'
                 logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
             else:
-                hof, hfset, hfcoeff = hf.main_keyword(s,parameters)
+                hof, hfset, hfcoeff = hf.main_keyword(s, parameters)
             hftxt  = 'Energy (kcal/mol)\tBasis\n----------------------------------'
             hftxt += '\n' + str(hof) + '\t' + '  '.join(hfset) 
-        io.write_file(hftxt,formula + '.hofk')
+        io.write_file(hftxt, formula + '.hofk')
         parameters['results']['deltaH0'] = hof
         parameters['results']['heat of formation basis'] = hfset
         parameters['all results'][slabel][qlabel]['deltaH0'] = hof
         parameters['all results'][slabel][qlabel]['heat of formation basis'] = hfset
-        if not type(hfcoeff) == list:
+        if not isinstance(hfcoeff, list):
             hfcoeff = hfcoeff.tolist()
         parameters['all results'][slabel][qlabel]['heat of formation coeff'] = hfcoeff
         hof298 = 0.
         chemkintext = ''
         rmgpoly = {}
         pfout   = ''
-        if formula in ['XH2','XO2','XN2']: #Remove X to use the definided values
+        if formula in ['XH2', 'XO2', 'XN2']: #Remove X to use the definided values
             logging.info('Heat of formation of {} is set to 0 by definition.'.format(formula))
         else:
             if not io.check_file('new.groups'):
@@ -617,9 +617,9 @@ def run(s):
                    for uncert in uncertainty:
                        uncert = uncert.split('-')
                        if len(uncert) > 2:
-                           typ,lscale, hscale = uncert
+                           typ, lscale, hscale = uncert
                        elif(len(uncert) > 1):
-                           typ,lscale = uncert
+                           typ, lscale = uncert
                        else:
                            typ = uncert[0]
                        types = {'f':'freqs','h':'hindered potential'}
@@ -627,18 +627,18 @@ def run(s):
                            if types[typ[0].lower()] in parameters['results']:
                                lscale = float(lscale)
                                hscale = float(hscale)
-                               scales = np.arange(lscale,hscale,(hscale-lscale) / 9)
-                               scales = np.append(scales,scales[-1] +(hscale-lscale) / 9)
+                               scales = np.arange(lscale, hscale, (hscale-lscale) / 9)
+                               scales = np.append(scales, scales[-1] +(hscale-lscale) / 9)
                                for scale in scales:
                                    parameters['scale'] = scale
                                    parameters['scaletype'] = typ
-                                   io.mkdir('scale{}_{:.3f}'.format(typ,scale))
-                                   io.cd('scale{}_{:.3f}'.format(typ,scale))
+                                   io.mkdir('scale{}_{:.3f}'.format(typ, scale))
+                                   io.cd('scale{}_{:.3f}'.format(typ, scale))
                                    if not io.check_file('new.groups'):
                                        groupstext = tc.get_new_groups()
                                        io.write_file(groupstext, 'new.groups')
-                                   _, tempchemkintext,_ = tc.write_chemkin_polynomial(mol, parameters)
-                                   parameters['all results'][slabel][qlabel]['scalechemkin_{}-{:.3f}'.format(typ,scale)] = tempchemkintext
+                                   _, tempchemkintext, _ = tc.write_chemkin_polynomial(mol, parameters)
+                                   parameters['all results'][slabel][qlabel]['scalechemkin_{}-{:.3f}'.format(typ, scale)] = tempchemkintext
                                    parameters['scaletype'] = None
                                    io.cd('..')
                        elif typ.lower().startswith('q'):
@@ -648,8 +648,8 @@ def run(s):
                                   if parameters['moltype'].lower() == 'linear':
                                       dof += 1
                                c = float(lscale)
-                               io.mkdir('scale{}_{:.3f}'.format(typ,c))
-                               io.cd('scale{}_{:.3f}'.format(typ,c))
+                               io.mkdir('scale{}_{:.3f}'.format(typ, c))
+                               io.cd('scale{}_{:.3f}'.format(typ, c))
                                hdr = '\n'.join(pfout.splitlines()[:2])
                                pfnew = pfout.splitlines()[2:]
                                for l, line in enumerate(pfnew):
@@ -666,9 +666,9 @@ def run(s):
                                    io.write_file(groupstext, 'new.groups')
                                skippf = parameters['skippf']
                                parameters['skippf'] = True
-                               _, tempchemkintext,_ = tc.write_chemkin_polynomial(mol, parameters)
+                               _, tempchemkintext, _ = tc.write_chemkin_polynomial(mol, parameters)
                                parameters['skippf'] = skippf
-                               parameters['all results'][slabel][qlabel]['scalechemkin_{}-{:.3f}'.format(typ,c)] = tempchemkintext
+                               parameters['all results'][slabel][qlabel]['scalechemkin_{}-{:.3f}'.format(typ, c)] = tempchemkintext
                                parameters['scaletype'] = None
                                io.cd('..')
                            else:
@@ -721,7 +721,7 @@ def main(arg_update={}):
                 qtcruninfo += 'Using {} MPI ranks in total'.format(mpisize)
                 qtcruninfo += 'Using {} cores for a single quantum chemistry calculation'.format(qcnproc)
                 beginindex = parameters['first'] + qcrank
-                qtcruninfo += 'Begin index shifted to {} for qcrank {} mpirank {}'.format(beginindex,qcrank, mpirank)
+                qtcruninfo += 'Begin index shifted to {} for qcrank {} mpirank {}'.format(beginindex, qcrank, mpirank)
             else:
                 sys.exit()
         else:
@@ -786,7 +786,7 @@ def main(arg_update={}):
     parameters['optlevel'] = 'sp' #TODO
     templatedir = parameters['qctemplate']
     if not os.path.sep in parameters['xyzdir']:
-        parameters['xyzdir'] = io.join_path(*[io.pwd(),parameters['xyzdir']])
+        parameters['xyzdir'] = io.join_path(*[io.pwd(), parameters['xyzdir']])
     inp = args.input
     jsonfile = args.jsoninput
     jlist = []
@@ -822,7 +822,7 @@ def main(arg_update={}):
                 smi = qc.get_slabel(basismol)
                 molbasis.append(basismol)
                 if smi not in mylist:
-                    msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol,s)
+                    msg = '{0} added to input list for heat of formation calculation of {1}'.format(basismol, s)
                     mylist = [smi] + mylist
                     logging.info(msg)
         molbasis = set(molbasis)
@@ -834,24 +834,24 @@ def main(arg_update={}):
         myliststr = '\n'.join(mylist)
         sortedfile = 'sorted.txt'
         io.write_file(myliststr, sortedfile)
-        if io.check_file(sortedfile,1):
+        if io.check_file(sortedfile, 1):
             logging.info('Sorted SMILES file = {}'.format(sortedfile))
             logging.info('You can use qtc -b 1 -e 5, to compute species with indices 1,2,3,4,5.')
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     if parameters['sortbymass']:
-        mylist = qc.sort_species_list(mylist, printinfo=True,byMass=True)
+        mylist = qc.sort_species_list(mylist, printinfo=True, byMass=True)
         myliststr = '\n'.join(mylist)
         sortedfile = 'sortedbymass.txt'
         io.write_file(myliststr, sortedfile)
-        if io.check_file(sortedfile,1):
+        if io.check_file(sortedfile, 1):
             logging.info('Sorted SMILES file = {}'.format(sortedfile))
         else:
             logging.error('Problem in writing sorted SMILES file {}'.format(sortedfile))
     if parameters['qckeyword']:
         logging.info('List of species')
         logging.info(pprint.pformat(mylist))
-        for mid,s in enumerate(mylist):
+        for mid, s in enumerate(mylist):
             parameters['runthermo'] = False
             parameters['optdir'] = ''
             parameters['freqdir'] = ''
@@ -863,7 +863,7 @@ def main(arg_update={}):
             parameters['break'] = False
             parameters['results'] = {}
             parameters['all results'].update({qc.get_slabel(s):{}}) 
-            parameters = qc.add_species_info(s,parameters)
+            parameters = qc.add_species_info(s, parameters)
             for i in range(ncalc):
                 if parameters['break']:
                     logging.info('Skipping next calculations for {}'.format(s))
@@ -877,7 +877,7 @@ def main(arg_update={}):
         if runthermo:
             logging.info('\n' + 120*'#' + '\n')
             logging.info("Starting thermo calculations")
-            for mid,s in enumerate(mylist):
+            for mid, s in enumerate(mylist):
                 parameters['runthermo'] = runthermo
                 parameters['runqc'] = False
                 parameters['optdir'] = ''
@@ -890,7 +890,7 @@ def main(arg_update={}):
                 parameters['break'] = False
                 parameters['results'] = {}
                 parameters['heat'] = None
-                parameters = qc.add_species_info(s,parameters)
+                parameters = qc.add_species_info(s, parameters)
                 for i in range(ncalc):
                     if parameters['break']:
                         logging.info('Skipping next calculations for {}'.format(s))
@@ -906,11 +906,11 @@ def main(arg_update={}):
     if parameters['all results']:
         logging.info('\n' + 100*'-' + '\n')
         pathtitle = 'Path in {}'.format(parameters['database'])
-        out   = '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('IDX','SMILES', 'Energy', 'ZPVE', pathtitle)
-        out  += '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('   ','      ', '[Hartree]', '[Hartree]', '  ')
-        for i,s in enumerate(mylist):
+        out   = '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('IDX', 'SMILES', 'Energy', 'ZPVE', pathtitle)
+        out  += '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('   ', '      ', '[Hartree]', '[Hartree]', '  ')
+        for i, s in enumerate(mylist):
             sresults = parameters['all results'][qc.get_slabel(s)]
-            for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
+            for qcresultkey, qcresultval in sorted(iter(sresults.items()), key= lambda x: x[0]):
                 runpath = qcresultval['path'].split('/database/')[-1]
                 zpve = 0.
                 if 'azpve' in qcresultval:
@@ -920,19 +920,19 @@ def main(arg_update={}):
                 if not 'energy' in qcresultval:
                     qcresultval['energy'] = float('NaN') 
                 out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
-                        str(i+1), qc.get_slabel(s), qcresultval['energy'],zpve,runpath)
+                        str(i+1), qc.get_slabel(s), qcresultval['energy'], zpve, runpath)
         logging.info(out)
         logging.info('\n' + 100*'-' + '\n')
         if runthermo:
             ckin = ''
-            out   = '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('IDX','SMILES', 'DeltaH(0)', 'DeltaH(298)', 'Key')
-            out  += '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('   ','      ', '[kj/mol]', '[kj/mol]', '  ')
-            for i,s in enumerate(mylist):
+            out   = '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('IDX', 'SMILES', 'DeltaH(0)', 'DeltaH(298)', 'Key')
+            out  += '{0:5s} {1:30s} {2:>15s} {3:>15s}\t   {4}\n'.format('   ', '      ', '[kj/mol]', '[kj/mol]', '  ')
+            for i, s in enumerate(mylist):
                 sresults = parameters['all results'][qc.get_slabel(s)]
-                for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
+                for qcresultkey, qcresultval in sorted(iter(sresults.items()), key= lambda x: x[0]):
                     if qcresultval['deltaH298']:
                         out += '{0:5s} {1:30s} {2:15.5f} {3:15.5f}\t   {4}\n'.format(
-                            str(i+1), qc.get_slabel(s),qcresultval['deltaH0']*ut.kcal2kj,qcresultval['deltaH298']*ut.kcal2kj,qcresultkey)
+                            str(i+1), qc.get_slabel(s), qcresultval['deltaH0']*ut.kcal2kj, qcresultval['deltaH298']*ut.kcal2kj, qcresultkey)
                         ckin += qcresultval['chemkin']
                     else:
                         out += s + '  not included in ckin because there is no pf output for ' + qcresultkey  + '\n'
@@ -943,7 +943,7 @@ def main(arg_update={}):
                 logging.info(out)
             ckinfile = 'chemkin_' + parameters['logfile'] + get_date_time("_%y%m%d_%H%M%S") + '.txt'
             ckinfile = io.get_unique_filename(ckinfile)
-            io.write_file(ckin,ckinfile)
+            io.write_file(ckin, ckinfile)
             logging.info('Written all chemkin polynomials in {}'.format(io.get_path(ckinfile)))
         if parameters['dumpjsonfile']:
             jsonfile = 'qtc_parameters_' +  get_date_time("%y%m%d_%H%M%S") + '.json'
@@ -960,51 +960,51 @@ def main(arg_update={}):
                     csvfile = prefix + '_method_' + str(i) +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
                     csvfile = io.get_unique_filename(csvfile)
                     csvtext = '{},{},{},{},{},{},{},{},{},{}\n'.format(
-                        'Slabel', 'RMGlabel', 'deltaH(0)', 'deltaH(298)', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
+                        'Slabel', 'RMGlabel', 'deltaH(0)', 'deltaH(298)', 'H298', 'S298', 'Cp(300)', 'Cp(500)', 'Cp(1000)', 'Cp(1500)')
                     for d in jlist:
                         name = str(d['name'])
                         smi  = str(d['SMILES'])
                         mult = int(d['multiplicity'])
                         qlabel = qc.get_qlabel(parameters['qckeyword'], i) 
-                        s    = qc.get_slabel(smi,mult)
+                        s    = qc.get_slabel(smi, mult)
                         try:
                             thermoresults = parameters['all results'][slabel][qlabel]
                             deltaH0   = thermoresults['deltaH0']
                             deltaH298 = thermoresults['deltaH298']
                             poly      = thermoresults['NASAPolynomial']
-                            Cplist    = [tc.get_heat_capacity(poly,T) for T in [300,500,1000,1500]]#cal/mol*K
-                            S298      = tc.get_entropy(poly,298.15) #cal/mol*K
-                            H298      = tc.get_enthalpy(poly,298.15) #kcal/mol
+                            Cplist    = [tc.get_heat_capacity(poly, T) for T in [300, 500, 1000, 1500]]#cal/mol*K
+                            S298      = tc.get_entropy(poly, 298.15) #cal/mol*K
+                            H298      = tc.get_enthalpy(poly, 298.15) #kcal/mol
                             csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(
-                                s, name, deltaH0, deltaH298, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
+                                s, name, deltaH0, deltaH298, H298, S298, Cplist[0], Cplist[1], Cplist[2], Cplist[3])
                         except:
                             csvtext += '{},{},{},{},{},{},{},{},{},{}\n'.format(
-                                s, name,'NA',     'NA',      'NA', 'NA', 'NA',        'NA',    'NA', '   NA')
+                                s, name, 'NA',     'NA',      'NA', 'NA', 'NA',        'NA',    'NA', '   NA')
                     if csvtext:
                         logging.info('Writing csv file {}'.format(csvfile))
-                        io.write_file(csvtext,csvfile)
+                        io.write_file(csvtext, csvfile)
                 csvfile = prefix + '_rmg_' +  get_date_time("_%y%m%d_%H%M%S") + '.csv'
                 csvfile = io.get_unique_filename(csvfile)
                 csvtext = '{},{},{},{},{},{},{},{},{},{},{}\n'.format(
-                    'Slabel', 'RMGlabel', 'Sensitivity', 'Uncertainty', 'Value', 'H298', 'S298', 'Cp(300)', 'Cp(500)','Cp(1000)', 'Cp(1500)')
+                    'Slabel', 'RMGlabel', 'Sensitivity', 'Uncertainty', 'Value', 'H298', 'S298', 'Cp(300)', 'Cp(500)', 'Cp(1000)', 'Cp(1500)')
                 for d in jlist:
                     name = str(d['name'])
                     smi  = str(d['SMILES'])
                     mult = int(d['multiplicity'])
-                    s    = qc.get_slabel(smi,mult)
+                    s    = qc.get_slabel(smi, mult)
                     try:
                         sensitivity = float(d['Sensitivity'])
                         uncertainty = float(d['Uncertainty'])
                         value       = float(d['Value'])
-                        Cplist      = [float(cp) / ut.kcal2kj for cp in [d['Cp300'],d['Cp500'],d['Cp1000'],d['Cp1500']]]
+                        Cplist      = [float(cp) / ut.kcal2kj for cp in [d['Cp300'], d['Cp500'], d['Cp1000'], d['Cp1500']]]
                         S298        = float(d['S298']) / ut.kcal2kj
                         H298        = float(d['H298']) / ut.kcal2kj / 1000.
-                        csvtext += '{},{},{},{},{},{},{},{},{},{},{}\n'.format(s, name, sensitivity, uncertainty, value, H298, S298, Cplist[0], Cplist[1],Cplist[2], Cplist[3])
+                        csvtext += '{},{},{},{},{},{},{},{},{},{},{}\n'.format(s, name, sensitivity, uncertainty, value, H298, S298, Cplist[0], Cplist[1], Cplist[2], Cplist[3])
                     except:
                         csvtext += '{},{},{},{},{},{},{},{},{},{},{}\n'.format(s, name,        'NA',        'NA',  'NA', 'NA', 'NA',      'NA',      'NA',     'NA',      'NA')
                 if csvtext:
                     logging.info('Writing csv file {}'.format(csvfile))
-                    io.write_file(csvtext,csvfile)
+                    io.write_file(csvtext, csvfile)
     logging.info("QTC: Calculations time (s)   = {0:.2f}".format(end - init))
     logging.info("QTC: Total time (s)          = {0:.2f}".format(end - start))
     logging.info("QTC: Date and time           = {0}".format(io.get_date()))

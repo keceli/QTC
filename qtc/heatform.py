@@ -6,12 +6,12 @@ import os
 import sys
 #sys.path.insert(0, '/home/elliott/Packages/QTC/')
 sys.path.insert(0, '/home/snelliott/projects/anl/QTC/')
-import iotools as io
-import qctools as qc
-import patools as pa
-import obtools as ob
+from . import iotools as io
+from . import qctools as qc
+from . import patools as pa
+from . import obtools as ob
 import logging
-import unittools as ut
+from . import unittools as ut
 """
 Heatform determines the heat of formation for a molecule by using a basis of 
 molecules with well-determined heats of formation
@@ -56,13 +56,13 @@ def get_atomlist(mol):
     atomlist - list of distinct atoms in that molecule
     """
     atomlist = []
-    elements = {'He','Li','Be','Ne','Na','Mg','Al','Si','Cl','Ar',
-      'Ca','Sc','Ti','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge', 
-      'As','Se','Br','Kr','C','B','H','O','F','S','N','P','K','V'}
+    elements = {'He', 'Li', 'Be', 'Ne', 'Na', 'Mg', 'Al', 'Si', 'Cl', 'Ar',
+      'Ca', 'Sc', 'Ti', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 
+      'As', 'Se', 'Br', 'Kr', 'C', 'B', 'H', 'O', 'F', 'S', 'N', 'P', 'K', 'V'}
     for el in elements:
         if el in mol:
            atomlist.append(el)
-           mol = mol.replace(el,'')
+           mol = mol.replace(el, '')
     return atomlist
 
 def select_basis(atomlist,attempt=0):
@@ -145,7 +145,7 @@ def select_basis(atomlist,attempt=0):
         i += 1
     return basis
 
-def get_stoich(mol,atomlist):
+def get_stoich(mol, atomlist):
     """
     Given a molecule's stoichiometry and a list of atoms, finds the
     number of each atom that the molecule contains
@@ -173,7 +173,7 @@ def get_stoich(mol,atomlist):
     return stoichlist
 
 
-def form_mat(basis,atomlist):
+def form_mat(basis, atomlist):
     """
     Form a matrix for a given basis and atomlist
     INPUT:  
@@ -184,14 +184,14 @@ def form_mat(basis,atomlist):
     mat       - matrix (length of basis by length of atomlist)
                 (square if done right)
     """
-    mat = np.zeros((len(atomlist),len(atomlist)))
-    for i,mol in enumerate(basis):
-        mat[i] = get_stoich(ob.get_formula(ob.get_mol(mol)),atomlist)
+    mat = np.zeros((len(atomlist), len(atomlist)))
+    for i, mol in enumerate(basis):
+        mat[i] = get_stoich(ob.get_formula(ob.get_mol(mol)), atomlist)
     mat = mat.T
      
     return mat
 
-def comp_coeff(mat,stoich):
+def comp_coeff(mat, stoich):
     """
     Finds the coefficients that solve C = M^-1 S.  For our purposes C are the coefficients [a,b,c,d..] for 
     the basis [R1, R2, R3, R4...] that give CxHyOzNw =  aR1 + bR2 + cR3 + dR4 where [x,y,z,w...] is S, our 
@@ -205,7 +205,7 @@ def comp_coeff(mat,stoich):
     coeff  - coefficients [a,b,c,d...] as described above
     """
     mati = np.linalg.inv(mat)
-    coeff = np.dot(mati,stoich)
+    coeff = np.dot(mati, stoich)
 
     return coeff
 
@@ -285,10 +285,10 @@ def is_auto(item):
     """
     Checks if a parameter should be automatically determined
     """
-    if type(item) == float:
+    if isinstance(item, float):
        if item == 9999.9:
            return True
-    elif type(item) == str:
+    elif isinstance(item, str):
        if 'auto' in item.lower():
            return True
     return False
@@ -368,7 +368,7 @@ def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, f
 
     gauss += '\nEnergy for HeatForm\n\n'
 
-    if type(mol) == dict:
+    if isinstance(mol, dict):
         dic    = mol
         mol    = ob.get_mol(dic['_id'])
         stoich = dic['stoich']
@@ -383,9 +383,9 @@ def build_gauss(mol, theory, basisset, zmat='none', directory=None, opt=False, f
     if zmat == 'none':
         zmat = '\n' + ob.get_zmat(mol)
     elif zmat.startswith('geometry'):
-        zmat = zmat.replace('geometry={angstrom','')
-        zmat = zmat.replace('}','Variables:')
-        zmat = zmat.replace('=','')
+        zmat = zmat.replace('geometry={angstrom', '')
+        zmat = zmat.replace('}', 'Variables:')
+        zmat = zmat.replace('=', '')
     zmat = str(charge) + '  ' + str(mult) + zmat
     gauss += zmat.lstrip('\n')
 
@@ -405,7 +405,7 @@ def build_molpro(mol, theory, basisset, zmat='none', directory=None, opt=False, 
     OUPUT:
     None (but an inputfile now exists with name <stoich>.inp)
     """
-    if type(mol) == dict:
+    if isinstance(mol, dict):
         dic = mol
         mol = ob.get_mol(dic['_id'])
         stoich = dic['stoich']
@@ -469,14 +469,14 @@ def run_gauss(filename):
     """
     Runs Gaussian on file: filename
     """
-    os.system('soft add +g09; g09 ' + filename.replace('[','\[').replace(']','\]'))
+    os.system('soft add +g09; g09 ' + filename.replace('[', '\[').replace(']', '\]'))
     return
 
 def run_molpro(filename):
     """
     Runs molpro on file: filename
     """
-    os.system('/home/elliott/bin/molprop ' + filename.replace('[','\[').replace(']','\]'))
+    os.system('/home/elliott/bin/molprop ' + filename.replace('[', '\[').replace(']', '\]'))
     
     return
 
@@ -503,18 +503,18 @@ def run_opt(mol, prog, meth, bas, mol_is_smiles=True):
     directory = io.db_opt_path(prog, meth, bas, None, mol)
     
     if  prog == 'gaussian':
-        print 'Running G09 optimization on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
+        print('Running G09 optimization on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas)
         filename = build_gauss(dic, meth, bas, directory=directory, opt=True)
         run_gauss(filename)
-        io.parse_all(mol, io.read_file(filename.replace('.inp','.log')))
+        io.parse_all(mol, io.read_file(filename.replace('.inp', '.log')))
         zmat = io.db_get_opt_prop(mol, 'zmat', db_location=directory)
         return zmat
 
     elif prog == 'molpro':
-        print 'Running Molpro optimization on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas
+        print('Running Molpro optimization on ' + stoich + ' at ' + meth.lstrip('R').lstrip('U') + '/' + bas)
         filename = build_molpro(dic, meth, bas, directory=directory, opt=True)
         run_molpro(filename)
-        io.parse_all(mol, io.read_file(filename.replace('.inp','.out')))
+        io.parse_all(mol, io.read_file(filename.replace('.inp', '.out')))
         zmat = io.db_get_opt_prop(mol, 'zmat', db_location=directory)
         return zmat
 
@@ -559,10 +559,10 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         freq = False
 
     if  propprog == 'gaussian':
-        print 'Running G09 ' + entype + ' on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
+        print('Running G09 ' + entype + ' on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas)
         filename = build_gauss(dic, propmeth, propbas, zmat=zmat, directory=directory, freq=freq, anharm=anharm)
         run_gauss(filename)
-        io.parse_all(mol, io.read_file(filename.replace('.inp','.log')), optprog, optmeth, optbas)
+        io.parse_all(mol, io.read_file(filename.replace('.inp', '.log')), optprog, optmeth, optbas)
         if io.check_file(directory + '/' + mol + '.' + entype):
             E = float(io.db_get_sp_prop(mol, entype, db_location=directory))
         elif entype == 'anzpve':
@@ -570,10 +570,10 @@ def run_energy(mol, optprog, optmeth, optbas, propprog, propmeth, propbas, entyp
         return E
 
     elif propprog == 'molpro':
-        print 'Running Molpro ' + entype + ' on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas
-        filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq,anharm=anharm)
+        print('Running Molpro ' + entype + ' on ' + stoich + ' at ' + propmeth.lstrip('R').lstrip('U') + '/' + propbas)
+        filename = build_molpro(mol, propmeth, propbas, zmat=zmat, directory=directory, freq=freq, anharm=anharm)
         run_molpro(filename)
-        io.parse_all(mol, io.read_file(filename.replace('.inp','.out')), optprog, optmeth, optbas)
+        io.parse_all(mol, io.read_file(filename.replace('.inp', '.out')), optprog, optmeth, optbas)
         E = float(io.db_get_sp_prop(mol, entype, db_location = directory))
         return E
 
@@ -593,7 +593,7 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
     """
     
     ### Check dictionary ###
-    from heatform_db import db
+    from .heatform_db import db
     E, zpve = 0, 0
     zpvetype = 'zpve'
     
@@ -621,7 +621,7 @@ def find_E(bas, opt, en, freq, runE=True, anharm=False, dbdir='./'):
     enefile    = io.join_path(edire, bas + '.ene')
 
     if freq != None:
-        freqprog,freqmethod, freqbasis  = freq[0], freq[1], freq[2]
+        freqprog, freqmethod, freqbasis  = freq[0], freq[1], freq[2]
         fdire      = io.db_sp_path(freqprog, freqmethod, freqbasis, None, bas, optprog, optmethod, optbasis)
         if anharm:
             zpvetype = 'anzpve'
@@ -673,17 +673,17 @@ def E_from_hfbasis(mol,basis,coefflist,E,opt, en, freq, anharm,dbdir='./'):
     E        - 0K heat of formation of molecule
    
     """
-    for i,bas in enumerate(basis):
-        h   = nest_2_dic(bas,'delHf',  0)
+    for i, bas in enumerate(basis):
+        h   = nest_2_dic(bas, 'delHf',  0)
         if h is None:
             h = 0
         E  +=  coefflist[i] * h * ut.kj2au
-        e    =  find_E(bas, opt, en, freq, anharm=anharm,dbdir=dbdir)
+        e    =  find_E(bas, opt, en, freq, anharm=anharm, dbdir=dbdir)
         E   -=  coefflist[i] * e
 
     return E
 
-def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
+def E_hfbasis_QTC(mol, basis, coefflist, E, opt, en, freq, parameters):
     """
     Uses the coefficients [a,b,c...] obtained from C = M^-1 S to find 
     delH(CxHyOz) = adelH(R1) + bdelH(R2) + cdelH(R3) + Eo(CxHyOz) - aEo(R1) - bEo(R2) -cEo(R3)
@@ -698,16 +698,16 @@ def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
     E        - 0K heat of formation of molecule
    
     """
-    for i,bas in enumerate(basis):
+    for i, bas in enumerate(basis):
         bas = ob.get_slabel(bas)
         smilesname = ob.get_smiles_filename(bas)
         formula   = ob.get_formula(bas)
         bas = bas.split('_')[0]
-        h  =  nest_2_dic(bas,'delHf',  0)
+        h  =  nest_2_dic(bas, 'delHf',  0)
         if h is None:
             smilesdir = io.join_path(parameters['database'], formula, smilesname)
             import os
-            rundir =  io.join_path(*[os.getcwd().split(parameters['database'])[0],smilesdir,parameters['qcdirectory']])
+            rundir =  io.join_path(*[os.getcwd().split(parameters['database'])[0], smilesdir, parameters['qcdirectory']])
             hoffile = io.join_path(*[rundir, formula + '.hofk'])
             if io.check_file(hoffile):
                 h = float(io.read_file(hoffile).splitlines()[2].split()[0]) / ut.au2kcal / ut.kj2au
@@ -721,14 +721,14 @@ def E_hfbasis_QTC(mol,basis,coefflist,E,opt, en, freq, parameters):
         E   -=  coefflist[i] * e
     return E
     
-def check(clist, basis,stoich,atomlist):
+def check(clist, basis, stoich, atomlist):
     """
     Makes sure nothing funky happened while computing coefficients
     """
     check = np.zeros(len(clist))
     statement = 'Coefficients produce correct stoichiometry\n'
     for i, c in enumerate(clist):
-       check += c * get_stoich(ob.get_formula(ob.get_mol(basis[i])),atomlist)
+       check += c * get_stoich(ob.get_formula(ob.get_mol(basis[i])), atomlist)
     for i, sto in enumerate(stoich):
         if not check[i] == sto:
             statement = 'Coefficients do NOT produce correct stoichiometry'
@@ -748,11 +748,11 @@ def get_progmethbasis(level, loglines='', optlevel=''):
         return get_progmethbasis(optlevel, loglines)
     else:
         prog, method, basisset = level.split('/')
-    return [prog.replace('g09','gaussian'), method, basisset]
+    return [prog.replace('g09', 'gaussian'), method, basisset]
 
 def update_level(level):
     if level != None:
-        level = level.replace('\(','(').replace('\)',')')
+        level = level.replace('\(', '(').replace('\)', ')')
     return level
 
 def convert_to_smiles(basis):
@@ -796,8 +796,8 @@ def comp_coefficients(molform, basis='auto'):
 
     #COMPUTE Atomlist, stoichlist, matrix, and coefficients
     atomlist = list(set(atomlist))
-    stoich = get_stoich(molform,atomlist)
-    mat = form_mat(basis,atomlist)
+    stoich = get_stoich(molform, atomlist)
+    mat = form_mat(basis, atomlist)
 
     ##Pick a new basis if current one produces singular matrix
     for i in range(5):
@@ -809,7 +809,7 @@ def comp_coefficients(molform, basis='auto'):
         atomlist = get_atomlist(molform)
         if 'H' not in atomlist:
             atomlist.append('H')
-        basis    = select_basis(atomlist,basisselection)
+        basis    = select_basis(atomlist, basisselection)
         basisselection += 1
        
         for bas in basis:
@@ -817,8 +817,8 @@ def comp_coefficients(molform, basis='auto'):
             atomlist.extend(get_atomlist(bas))
 
         atomlist = list(set(atomlist))
-        stoich   = get_stoich(molform,atomlist)
-        mat      = form_mat(basis,atomlist)
+        stoich   = get_stoich(molform, atomlist)
+        mat      = form_mat(basis, atomlist)
         basprint +='\n\nBasis is: ' + ', '.join(basis)
         logging.debug( basprint)
         #basprint +='\n'.join(['\t'.join([{}.format(el) for el in line] for line in mat])
@@ -830,15 +830,15 @@ def comp_coefficients(molform, basis='auto'):
        for el in mat[i]:
            basprint += str(el) + '\t'
 
-    clist =  comp_coeff(mat,stoich)
+    clist =  comp_coeff(mat, stoich)
     return clist, basis, basprint
 
 
 def E_BAC(bas, parameters):
     ### Check dictionary ###
-    from heatform_db import db
-    import qctools as qc
-    import iotools as io
+    from .heatform_db import db
+    from . import qctools as qc
+    from . import iotools as io
     slabel = qc.get_slabel(bas)
     calcindex = parameters['calcindex']
     qckeyword = parameters['qckeyword']
@@ -847,7 +847,7 @@ def E_BAC(bas, parameters):
     if 'bac' in parameters['all results'][slabel][qlabel]:
         bac = parameters['all results'][slabel][qlabel]['bac']
     if bac:
-        logging.debug('BAC for {0} {1} = {2} kcal/mol'.format(slabel, qlabel,bac))
+        logging.debug('BAC for {0} {1} = {2} kcal/mol'.format(slabel, qlabel, bac))
     else: 
         logging.error('BAC not found for {0} {1}'.format(slabel, qlabel))
     return  float(bac)
@@ -856,9 +856,9 @@ def E_BAC(bas, parameters):
 
 def E_QTC(bas, opt, en, freq, parameters):
     ### Check dictionary ###
-    from heatform_db import db
-    import qctools as qc
-    import iotools as io
+    from .heatform_db import db
+    from . import qctools as qc
+    from . import iotools as io
     natom = ob.get_natom(bas)
     slabel = qc.get_slabel(bas)
     parameters['natom'] = natom
@@ -871,7 +871,7 @@ def E_QTC(bas, opt, en, freq, parameters):
         if 'energy' in parameters['all results'][slabel][qlabel]:
             en = parameters['all results'][slabel][qlabel]['energy']
     if en:
-        logging.debug('Energy for {0} {1} = {2} Hartree'.format(slabel, qlabel,en))
+        logging.debug('Energy for {0} {1} = {2} Hartree'.format(slabel, qlabel, en))
     else: 
         logging.error('Energy not found for {0} {1}'.format(slabel, qlabel))
     if qlabel in parameters['all results'][slabel]:
@@ -892,14 +892,14 @@ def E_QTC(bas, opt, en, freq, parameters):
                     zpve = parameters['all results'][slabel][qlabel]['zpve']
                     zpvelabel = 'harmonic ' + qlabel
     if zpve:
-        logging.debug('ZPVE (harmonic) for {0} {1} = {2} Hartree'.format(slabel,zpvelabel,zpve))
+        logging.debug('ZPVE (harmonic) for {0} {1} = {2} Hartree'.format(slabel, zpvelabel, zpve))
     else: 
         logging.warning('ZPVE not found for {0} {1}'.format(slabel, qlabel))
     return  float(en) + float(zpve)
 
 
 def get_total_energy(mol, parameters):
-    import qctools as qc
+    from . import qctools as qc
     natom = ob.get_natom(mol)
     parameters['natom'] = natom
     calcindex = parameters['calcindex']
@@ -910,7 +910,7 @@ def get_total_energy(mol, parameters):
         zpvetype = 'anzpve'    
     
     
-def main_keyword(s,parameters):
+def main_keyword(s, parameters):
     
    # mol    = ob.get_mol(s)
    # smi = ob.get_smiles(s)
@@ -960,7 +960,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
 
 
     #Convert basis selection to smiles if it is mol. formula format
-    if type(basis) is str:
+    if isinstance(basis, str):
         basis = basis.split()
     if bas_not_smiles:
         basis = convert_to_smiles(basis)
@@ -971,7 +971,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
     else: loglines = ''
 
     enlevel   = get_progmethbasis(enlevel,  optlevel = optlevel, loglines=loglines)
-    freqlevel = get_progmethbasis(freqlevel,optlevel = optlevel, loglines=loglines)
+    freqlevel = get_progmethbasis(freqlevel, optlevel = optlevel, loglines=loglines)
     optlevel  = get_progmethbasis(optlevel, loglines = loglines)
 
     molform = ''
@@ -995,7 +995,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
               basprint) 
     lines +=  '\n\nCoefficients are: '
     lines += ', '.join(['{}'.format(co) for co in clist])
-    print lines
+    print(lines)
     logging.debug(lines + '\n')
     #print check(clist, basis, stoich,atomlist)
 
@@ -1013,7 +1013,7 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
             logging.debug( '{} ZPVE: {:5} pulled from: {}'.format(mol, zpve, logfile))
         E = E + zpve
 
-    E =  E_from_hfbasis(molform,basis,clist,E, optlevel, enlevel, freqlevel,anharm)
+    E =  E_from_hfbasis(molform, basis, clist, E, optlevel, enlevel, freqlevel, anharm)
     hf0k = AU_to_kcal(E)
 
     enprog, enmethod, enbasis = enlevel[0], enlevel[1], enlevel[2]
@@ -1021,13 +1021,13 @@ def main(mol,logfile='',basis='auto',E=9999.9,optlevel='auto/',freqlevel='optlev
     hfdire = io.db_sp_path(enprog, enmethod, enbasis, mol, None, optprog, optmethod, optbasis)
     if '_' not in mol:
         if not io.check_file(hfdire + '/' + mol + '.hf0k'):
-            io.db_store_sp_prop('Energy (kcal/mol)\tBasis\n----------------------------------',mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
+            io.db_store_sp_prop('Energy (kcal/mol)\tBasis\n----------------------------------', mol, 'hf0k', None, enprog, enmethod, enbasis, optprog, optmethod, optbasis)
         s = '\n' + str(hf0k) + '\t' + '  '.join(basis) 
-        io.db_append_sp_prop(s,mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
+        io.db_append_sp_prop(s, mol, 'hf0k', None, enprog, enmethod, enbasis, optprog, optmethod, optbasis)
         
         lines  = '\n\nStored heats of formation:\n'
         lines += '----------------------------------\n' 
-        lines += io.db_get_sp_prop(mol,'hf0k',None,enprog,enmethod,enbasis, optprog, optmethod, optbasis)
+        lines += io.db_get_sp_prop(mol, 'hf0k', None, enprog, enmethod, enbasis, optprog, optmethod, optbasis)
         lines += '\n\n_________________________________________________\n\n'
         logging.debug( lines)
 
@@ -1092,7 +1092,7 @@ def isUnbalanced(balance):
     return True
 
 def get_adj_mat(lines):
-    lines = lines.lower().replace('\n\n','\n')
+    lines = lines.lower().replace('\n\n', '\n')
     lines = lines.splitlines()
     rows = []
     rad  = []
@@ -1221,7 +1221,7 @@ def CBHone(smiles, mat, atoms, heavy, bond, rads, parameters = {}):
     newfrags = {}
     zedfrags = CBHzed(smiles, mat, atoms, heavy, bond, rads)
     new = {}
-    frags =  {k: v for k, v in frags.items() if v}
+    frags =  {k: v for k, v in list(frags.items()) if v}
     for frag in frags:
         newfrags[frag] = frags[frag]
         atoms, mat, rads = get_x2zparams(frag, parameters)
@@ -1239,7 +1239,7 @@ def CBHone(smiles, mat, atoms, heavy, bond, rads, parameters = {}):
         else:
             newfrags[frag]  = zedfrags[frag]
     frags = newfrags
-    frags =  {k: v for k, v in frags.items() if v}
+    frags =  {k: v for k, v in list(frags.items()) if v}
     frags = make_balanced(smiles, frags)
     return frags
 
@@ -1360,7 +1360,7 @@ def get_x2zparams(smiles, parameters={}):
     ['C', 'C', 'O', 'H', 'H', 'H'], [[], ['1'], ['0', '2'], ['1', '0', '0'], ['1', '0', '0', '0'], ['1', '0', '0', '0', '0']],  [1]
     """
     xyz = choose_xyz(smiles, parameters)
-    io.write_file(xyz,'x2z.xyz')
+    io.write_file(xyz, 'x2z.xyz')
     lines = qc.run_x2z('x2z.xyz', 'x2z')
     atoms, mat, rads = get_adj_mat(lines)
     return atoms, mat, rads
@@ -1374,7 +1374,7 @@ def cbh_coefficients(smiles, ref, parameters = {}):
         msg = 1
     else:
         atoms, mat, rads = get_x2zparams(smiles, parameters)
-        heavy = ['C','O','N']
+        heavy = ['C', 'O', 'N']
         bond  = {'1':'','2':'=','3':'#','4':'$','1.5':':','2.5':'=','1.7':'=','2.3':'=','1.3':'','2.7':'#'}
         
         msg = ''
@@ -1416,13 +1416,13 @@ def get_bac(parameters, mylist, samppercent = 0, errthresh = 10):
     taskmat = {}
     testset = ''
     bacset = ''
-    for i,s in enumerate(mylist):
-        anl = nest_2_dic(qc.get_slabel(s), 'delHf','ANL0')
+    for i, s in enumerate(mylist):
+        anl = nest_2_dic(qc.get_slabel(s), 'delHf', 'ANL0')
         bonds = None
         if anl:
             if np.random.rand() > samppercent:
                 sresults = parameters['all results'][qc.get_slabel(s)]
-                for qcresultkey, qcresultval in sorted(sresults.iteritems(),key= lambda x: x[0]):
+                for qcresultkey, qcresultval in sorted(iter(sresults.items()), key= lambda x: x[0]):
                     logging.debug(s)
                     task = qcresultkey#qcresultval['chemkin'].splitlines()[0].split()[2]
                     if task in taskmat:
@@ -1546,22 +1546,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                             description="SARAH!!! you haven't done this yet!!!")
 
-    parser.add_argument('-m','--molecule',           type=str,   default='auto')
+    parser.add_argument('-m', '--molecule',           type=str,   default='auto')
 
-    parser.add_argument('-l','--logfile',            type=str,  default='geoms/reac1_l1.log')
+    parser.add_argument('-l', '--logfile',            type=str,  default='geoms/reac1_l1.log')
 
-    parser.add_argument('-b','--select_stoich_basis',type=str,   default='auto')
-    parser.add_argument('-B','--select_smiles_basis',type=str,   default='auto')#Doesn't actually matter if you use b or B right now
+    parser.add_argument('-b', '--select_stoich_basis', type=str,   default='auto')
+    parser.add_argument('-B', '--select_smiles_basis', type=str,   default='auto')#Doesn't actually matter if you use b or B right now
 
-    parser.add_argument('-E','--electronic_energy',  type=float, default=9999.9)
-    parser.add_argument('-o','--optlevel',          type=str,   default='auto/')
-    parser.add_argument('-f','--freqlevel',       type=str,  default='optlevel')
-    parser.add_argument('-e','--energylevel',     type=str,  default='optlevel')
+    parser.add_argument('-E', '--electronic_energy',  type=float, default=9999.9)
+    parser.add_argument('-o', '--optlevel',          type=str,   default='auto/')
+    parser.add_argument('-f', '--freqlevel',       type=str,  default='optlevel')
+    parser.add_argument('-e', '--energylevel',     type=str,  default='optlevel')
 
-    parser.add_argument('-d','--database',           type=str, default='heatform_db')
-    parser.add_argument('-s','--mol_not_smiles',            action='store_true')
-    parser.add_argument('-r','--run_energy',                action='store_true')
-    parser.add_argument('-a','--anharmonic',                action='store_true')
+    parser.add_argument('-d', '--database',           type=str, default='heatform_db')
+    parser.add_argument('-s', '--mol_not_smiles',            action='store_true')
+    parser.add_argument('-r', '--run_energy',                action='store_true')
+    parser.add_argument('-a', '--anharmonic',                action='store_true')
 
     ###########################
     args = parser.parse_args()
@@ -1582,4 +1582,4 @@ if __name__ == '__main__':
     db     = args.database
     mol_not_smiles = args.mol_not_smiles
   
-    main(mol,logfile=logfile, basis=basis, E=E, optlevel=optlevel, freqlevel=freqlevel, enlevel=enlevel, anharm=anharm, runE=runE,bas_not_smiles=bas_not_smiles) 
+    main(mol, logfile=logfile, basis=basis, E=E, optlevel=optlevel, freqlevel=freqlevel, enlevel=enlevel, anharm=anharm, runE=runE, bas_not_smiles=bas_not_smiles) 

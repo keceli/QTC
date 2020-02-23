@@ -1,8 +1,8 @@
 #!usr/bin/python
 
 import re
-import iotools as io
-import unittools as ut
+from . import iotools as io
+from . import unittools as ut
 import numpy as np
 import logging
 """
@@ -53,8 +53,8 @@ def gaussian_natom(s):
     """
     NAtoms=     30 NQM=       30 NQMF=       0 NMMI=      0 NMMIF=      0
     """
-    import iotools as io
-    if type(s) == str:
+    from . import iotools as io
+    if isinstance(s, str):
         lines = s.splitlines()
     keyword = 'NAtoms='
     n = io.get_line_number(keyword, lines=lines)
@@ -76,14 +76,14 @@ def gaussian_nfreq(s):
 def gaussian_basisset(lines):
 
     bas = 'Standard basis:\s*(\S*)'
-    bas = re.findall(bas,lines)
-    bas[-1] = bas[-1].replace('(d)','*')
+    bas = re.findall(bas, lines)
+    bas[-1] = bas[-1].replace('(d)', '*')
     return bas[-1]
 
 def gaussian_method(lines):
 
     method = 'Done:\s*E\((\w+)'
-    method = re.findall(method,lines)
+    method = re.findall(method, lines)
     #if method[-1].strip().upper() == 'CORR' or method[-1].strip().upper() == 'Z':
     if 'CCSD(T)' in lines:
         return 'CCSD(T)'
@@ -102,27 +102,27 @@ def gaussian_energy(lines,method=''):
     if method == '':
         method = gaussian_method(lines)
     if 'CCSD' in method or 'MP' in method:
-        method = method.replace('(','\(').replace(')','\)')
+        method = method.replace('(', '\(').replace(')', '\)')
     #    energ  = method + '=([u,U,r,R]*[\w,\.,\s,-,D,\+]*)'
         energ  = method + '=([u,U,r,R]*[\w,\.,\s,-]*)'
-        energ  = re.findall(energ,lines.replace('\n','').replace(' ',''))
+        energ  = re.findall(energ, lines.replace('\n', '').replace(' ', ''))
     #    return (method,float(energ[-1].replace('D','E').replace('\n','').replace(' ','')))
-        return (method,float(energ[-1].replace('\n','').replace(' ','')))
+        return (method, float(energ[-1].replace('\n', '').replace(' ', '')))
     else:
-        lines = lines.strip().replace('\n','').replace(' ','')
+        lines = lines.strip().replace('\n', '').replace(' ', '')
         if 'anharm' in lines:
             energ = 'MP2=\s*([\d,\-,\.,D,\+]*)'
-            energ = re.findall(energ,lines)
+            energ = re.findall(energ, lines)
             if energ:
-                return (method, float(energ[-1].replace('D','E')))
+                return (method, float(energ[-1].replace('D', 'E')))
             else:
                 energ = 'HF=\s*([\d,\-,\.,D,\+]*)'
-                energ = re.findall(energ,lines)
-                return (method, float(energ[-1].replace('D','E')))
+                energ = re.findall(energ, lines)
+                return (method, float(energ[-1].replace('D', 'E')))
        # energ = '(\S+)\s*A\.U\.'
         energ = 'E\([u,U,r,R]*' + method + '\)\s*=\s*([\d,\-,\.,D,\+]*)'
-        energ = re.findall(energ,lines)
-        return (method, float(energ[-1].replace('D','E')))
+        energ = re.findall(energ, lines)
+        return (method, float(energ[-1].replace('D', 'E')))
     return 
 
 def gaussian_opt_zmat_params(lines):
@@ -148,8 +148,8 @@ def gaussian_zmat(lines):
     lines  = lines.split('Z-matrix:\n')
     zmat   = lines[1].split('       Variables:')[0]
     zmat  += 'Variables:\n'
-    zmat   = zmat.replace('Charge = ','')
-    zmat   = zmat.replace('Multiplicity =','')
+    zmat   = zmat.replace('Charge = ', '')
+    zmat   = zmat.replace('Multiplicity =', '')
     optzmat = gaussian_opt_zmat_params(lines[1])
     if optzmat == None:
         return None
@@ -164,7 +164,7 @@ def gaussian_freqs(lines):
     freqs = []
     lines = lines.splitlines()
     key = 'Fundamental Bands (DE w.r.t. Ground State)'
-    iline = io.get_line_number(key,lines=lines)
+    iline = io.get_line_number(key, lines=lines)
     if iline > 0:
         for i in range(nfreq):
             iline += 1
@@ -193,11 +193,11 @@ def gaussian_hessian(lines):
     endkey   = 'Force constants in internal coordinates:'
     lines= lines.split('Harmonic vibro-rotational analysis')[-1]
     lines = lines.splitlines()
-    sline = io.get_line_number(startkey,lines=lines)
-    eline = io.get_line_number(endkey,lines=lines)
+    sline = io.get_line_number(startkey, lines=lines)
+    eline = io.get_line_number(endkey, lines=lines)
     if sline < 0:
         return ''
-    hess   = '\n'.join(lines[sline+1:eline]).replace('D','E')
+    hess   = '\n'.join(lines[sline+1:eline]).replace('D', 'E')
     return hess
 
 def gaussian_zpve(lines):
@@ -212,15 +212,15 @@ def gaussian_anzpve(lines):
     """
     Returns anharmonic zpve in au.
     """
-    from unittools import rcm2au,kj2au
+    from .unittools import rcm2au, kj2au
     zpve = 'ZPE\(anh\)=\s*([\d,\w,\+,\.,\-]*)'
     zpve = re.findall(zpve, lines)
     if len(zpve) > 0:
-        return float(zpve[-1].replace('D','E')) * kj2au
+        return float(zpve[-1].replace('D', 'E')) * kj2au
     zpve = 'Total Anharm\s*:\s*cm\-1\s*=\s*([\d,\.,\-]*)'
     zpve = re.findall(zpve, lines)
     if len(zpve) > 0:
-        return float(zpve[-1].replace('D','E')) * rcm2au
+        return float(zpve[-1].replace('D', 'E')) * rcm2au
     return
  
 def gaussian_calc(lines):
@@ -242,13 +242,13 @@ def gaussian_xyz_foresk(lines):
     if 'Eckart' in lines:
         lines = lines.split('Gaussian Orientation')[-1].split('Eckart')[0]
         lines = lines.split('\n')[5:-2]
-        for i,line in enumerate(lines):
+        for i, line in enumerate(lines):
             line = line.split()
             xyz += atoms[i] + '  ' + line[2] + '  ' + line[3] + '  ' + line[4] + '\n'
     else:
         lines = lines.split('Coordinates (Angstroms)')[-1].split(' Distance matrix')[0]
         lines = lines.split('\n')[3:-2]
-        for i,line in enumerate(lines):
+        for i, line in enumerate(lines):
             line = line.split()
             xyz +=  atoms[i] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
     return xyz 
@@ -260,13 +260,13 @@ def gaussian_geo(lines):
         if 'Eckart' in lines:
             lines = lines.split('Gaussian Orientation')[-1].split('Eckart')[0]
             lines = lines.split('\n')[5:-2]
-            for i,line in enumerate(lines):
+            for i, line in enumerate(lines):
                 line = line.split()
                 xyz += atomnum[line[1]]+ '  ' + line[2] + '  ' + line[3] + '  ' + line[4] + '\n'
         else:
             lines = lines.split('Coordinates (Angstroms)')[-1].split(' Distance matrix')[0].split(' Rotation')[0].split('Symm')[0]
             lines = lines.split('\n')[3:-2]
-            for i,line in enumerate(lines):
+            for i, line in enumerate(lines):
                 line = line.split()
                 xyz += ' ' + atomnum[line[1]] + '  ' + line[3] + '  ' + line[4] + '  ' + line[5] + '\n'
     except:
@@ -285,7 +285,7 @@ def gaussian_xyz(lines):
 def gaussian_rotconstscent(lines):
     startkey = 'Effective Rotational Constants'
     lines = lines.splitlines()
-    sline = io.get_line_number(startkey,lines=lines)
+    sline = io.get_line_number(startkey, lines=lines)
     if sline < 0:
         return ''
     rotlines   =  lines[sline+4:sline+7]
@@ -296,7 +296,7 @@ def gaussian_rotconstscent(lines):
 
 def gaussian_rotconsts(lines):
     rot = 'Rotational constants\s*\(GHZ\):\s*([\s,\d,\.,\-]*)'     
-    rot = re.findall(rot,lines)
+    rot = re.findall(rot, lines)
     if len(rot) > 0: 
         rot = rot[-1].split()
     ndof  = gaussian_nfreq(lines)
@@ -311,7 +311,7 @@ def gaussian_rotdists (lines):
     startkey = 'Quartic Centrifugal Distortion Constants Tau Prime'
     endkey   = 'Asymmetric Top Reduction'
     lines = lines.splitlines()
-    sline = io.get_line_number(startkey,lines=lines)
+    sline = io.get_line_number(startkey, lines=lines)
     if sline < 0:
         return ''
     lines  = lines[sline+3:sline+9]
@@ -322,14 +322,14 @@ def gaussian_rotdists (lines):
            distlines.append('\t'.join(splitline[1:3]))
         else:
            break
-    constants   = '\n'.join(distlines).replace('D','e')
+    constants   = '\n'.join(distlines).replace('D', 'e')
     return constants
 
 def gaussian_vibrot(lines):
     startkey = 'Vibro-Rot alpha Matrix (in cm^-1)'
     ndof  = gaussian_nfreq(lines)
     lines = lines.splitlines()
-    sline = io.get_line_number(startkey,lines=lines)
+    sline = io.get_line_number(startkey, lines=lines)
     if sline < 0:
         return ''
     lines =  lines[sline+3:sline+3+ndof]
@@ -348,47 +348,47 @@ def molpro_energy(lines,method=''):
     if method == '':
         method = molpro_method(lines)
     method = method + '[a,b]?'
-    method = method.replace('(','\(').replace(')','\)')
+    method = method.replace('(', '\(').replace(')', '\)')
     if 'OPTG' in lines:
         energ = 'E\([U,u,R,r]*' + method +'\) \/ Hartree\s*[\d,\-,\.]*\s*([\d,\-,\.]*)'
-        energ  = re.findall(energ,lines)
+        energ  = re.findall(energ, lines)
         if len(energ) != 0:
-            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n','').replace(' ','')))
+            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n', '').replace(' ', '')))
 
     if 'CCSD' in method:
         energ  = method + ' total energy\s*([\d,\-,\.]+)'
-        energ  = re.findall(energ,lines)
+        energ  = re.findall(energ, lines)
         if len(energ) == 0:
-            energ  = '!\w*\-\s*[\U,\R]' + method + '\s*energy\s*([\d,\-,\.]+)'
-            energ  = re.findall(energ,lines)
+            energ  = '!\w*\-\s*[\\U,\R]' + method + '\s*energy\s*([\d,\-,\.]+)'
+            energ  = re.findall(energ, lines)
             if len(energ) > 0:
-                return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n','').replace(' ','')))
+                return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n', '').replace(' ', '')))
         else:
-            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n','').replace(' ','')))
+            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n', '').replace(' ', '')))
 
     elif 'HF' in method:
         energ = method + ' STATE\s*\d\.\d\s*Energy\s*([\w,\-,\.]+)'
-        energ = re.findall(energ,lines)
+        energ = re.findall(energ, lines)
         if len(energ) > 0:
-            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n','').replace(' ','')))
+            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n', '').replace(' ', '')))
     
     elif 'MP' in method:
         energ = ' ' + method + ' total energy:\s*([\w,\-,\.]+)'
-        energ = re.findall(energ,lines)
+        energ = re.findall(energ, lines)
         if  len(energ) > 0:
-            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n','').replace(' ','')))
+            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n', '').replace(' ', '')))
 
     energ  = 'SETTING ENERGY\s*=\s*([\w,\.,-]+)'
-    energ  = re.findall(energ,lines)
+    energ  = re.findall(energ, lines)
     if len(energ) == 0:
         energ  = 'SETTING CBSEN\s*=\s*([\w,\.,-]+)'
-        energ  = re.findall(energ,lines)
+        energ  = re.findall(energ, lines)
         if len(energ) > 0:
-            return (method.rstrip('[a,b]?'),float(energ[-1].replace('\n','').replace(' ','')))
+            return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n', '').replace(' ', '')))
     else:
-        return (method.rstrip('[a,b]?'),float(energ[-1].replace('\n','').replace(' ','')))
+        return (method.rstrip('[a,b]?'), float(energ[-1].replace('\n', '').replace(' ', '')))
     if len(energ) == 0:
-        print 'energy not found'
+        print('energy not found')
     return 0 
    
 def  molpro_freqs(lines):
@@ -407,8 +407,8 @@ def molpro_hessian(lines):
     startkey = 'Force Constants (Second Derivatives of the Energy)'
     endkey   = 'Atomic Masses'
     lines = lines.splitlines()
-    sline = io.get_line_number(startkey,lines=lines)
-    eline = io.get_line_number(endkey,lines=lines)
+    sline = io.get_line_number(startkey, lines=lines)
+    eline = io.get_line_number(endkey, lines=lines)
     if sline < 0:
         return ''
     hess = ''
@@ -418,13 +418,13 @@ def molpro_hessian(lines):
            if 'G'  in val:
                if 'GX' in val:
                    add = 1
-                   val = val.replace('GX','')
+                   val = val.replace('GX', '')
                elif 'GY' in val:
                    add = 2
-                   val = val.replace('GY','')
+                   val = val.replace('GY', '')
                else:
                    add = 3
-                   val = val.replace('GZ','')
+                   val = val.replace('GZ', '')
                val =  str( (int(val) - 1 ) * 3 + add)
            hessline += '\t' +  val
        hess +=  hessline + '\n'
@@ -440,7 +440,7 @@ def molpro_zpve(lines):
 
 def molpro_method(lines):
     method  = '1PROGRAM\s*\*\s*(\S*)'
-    method  = re.findall(method,lines)
+    method  = re.findall(method, lines)
     if 'CCSD(T)' in lines:
         method =  ['CCSD(T)']
     elif 'MP2' in lines:
@@ -449,7 +449,7 @@ def molpro_method(lines):
         method = ['CCSD']
     if method[-1] == 'DFT':
         method = 'dft=\[([\d,\w]*)\]'
-        method  = re.findall(method,lines)
+        method  = re.findall(method, lines)
     method = method[-1].lstrip('r').lstrip('u').lstrip('R').lstrip('U')
     if 'F12' in lines:
         method += '-F12'
@@ -464,14 +464,14 @@ def molpro_calc(lines):
 def molpro_basisset(lines):
 
     basis  = 'basis=(\S*)' 
-    basis  = re.findall(basis,lines)
-    basis[-1] = basis[-1].replace('(d)','*')
+    basis  = re.findall(basis, lines)
+    basis[-1] = basis[-1].replace('(d)', '*')
     return basis[-1]
 
 def molpro_rotconsts(lines):
 
     rot  = 'Rotational constants:\s*([\s,\d,\.,\-]*)' 
-    rot = re.findall(rot,lines)
+    rot = re.findall(rot, lines)
     rot = rot[-1].split()
     return rot
  
@@ -546,20 +546,20 @@ def qchem_xyz(lines):
    
 def qchem_energy(lines):
     energy  = 'Final energy is\s*([\d,\.,-]*)' 
-    energy  = re.findall(energy,lines)
+    energy  = re.findall(energy, lines)
     if len(energy) < 1:
         energy  = 'energy in the final basis set =\s*([\d,\.,-]*)'
-        energy  = re.findall(energy,lines)
+        energy  = re.findall(energy, lines)
     return float(energy[-1])
 
 def qchem_method(lines):
     method  = 'method\s*(\S*)' 
-    method  = re.findall(method,lines)
+    method  = re.findall(method, lines)
     return  method[-1]
 
 def qchem_basisset(lines):
     method  = 'Requested basis set is\s*(\S*)' 
-    method  = re.findall(method,lines)
+    method  = re.findall(method, lines)
     return  method[-1].lower()
 
 def qchem_freqs(lines):
@@ -605,7 +605,7 @@ def EStokTP_freqs(lines):
     lines  = lines.split()
     nfreqs = lines[0]
     freqs  = lines[1:]
-    freqs  = np.array(map(float, freqs))
+    freqs  = np.array(list(map(float, freqs)))
     freqs  = np.sort(freqs)[::-1]
     return freqs.tolist()
 
@@ -619,7 +619,7 @@ def method(lines):
         return gaussian_method(lines)
     if prog == 'molpro':
         return molpro_method(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return
 
 def basisset(lines):
@@ -628,7 +628,7 @@ def basisset(lines):
         return gaussian_basisset(lines)
     if prog == 'molpro':
         return molpro_basisset(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return
 
 def energy(lines):
@@ -637,7 +637,7 @@ def energy(lines):
         return gaussian_energy(lines)
     if prog == 'molpro':
         return molpro_energy(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return
 
 def zmat(lines):
@@ -646,7 +646,7 @@ def zmat(lines):
         return gaussian_zmat(lines)
     if prog == 'molpro':
         return molpro_zmat(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return
 
 def freqs(lines):
@@ -655,7 +655,7 @@ def freqs(lines):
         return gaussian_freqs(lines)
     if prog == 'molpro':
         return molpro_freqs(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return
 
 def zpve(lines):
@@ -675,7 +675,7 @@ def anzpve(lines):
         return gaussian_anzpve(lines)
     if prog == 'molpro':
        return #molpro_anzpve(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return 
 
 def xyz(lines):
@@ -684,7 +684,7 @@ def xyz(lines):
         return gaussian_xyz(lines)
     if prog == 'molpro':
         return molpro_xyz(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return
 
 def geo(lines):
@@ -693,7 +693,7 @@ def geo(lines):
         return gaussian_geo(lines)
     if prog == 'molpro':
         return molpro_geo(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return
 
 def rotconsts(lines):
@@ -702,7 +702,7 @@ def rotconsts(lines):
         return gaussian_rotconsts(lines)
     if prog == 'molpro':
         return molpro_rotconsts(lines)
-    print 'program not recognized as gaussian or molpro'
+    print('program not recognized as gaussian or molpro')
     return
 
 def get_298(lines):

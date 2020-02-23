@@ -21,7 +21,7 @@ def start_mongo(dbpath,logpath,mongoexe='mongod'):
     Starts a mongo session.
     """
     import subprocess
-    subprocess.call([mongoexe,'--logpath', logpath, '--fork', '--dbpath', dbpath])
+    subprocess.call([mongoexe, '--logpath', logpath, '--fork', '--dbpath', dbpath])
     return
 
 
@@ -38,7 +38,7 @@ def get_collection(db='mydatabase',collection='mycollection'):
 def insert_entry(db,entry,efilter=None,upsert=True):
     if efilter is None:
         efilter = entry
-    return db.replace_one(efilter,entry,upsert=upsert)
+    return db.replace_one(efilter, entry, upsert=upsert)
 
 
 def load_json(jsonfile):
@@ -57,7 +57,7 @@ def dump_json(d, filename):
     """
     try:
         with open(filename, 'w') as f:
-            json.dump(d, f, ensure_ascii=False,indent=2)
+            json.dump(d, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logging.error('Error in dumping json file')
         exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -70,8 +70,8 @@ def gen_dict_extract(key, var):
     """
     https://stackoverflow.com/questions/9807634/find-all-occurrences-of-a-key-in-nested-python-dictionaries-and-lists
     """
-    if hasattr(var,'iteritems'):
-        for k, v in var.iteritems():
+    if hasattr(var, 'iteritems'):
+        for k, v in var.items():
             if k == key:
                 yield v
             if isinstance(v, dict):
@@ -92,19 +92,19 @@ def visualise_dict(d,lvl=0):
         form = '{:<45} {:<15} {:<10}'
         # print the table header if we're at the beginning
         if lvl == 0 and k == sorted(d)[0]:
-            logging.info(form.format('KEY','LEVEL','TYPE'))
+            logging.info(form.format('KEY', 'LEVEL', 'TYPE'))
             logging.info('-'*79)
 
         indent = '  '*lvl # indent the table to visualise hierarchy
         t = str(type(d[k]))
 
         # print details of each entry
-        logging.info(form.format(indent+str(k),lvl,t))
+        logging.info(form.format(indent+str(k), lvl, t))
 
         # if the entry is a dictionary
-        if type(d[k])==dict:
+        if isinstance(d[k], dict):
             # visualise THAT dictionary with +1 indent
-            visualise_dict(d[k],lvl+1)
+            visualise_dict(d[k], lvl+1)
 
 def merge_dicts(*dict_args):
     """

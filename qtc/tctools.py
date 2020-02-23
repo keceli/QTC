@@ -5,12 +5,12 @@ import time
 import subprocess
 import os
 from os.path import isfile
-import iotools as io
-import obtools as ob
-import qctools as qc
-import patools as pa
+from . import iotools as io
+from . import obtools as ob
+from . import qctools as qc
+from . import patools as pa
 import logging
-import unittools as ut
+from . import unittools as ut
 import math
 import numpy as np
 """
@@ -24,7 +24,7 @@ thermp
 __updated__ = "2017-12-15"
 
 
-def get_stoichometry(formula,element):
+def get_stoichometry(formula, element):
     """
     Returns the stoichometry (count) of an element in a given formula
     Note: Case insensitive
@@ -63,14 +63,14 @@ def parse_line16(s):
 
     n = len(s) / 16
     #replace fortran exponent D to E
-    tmp = s.replace('D','E')
+    tmp = s.replace('D', 'E')
     nums = [0.] * n
     for i in range(n):
         nums[i] = float(tmp[i*16:(i+1)*16])
     return nums
 
 
-def get_comment_lines(tag,deltaH):
+def get_comment_lines(tag, deltaH):
     """
     Returns 3 line string that includes the comment based on tag, deltaH and date.
     Based on Franklin Goldsmith's NASA_CKIN.py
@@ -185,7 +185,7 @@ def get_coefficients(c97text):
     return las, has, msg
 
 
-def get_coefficients_str(las,has):
+def get_coefficients_str(las, has):
     """
     Returns a string of 3 lines containing NASA polynomial
     coefficients in chemkin format
@@ -254,10 +254,10 @@ C4H9O4                  H   9C   4O   4N   0G   200.00   3000.00  1000.00      1
         las[4] = float(lines[3][15:30])
         las[5] = float(lines[3][30:45])
         las[6] = float(lines[3][45:60])
-    return get_rmg_polynomial(las, has, temps=[tlow,tmed,tmed,thigh])
+    return get_rmg_polynomial(las, has, temps=[tlow, tmed, tmed, thigh])
 
     
-def get_rmg_polynomial(las, has,temps=[200.,1000.,1000.,3000.]):
+def get_rmg_polynomial(las, has,temps=[200., 1000., 1000., 3000.]):
     """
     Return NASA polynomial as a dictionary in RMG format:
     
@@ -268,10 +268,10 @@ def get_rmg_polynomial(las, has,temps=[200.,1000.,1000.,3000.]):
                       Tmax = (6000,'K')
                       NASAPolynomial = {'polynomials':polynomials,'Tmin':Tmin,'Tmax':Tmax}
     """
-    p = [{'coeffs': las, 'Tmin':(temps[0],'K'), 'Tmax':(temps[1],'K')},
-         {'coeffs': has, 'Tmin':(temps[2],'K'), 'Tmax':(temps[3],'K')}]
+    p = [{'coeffs': las, 'Tmin':(temps[0], 'K'), 'Tmax':(temps[1], 'K')},
+         {'coeffs': has, 'Tmin':(temps[2], 'K'), 'Tmax':(temps[3], 'K')}]
     
-    return {'polynomials': p, 'Tmin' : (min(temps), 'K'), 'Tmax' : (max(temps),'K')}
+    return {'polynomials': p, 'Tmin' : (min(temps), 'K'), 'Tmax' : (max(temps), 'K')}
 
 
 def get_name_from_messpf(inputfile='pf.inp'):
@@ -298,7 +298,7 @@ def get_name_from_messpf(inputfile='pf.inp'):
     0   2
     End
     """
-    with open(inputfile,'r') as f:
+    with open(inputfile, 'r') as f:
         lines = f.readlines()
     for line in lines:
         if 'Species' in line:
@@ -306,7 +306,7 @@ def get_name_from_messpf(inputfile='pf.inp'):
     return name
 
 
-def get_chemkin_str(deltaH,tag,formula,filename):
+def get_chemkin_str(deltaH, tag, formula, filename):
     """
     Given formula string, tag string, deltaH float and a filename string,
     returns a string for NASA polynomials in chemkin format:
@@ -348,9 +348,9 @@ def write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, file
     nC = get_stoichometry(formula, 'C')
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
-    cformula = '{}_{}'.format(formula,str(mid))
+    cformula = '{}_{}'.format(formula, str(mid))
     line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(cformula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
-    lines5to7 = get_coefficients_str(las,has)
+    lines5to7 = get_coefficients_str(las, has)
     s = comments + line4 +lines5to7
     io.write_file(s, filename)
     return s
@@ -413,7 +413,7 @@ def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp
     nC = get_stoichometry(formula, 'C')
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
-    with open(filename,'w') as f:
+    with open(filename, 'w') as f:
         f.write('1, 0\n')
         f.write('Nwell, Nprod\n')
         f.write('30\n')
@@ -493,7 +493,7 @@ def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp
 #     return inp
 
 
-def get_messpf_input(mol,parameters):
+def get_messpf_input(mol, parameters):
     """
     TODO: Anharmonic frequencies 
     Write input file for mess partition function program
@@ -531,8 +531,8 @@ def get_messpf_input(mol,parameters):
             0    2
        End
     """
-    import unittools as ut
-    import anharm
+    from . import unittools as ut
+    from . import anharm
     natom = parameters['natom']
     label = parameters['qlabel']
     results = parameters['results']
@@ -608,9 +608,9 @@ def get_messpf_input(mol,parameters):
     else:
         ###  BEGIN RRHO
         inp += 'RRHO\n'
-        inp += '  Geometry[angstrom] {0} !{1}\n\t  '.format(natom,label)
+        inp += '  Geometry[angstrom] {0} !{1}\n\t  '.format(natom, label)
         inp += '\t  '.join(xyz.splitlines(True)[2:])
-        inp += '\n  ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve,label)
+        inp += '\n  ZeroEnergy[kcal/mol] {0} ! {1}\n'.format(zpve, label)
         inp += '  ElectronicLevels[1/cm]  1\n'
         inp += '     0 {0}\n'.format(multiplicity)
 
@@ -646,7 +646,7 @@ def get_messpf_input(mol,parameters):
             inp += hindlines  ###   END RRHO
         #freqs
         if len(freqs) > 0:
-            inp += '      Frequencies[1/cm] {0} !{1}\n'.format(len(freqs),label)
+            inp += '      Frequencies[1/cm] {0} !{1}\n'.format(len(freqs), label)
             inp += '      ' + ' '.join([str(x) for x in freqs]) + '\n'
         if scaletype and scale:
             if 'f' in scaletype:
@@ -707,13 +707,13 @@ def run_pf(messpf='messpf',inputfile='pf.inp'):
     End
     """
     import subprocess
-    import iotools as io
+    from . import iotools as io
     msg = ''
     if io.check_exe(messpf):
-        if io.check_file(inputfile,1):
+        if io.check_file(inputfile, 1):
             if io.check_exe(messpf):
-                subprocess.call([messpf,inputfile])
-                if io.check_file('pf.log',1):
+                subprocess.call([messpf, inputfile])
+                if io.check_file('pf.log', 1):
                     msg += '{0} generated by mess.\n'.format(inputfile)
             else:
                 msg += 'Mess executable not found {0}\n'.format(messpf)
@@ -732,15 +732,15 @@ def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.out', thermpexe='t
     linus
     /tcghome/sjk/gen/aux_me/therm/thermp.exe
     """
-    import iotools as io
+    from . import iotools as io
     msg = ''
     io.write_file(thermpinput, thermpfile)
-    if not io.check_file(thermpfile,1):
+    if not io.check_file(thermpfile, 1):
         return "{0} file not found.\n".format(thermpfile)
-    pfdat = pffile.replace('out','dat')
+    pfdat = pffile.replace('out', 'dat')
     if io.check_file(pffile):
-        io.mv(pffile,pfdat)
-    if io.check_file(pfdat,1):
+        io.mv(pffile, pfdat)
+    if io.check_file(pfdat, 1):
         msg += io.execute(thermpexe)
     else:
         msg += "{0} file not found.\n".format(pffile)
@@ -757,7 +757,7 @@ def run_pac99(formula,pac99='pac99'):
     pac99='/tcghome/sjk/gen/aux_me/therm/pac99.x'
     """
     from subprocess import Popen, PIPE
-    import iotools as io
+    from . import iotools as io
     msg = ''
     c97file = formula +'.c97'
     i97file = formula +'.i97'
@@ -779,7 +779,7 @@ def run_pac99(formula,pac99='pac99'):
     else:
         msg += '{0} file not found.\n'.format(pac99)
     if io.check_file(c97file) and io.check_file(o97file):
-        msg += "{0} {1} files are written.\n".format(c97file,o97file)
+        msg += "{0} {1} files are written.\n".format(c97file, o97file)
     return msg
 
 
@@ -831,7 +831,7 @@ def write_chemkin_polynomial(mol, parameters):
         inp = get_messpf_input(mol, parameters)
         io.write_file(inp, messpfinput)
         logging.debug('Running {0} to generate partition function...'.format(parameters['messpf']))
-        msg = io.execute([parameters['messpf'],messpfinput])
+        msg = io.execute([parameters['messpf'], messpfinput])
         logging.debug(msg)
     logging.debug('Running thermp...')
     inp = get_thermp_input(mol.formula, hof)
@@ -859,8 +859,8 @@ def write_chemkin_polynomial(mol, parameters):
         chemkinfile = formula + '.ckin'
         logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))    
         try:
-            chemkininput = write_chemkin_file(slabel,qlabel, hof, hof298, formula, mid, las, has, chemkinfile)
-            rmgpoly = get_rmg_polynomial(las,has)
+            chemkininput = write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, chemkinfile)
+            rmgpoly = get_rmg_polynomial(las, has)
         except:
             logging.error("Failed to write chemkin polynomials")
     else:
@@ -868,7 +868,7 @@ def write_chemkin_polynomial(mol, parameters):
     return hof298, chemkininput, rmgpoly
 
 
-def get_heat_capacity(rmgpoly,T):
+def get_heat_capacity(rmgpoly, T):
     """
     rmgpoly is a dictionary in the following format
     {u'Tmax': [3000.0, u'K'],
@@ -922,11 +922,11 @@ def get_heat_capacity(rmgpoly,T):
         cp = cp * ut.Rinkcal
     else:
         logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
-                      (T,rmgpoly['Tmin'][0],rmgpoly['Tmax'][0])]
+                      (T, rmgpoly['Tmin'][0], rmgpoly['Tmax'][0])]
     return cp
 
 
-def get_entropy(rmgpoly,T):
+def get_entropy(rmgpoly, T):
     """
     rmgpoly is a dictionary in the following format
     {u'Tmax': [3000.0, u'K'],
@@ -980,11 +980,11 @@ def get_entropy(rmgpoly,T):
         S = S * ut.Rinkcal
     else:
         logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
-                      (T,rmgpoly['Tmin'][0],rmgpoly['Tmax'][0])]
+                      (T, rmgpoly['Tmin'][0], rmgpoly['Tmax'][0])]
     return S
 
 
-def get_enthalpy(rmgpoly,T):
+def get_enthalpy(rmgpoly, T):
     """
     rmgpoly is a dictionary in the following format
     {u'Tmax': [3000.0, u'K'],
@@ -1029,7 +1029,7 @@ def get_enthalpy(rmgpoly,T):
         H = H * ut.Rinkcal * T / 1000.
     else:
         logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
-                      (T,rmgpoly['Tmin'][0],rmgpoly['Tmax'][0])]
+                      (T, rmgpoly['Tmin'][0], rmgpoly['Tmax'][0])]
     return H
 
 
