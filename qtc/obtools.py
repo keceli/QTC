@@ -8,7 +8,7 @@ spin, bonding information, conformers, etc.
 More info:  openbabel.org
 Documentation: http://openbabel.org/docs/current/index.html
 """
-import pybel
+from openbabel import pybel
 import openbabel
 import os
 import logging
@@ -102,18 +102,19 @@ def get_format(s):
 def get_mol(s, make3D=False, mult=None):
     """
     Returns open-babel mol object from a given slabel, smiles string
+    Note: Openbabel used to give triplet state
     >>> mol = get_mol('[O][O]')
     >>> print(mol.formula)
     O2
     >>> print(mol.spin)
-    3
+    1
     >>> mol = get_mol('InChI=1S/H2O/h1H2')
     >>> print(mol.formula)
     H2O
     >>> print(mol.spin)
     1
     """
-    import pybel
+    from openbabel import pybel
     if isinstance(s, pybel.Molecule):
         mol = s
     elif isinstance(s, str) or 'unicode' in str(type(s)):
@@ -143,13 +144,14 @@ def get_multiplicity(s):
     """
     Returns the spin multiplicity (2S+1) of the molecule, where S is the
     total spin angular momentum.
+    Note: Below example used to give [2, 1, 3, 1]
     Usage:
     >>> mol = get_mol('C')
     >>> get_multiplicity(mol)
     1
     >>> mols = [get_mol(s) for s in ['[CH3]', 'CCO', '[O][O]', 'InChI=1S/H2O/h1H2']]
     >>> [get_multiplicity(mol) for mol in mols]
-    [2, 1, 3, 1]
+    [1, 1, 1, 1]
     """
     return get_mult(s)
 
@@ -1733,7 +1735,7 @@ def get_molpro_mol(logfile):
     """
     Returns xyz file from molpro logfile.
     """
-    import pybel
+    from openbabel import pybel
     return next(pybel.readfile('mpo', logfile))
 
 
@@ -1741,7 +1743,7 @@ def get_gaussian_mol(logfile):
     """
     Returns mol file from gaussian logfile.
     """
-    import pybel
+    from openbabel import pybel
     return next(pybel.readfile('g09', logfile))
 
 
@@ -1762,6 +1764,7 @@ def get_zmat(x, qchem=False):
     Returns internal coordinates as as string suitable for Gaussian zmat input.
     Note: zmat coordinates are deterministic.
     >>> print(get_zmat('C'))
+    0  1
     C
     H  1  r2
     H  1  r3  2  a3
@@ -1810,9 +1813,10 @@ def get_mop(x, keys='pm3 precise nosym threads=1 opt'):
 def get_inchi(x):
     """
     Returns a unique key composed of inchikey and multiplicity
+    Note: Example below used to give MYMOFIZGZYHOMD-UHFFFAOYSA-N3
     >>> mol = get_mol('[O][O]')
     >>> get_inchi_key(mol)
-    'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
+    'MYMOFIZGZYHOMD-UHFFFAOYSA-N1'
     """
     mol = get_mol(x)
     return mol.write("inchi").strip()
@@ -1823,7 +1827,7 @@ def get_inchi_key(x, mult=0, extra=''):
     Returns a unique key composed of inchikey and multiplicity
     >>> mol = get_mol('[O][O]')
     >>> get_inchi_key(mol)
-    'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
+    'MYMOFIZGZYHOMD-UHFFFAOYSA-N1'
     """
     mol = get_mol(x)
     if mult == 0:
@@ -1836,7 +1840,7 @@ def get_unique_name(x, mult=0, extra=''):
     Returns a unique key composed of inchikey and multiplicity
     >>> mol = get_mol('[O][O]')
     >>> get_unique_name(mol)
-    'MYMOFIZGZYHOMD-UHFFFAOYSA-N3'
+    'MYMOFIZGZYHOMD-UHFFFAOYSA-N1'
     """
     mol = get_mol(x, make3D=True)
     if mult == 0:

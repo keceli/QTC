@@ -1,10 +1,14 @@
 #!usr/bin/python
 
 import re
-from . import iotools as io
-from . import unittools as ut
 import numpy as np
 import logging
+import os
+import sys
+
+sys.path.insert(0,os.path.realpath(os.path.dirname(__file__)))
+import iotools as io
+import unittools as ut
 """
 Module for parsing logfiles
 

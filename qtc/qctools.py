@@ -2,15 +2,21 @@
 """
 Quantum chemistry tools.
 """
-from . import obtools as ob
-from . import iotools as io
-import numpy as np
-from . import patools as pa
 import logging
+import numpy as np
+
 try:
     import cclib
 except:
     pass
+
+import os
+import sys
+
+sys.path.insert(0,os.path.realpath(os.path.dirname(__file__)))
+import iotools as io
+import obtools as ob
+import patools as pa
 
 __updated__ = "2018-03-03"
 __authors__ = 'Murat Keceli, Sarah Elliott'
