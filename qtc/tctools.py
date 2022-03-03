@@ -1,18 +1,20 @@
 #!/usr/bin/env python
+import unittools as ut
+import patools as pa
+import qctools as qc
+import obtools as ob
+import iotools as io
 import argparse
 import datetime
 import time
 import subprocess
 import os
 from os.path import isfile
-from . import iotools as io
-from . import obtools as ob
-from . import qctools as qc
-from . import patools as pa
 import logging
-from . import unittools as ut
 import math
 import numpy as np
+import sys
+sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)))
 """
 Thermochemistry tools.
 Requires:
@@ -35,36 +37,38 @@ def get_stoichometry(formula, element):
     """
     formula = formula.upper()
     element = element.upper()
+    assert len(element) == 1, 'TODO'
     n = 0
-    if len(formula.split(element)) > 1:
-          formula = formula.split(element)[1]
-          formula = formula.split('C')[0]
-          formula = formula.split('H')[0]
-          formula = formula.split('N')[0]
-          formula = formula.split('O')[0]
-          if len(formula) > 0:
-              n =  int(formula)
-          else:
-              n =  1
+    pos = formula.find(element)
+    for pos, char in enumerate(formula):
+        if(char == element):
+            if len(formula) > pos+1:
+                if formula[pos+1].isdigit():
+                    n += int(formula[pos+1])
+                else:
+                    n += 1
+            else:
+                n += 1
     return n
 
 
 def parse_line16(s):
     """
-    Return a numpy array of numbers parsed from a
+    Return a list of numbers parsed from a
     string of numbers located in every 16 chars.
     Note: Numbers may not have a space in between.
     >>> parse_line16(' 2.807326142D-08-7.923286750D-12 0.000000000D+00 3.329428940D+04 3.816278870D+01')
-    array([  2.80732614e-08,  -7.92328675e-12,   0.00000000e+00,
-             3.32942894e+04,   3.81627887e+01])
+    [2.807326142e-08, -7.92328675e-12, 0.0, 33294.2894, 38.1627887]
     """
-    assert len(s) % 16 == 0, 'Given string for parse_line should have 16n chararacters, n={1,2,...}'
-    assert len(s) > 0, 'Given string for parse_line should have 16n chararacters, n={1,2,...}'
+    assert len(
+        s) % 16 == 0, 'Given string for parse_line should have 16n chararacters, n={1,2,...}'
+    assert len(
+        s) > 0, 'Given string for parse_line should have 16n chararacters, n={1,2,...}'
 
-    n = len(s) / 16
-    #replace fortran exponent D to E
+    n = int(len(s) / 16)
+    # replace fortran exponent D to E
     tmp = s.replace('D', 'E')
-    nums = [0.] * n
+    nums = [0] * n
     for i in range(n):
         nums[i] = float(tmp[i*16:(i+1)*16])
     return nums
@@ -86,62 +90,62 @@ def get_comment_lines(tag, deltaH):
     import datetime
     date = datetime.datetime.now().strftime("%d%b%Y")
     line1 = '!\n'
-    if tag=='SJKB0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    if tag == 'SJKB0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from B3LYP/6-311++G(d,p) by CFG on  ' + date + '\n'
-    elif tag=='SJKB20':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKB20':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from B2PLYPD3/cc-pVTZ by SJK on  ' + date + '\n'
-    elif tag=='SJKT0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKT0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from CCSD(T)/cc-pVTZ by SJK on  ' + date + '\n'
-    elif tag=='SJKQ0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKQ0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from CCSD(T)/cc-pVQZ by SJK on  ' + date + '\n'
-    elif tag=='SJKCBS0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKCBS0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from CCSD(T)/CBSby SJK on  ' + date + '\n'
-    elif tag=='SJKCIT0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKCIT0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from CI+QC/cc-pVTZ by SJK on  ' + date + '\n'
-    elif tag=='SJKCIQ0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKCIQ0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from CI+QC/cc-pVQZ by SJK on  ' + date + '\n'
-    elif tag=='SJKCICBS0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKCICBS0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from CI+QC/cc-pVQZ by SJK on  ' + date + '\n'
-    elif tag=='SJKPT2T0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKPT2T0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from CASPT2/cc-pVTZ by SJK on  ' + date + '\n'
-    elif tag=='SJKPT2Q0':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n"%(deltaH)
+    elif tag == 'SJKPT2Q0':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL0\n" % (deltaH)
         line3 = '!Q(T) from CASPT2/cc-pVQZ by SJK on  ' + date + '\n'
-    elif tag=='SJKB1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKB1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from B3LYP/6-311++G(d,p) by CFG on  ' + date + '\n'
-    elif tag=='SJKT1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKT1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from CCSD(T)/cc-pVTZ by SJK on  ' + date + '\n'
-    elif tag=='SJKQ1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKQ1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from CCSD(T)/cc-pVQZ by SJK on  ' + date + '\n'
-    elif tag=='SJKCBS1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKCBS1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from CCSD(T)/CBS by SJK on  ' + date + '\n'
-    elif tag=='SJKCBSA1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKCBSA1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from CCSD(T)/CBS + anh by SJK on  ' + date + '\n'
-    elif tag=='SJKCIT1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKCIT1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from CI+QC/cc-pVTZ by SJK on  ' + date + '\n'
-    elif tag=='SJKCIQ1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKCIQ1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from CI+QC/cc-pVQZ by SJK on  ' + date + '\n'
-    elif tag=='SJKPT2T1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKPT2T1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from CASPT2/cc-pVTZ by SJK on  ' + date + '\n'
-    elif tag=='SJKPT2Q1':
-        line2 ="!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n"%(deltaH)
+    elif tag == 'SJKPT2Q1':
+        line2 = "!DHf(0K) = %8.2F [kcal/mol], taken from SJK ANL1\n" % (deltaH)
         line3 = '!Q(T) from CASPT2/cc-pVQZ by SJK on  ' + date + '\n'
     else:
         line2 = '!{0}.\n'.format(date)
@@ -172,10 +176,10 @@ def get_coefficients(c97text):
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
     lines = c97text.splitlines()
-    las  = [0.] * 7
-    has  = [0.] * 7
-    msg  = None
-    if len (lines) > 1:
+    las = [0.] * 7
+    has = [0.] * 7
+    msg = None
+    if len(lines) > 1:
         las[0:5] = parse_line16(lines[6][0:80])
         las[5:7] = parse_line16(lines[7][48:80])
         has[0:5] = parse_line16(lines[9][0:80])
@@ -207,9 +211,12 @@ def get_coefficients_str(las, has):
      3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
-    line2 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    2\n"%(has[0], has[1], has[2], has[3], has[4])
-    line3 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    3\n"%(has[5], has[6], las[0], las[1], las[2])
-    line4 = "% 15.8E% 15.8E% 15.8E% 15.8E                   4\n"%(las[3], las[4], las[5], las[6])
+    line2 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    2\n" % (
+        has[0], has[1], has[2], has[3], has[4])
+    line3 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    3\n" % (
+        has[5], has[6], las[0], las[1], las[2])
+    line4 = "% 15.8E% 15.8E% 15.8E% 15.8E                   4\n" % (
+        las[3], las[4], las[5], las[6])
     return line2+line3+line4
 
 
@@ -222,7 +229,7 @@ C4H9O4                  H   9C   4O   4N   0G   200.00   3000.00  1000.00      1
  1.57361381E+01 3.29113185E-02-1.59602886E-05 3.77476959E-09-3.52930905E-13    2
 -2.63226479E+04-4.77325306E+01 4.60561015E-01 9.96060317E-02-1.28949962E-04    3
  9.08860280E-08-2.58936516E-11-2.34008733E+04 2.49356355E+01                   4
- 
+
      line2 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    2\n"%(has[0], has[1], has[2], has[3], has[4])
     line3 = "% 15.8E% 15.8E% 15.8E% 15.8E% 15.8E    3\n"%(has[5], has[6], las[0], las[1], las[2])
     line4 = "% 15.8E% 15.8E% 15.8E% 15.8E                   4\n"%(las[3], las[4], las[5], las[6])
@@ -256,11 +263,11 @@ C4H9O4                  H   9C   4O   4N   0G   200.00   3000.00  1000.00      1
         las[6] = float(lines[3][45:60])
     return get_rmg_polynomial(las, has, temps=[tlow, tmed, tmed, thigh])
 
-    
-def get_rmg_polynomial(las, has,temps=[200., 1000., 1000., 3000.]):
+
+def get_rmg_polynomial(las, has, temps=[200., 1000., 1000., 3000.]):
     """
     Return NASA polynomial as a dictionary in RMG format:
-    
+
     NASA Polynomial, seven or nine coefficients, Tmax and Tmin = valid temperature range
     polynomials = [{'coeffs':[2.3443,0.00798042,-1.94779e-05,2.0157e-08,-7.37603e-12,-917.924,0.683002], 'Tmin':(200,'K'), 'Tmax':(1000,'K')},
                       {'coeffs':[2.93283,0.000826598,-1.46401e-07,1.54099e-11,-6.88796e-16,-813.056,-1.02432], 'Tmin':(1000,'K'), 'Tmax':(6000,'K')}]
@@ -268,10 +275,10 @@ def get_rmg_polynomial(las, has,temps=[200., 1000., 1000., 3000.]):
                       Tmax = (6000,'K')
                       NASAPolynomial = {'polynomials':polynomials,'Tmin':Tmin,'Tmax':Tmax}
     """
-    p = [{'coeffs': las, 'Tmin':(temps[0], 'K'), 'Tmax':(temps[1], 'K')},
-         {'coeffs': has, 'Tmin':(temps[2], 'K'), 'Tmax':(temps[3], 'K')}]
-    
-    return {'polynomials': p, 'Tmin' : (min(temps), 'K'), 'Tmax' : (max(temps), 'K')}
+    p = [{'coeffs': las, 'Tmin': (temps[0], 'K'), 'Tmax':(temps[1], 'K')},
+         {'coeffs': has, 'Tmin': (temps[2], 'K'), 'Tmax':(temps[3], 'K')}]
+
+    return {'polynomials': p, 'Tmin': (min(temps), 'K'), 'Tmax': (max(temps), 'K')}
 
 
 def get_name_from_messpf(inputfile='pf.inp'):
@@ -323,10 +330,11 @@ def get_chemkin_str(deltaH, tag, formula, filename):
     nC = get_stoichometry(formula, 'C')
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
-    line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
+    line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n" % (
+        formula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
     lines5to7 = get_coefficients_str(formula+'.c97')
 
-    return lines1to3 + line4 +lines5to7
+    return lines1to3 + line4 + lines5to7
 
 
 def write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, filename):
@@ -341,7 +349,7 @@ def write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, file
      3.42307801E+04 7.92337328E+00 2.88111952E+00 4.82519125E-03 1.81803093E-05    3
     -2.82828645E-08 1.20965495E-11 3.44635296E+04 9.70378850E+00                   4
     """
-    comments   = '! {} \t {}\n'.format(slabel, qlabel)
+    comments = '! {} \t {}\n'.format(slabel, qlabel)
     comments += '! deltaH(0) {:.2f} kcal/mol\n'.format(hof)
     comments += '! deltaH(298) {:.2f} kcal/mol\n'.format(hof298)
     nH = get_stoichometry(formula, 'H')
@@ -349,14 +357,15 @@ def write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, file
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
     cformula = '{}_{}'.format(formula, str(mid))
-    line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n"%(cformula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
+    line4 = "%s        H%4dC%4dO%4dN%4dG%9.2F%10.2F%9.2F      1\n" % (
+        cformula.ljust(16)[0:16], nH, nC, nO, nN, 200.0, 3000.0, 1000.0)
     lines5to7 = get_coefficients_str(las, has)
-    s = comments + line4 +lines5to7
+    s = comments + line4 + lines5to7
     io.write_file(s, filename)
     return s
 
 
-def get_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.):
+def get_thermp_input(formula, deltaH, enthalpyT=0., breakT=1000.):
     """
     Returns thermp input text as a string for a given formula string and deltaH (float)
     e.g.
@@ -376,25 +385,25 @@ def get_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.):
     nN = get_stoichometry(formula, 'N')
     nO = get_stoichometry(formula, 'O')
     tmp = '1, 0\n'
-    tmp +='Nwell, Nprod\n'
-    tmp +='30\n'
-    tmp +='nt\n'
-    tmp +='{0} {1}\n'.format(deltaH, enthalpyT)
-    tmp +='{0}\n'.format(formula)
+    tmp += 'Nwell, Nprod\n'
+    tmp += '30\n'
+    tmp += 'nt\n'
+    tmp += '{0} {1}\n'.format(deltaH, enthalpyT)
+    tmp += '{0}\n'.format(formula)
     if nC > 0:
-        tmp +='C {0}\n'.format(nC)
+        tmp += 'C {0}\n'.format(nC)
     if nH > 0:
-        tmp +='H {0}\n'.format(nH)
+        tmp += 'H {0}\n'.format(nH)
     if nO > 0:
-        tmp +='O {0}\n'.format(nO)
+        tmp += 'O {0}\n'.format(nO)
     if nN > 0:
-        tmp +='N {0}\n'.format(nN)
-    tmp +='**\n'
-    tmp +='{0}'.format(breakT)
+        tmp += 'N {0}\n'.format(nN)
+    tmp += '**\n'
+    tmp += '{0}'.format(breakT)
     return tmp
 
 
-def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp.dat'):
+def write_thermp_input(formula, deltaH, enthalpyT=0., breakT=1000., filename='thermp.dat'):
     """
     Write thermp input file with given formula string, deltaH float
     e.g.
@@ -495,7 +504,7 @@ def write_thermp_input(formula,deltaH,enthalpyT=0.,breakT=1000.,filename='thermp
 
 def get_messpf_input(mol, parameters):
     """
-    TODO: Anharmonic frequencies 
+    TODO: Anharmonic frequencies
     Write input file for mess partition function program
     AtomDistanceMin[angstrom] 0.6
     Temperature(step[K],size)        100.   30
@@ -517,8 +526,8 @@ def get_messpf_input(mol, parameters):
     ElectronicLevels[1/cm]  1
     0 1
     End
-    
-    For a single atom:    
+
+    For a single atom:
 
     AtomDistanceMin[angstrom] 0.6
     Temperature(step[K],size)        100.   30
@@ -551,7 +560,7 @@ def get_messpf_input(mol, parameters):
     scale = 0
     scaletype = None
     vibrots = None
-    emax = 500 #kcal/mol, not sure
+    emax = 500  # kcal/mol, not sure
     if 'azpve' in results:
         zpve = results['azpve']
     elif 'zpve' in results:
@@ -561,7 +570,7 @@ def get_messpf_input(mol, parameters):
     if 'pfreqs' in results:
         freqs = results['pfreqs']
     elif 'freqs' in results:
-        freqs = results['freqs']    
+        freqs = results['freqs']
         if len(freqs) > 0:
             for freq in freqs:
                 if float(freq) > 0:
@@ -571,17 +580,18 @@ def get_messpf_input(mol, parameters):
             results['freqs'] = posfreqs
             freqs = posfreqs
     if 'rotconsts' in results:
-        rotconsts = results['rotconsts']  
+        rotconsts = results['rotconsts']
     if 'vibrots' in results:
-        vibrots = results['vibrots']    
+        vibrots = results['vibrots']
     else:
         vibrots = None
     if 'rotdists' in results:
-        rotdists = results['rotdists']  
+        rotdists = results['rotdists']
     if 'xmat' in results:
         xmat = np.asarray(results['xmat'])
         if 'pfreqs' in results:
-            freqs, fill, xmat, fill2, fill3, vibrots = anharm.main(results, vibrots)
+            freqs, fill, xmat, fill2, fill3, vibrots = anharm.main(
+                results, vibrots)
         elif 'afreqs' in results:
             freqs = results['afreqs']
         #xmat = anharm.mess_x(xmat)
@@ -591,22 +601,22 @@ def get_messpf_input(mol, parameters):
         scaletype = parameters['scaletype']
 
     coreIsMd = False
-    if  'hindered potential' in results:
-        if  'Core' in results['hindered potential']:
+    if 'hindered potential' in results:
+        if 'Core' in results['hindered potential']:
             coreIsMd = True
 
-    #########HEADER
-    inp  = 'AtomDistanceMin[angstrom] 0.6\n'
+    # HEADER
+    inp = 'AtomDistanceMin[angstrom] 0.6\n'
     inp += 'Temperature(step[K],size)        100.   30\n'
     inp += 'RelativeTemperatureIncrement            0.001\n'
-    ###  BEGIN INPUT
+    # BEGIN INPUT
     inp += 'Species {0}\n'.format(formula)
     if natom == 1:
         inp += 'Atom\n'
         inp += 'Mass[amu] {}\n'.format(ut.atommasses[formula])
         inp += 'End\n'
     else:
-        ###  BEGIN RRHO
+        # BEGIN RRHO
         inp += 'RRHO\n'
         inp += '  Geometry[angstrom] {0} !{1}\n\t  '.format(natom, label)
         inp += '\t  '.join(xyz.splitlines(True)[2:])
@@ -614,52 +624,56 @@ def get_messpf_input(mol, parameters):
         inp += '  ElectronicLevels[1/cm]  1\n'
         inp += '     0 {0}\n'.format(multiplicity)
 
-        ###  BEGIN CORE
-        coreline  = '   Core RigidRotor\n'
+        # BEGIN CORE
+        coreline = '   Core RigidRotor\n'
         coreline += '      ZeroPointEnergy[1/cm] {}\n'.format(zpe)
         hindlines = ''
-        if 'hindered potential' in results: 
-            if  coreIsMd:
-                coreline  = '  Core MultiRotor\n'
-                hindlines = '     {}'.format('     '.join(results['hindered potential' ].splitlines(True)[3:]))
+        if 'hindered potential' in results:
+            if coreIsMd:
+                coreline = '  Core MultiRotor\n'
+                hindlines = '     {}'.format('     '.join(
+                    results['hindered potential'].splitlines(True)[3:]))
             else:
-                hindlines  = '   End\n'
+                hindlines = '   End\n'
                 hindpot = results['hindered potential']
                 if scale and scaletype:
-                     if scaletype.startswith('h'):
-                         hindpot = hindpot.split('Potential[kcal/mol]')
-                         if len(hindpot) > 1:
-                             for h, pot in enumerate(hindpot[1:]):
-                                 pot, end = pot.split('End')
-                                 num = pot.split()[0] 
-                                 pot = pot.split()[1:]
-                                 newpot = ' {}\n    '.format(num)
-                                 for val in pot:
-                                     newpot += '   {:.3f}'.format(float(scale) * float(val))
-                                 hindpot[h+1] = newpot + '\n End' + end
-                         hindpot = 'Potential[kcal/mol]'.join(hindpot)
+                    if scaletype.startswith('h'):
+                        hindpot = hindpot.split('Potential[kcal/mol]')
+                        if len(hindpot) > 1:
+                            for h, pot in enumerate(hindpot[1:]):
+                                pot, end = pot.split('End')
+                                num = pot.split()[0]
+                                pot = pot.split()[1:]
+                                newpot = ' {}\n    '.format(num)
+                                for val in pot:
+                                    newpot += '   {:.3f}'.format(
+                                        float(scale) * float(val))
+                                hindpot[h+1] = newpot + '\n End' + end
+                        hindpot = 'Potential[kcal/mol]'.join(hindpot)
                 hindlines += '  {}'.format('  '.join(hindpot.splitlines(True)))
         inp += coreline
         inp += '      InterpolationEnergyMax[kcal/mol] {}\n'.format(emax)
         inp += '      SymmetryFactor {0}\n'.format(sym)
         if coreIsMd:
-            inp += hindlines  ###   END RRHO
-        #freqs
+            inp += hindlines  # END RRHO
+        # freqs
         if len(freqs) > 0:
-            inp += '      Frequencies[1/cm] {0} !{1}\n'.format(len(freqs), label)
+            inp += '      Frequencies[1/cm] {0} !{1}\n'.format(
+                len(freqs), label)
             inp += '      ' + ' '.join([str(x) for x in freqs]) + '\n'
         if scaletype and scale:
             if 'f' in scaletype:
                 inp += '      FrequencyScalingFactor {:.4f}\n'.format(scale)
-        #anharmonics
+        # anharmonics
         if len(xmat) > 0:
             inp += '      Anharmonicities[1/cm]\n'
-            for i in range( len(xmat)):
-                inp += '\t\t' + ' '.join([str(xmat[i][j]) for j in range(i+1)]) + '\n'
+            for i in range(len(xmat)):
+                inp += '\t\t' + ' '.join([str(xmat[i][j])
+                                         for j in range(i+1)]) + '\n'
         if not coreIsMd:
             if 'norot' in parameters:
                 if not parameters['norot']:
-                    #if len(rotconsts) > 0:
+                    # if len(rotconsts) > 0:
                     #    inp += '      RotationalConstants[1/cm] '
                     #    inp += ' '.join(rotconsts) + '\n'
                     if vibrots:
@@ -668,18 +682,21 @@ def get_messpf_input(mol, parameters):
                             inp += '      RovibrationalCouplings[1/cm]\n'
                             inp += '\t   ' + '\t   '.join(vibrots) + '\n'
                         else:
-                            logging.warning("Rotational Couplings length does not match freqs -- removed from pf.inp")
+                            logging.warning(
+                                "Rotational Couplings length does not match freqs -- removed from pf.inp")
                     if len(rotdists) > 0:
                         inp += '      RotationalDistortion[1/cm]\n'
-                        inp += '\t   ' + '\t   '.join(rotdists.splitlines(True)) + '\n'
-                        inp += '      End\n' ###   END CORE
-            inp += hindlines  ###   END RRHO
+                        inp += '\t   ' + \
+                            '\t   '.join(rotdists.splitlines(True)) + '\n'
+                        inp += '      End\n'  # END CORE
+            inp += hindlines  # END RRHO
         if not 'hindered potential' in results:
             inp += '   End\n'
-        inp += 'End\n' ###   END CORE
+        inp += 'End\n'  # END CORE
     return inp
 
-def run_pf(messpf='messpf',inputfile='pf.inp'):
+
+def run_pf(messpf='messpf', inputfile='pf.inp'):
     """
     Runs mess to generate partition function
     Requires an input file,i.e. pf.inp.
@@ -722,10 +739,12 @@ def run_pf(messpf='messpf',inputfile='pf.inp'):
             msg += "{0} input file does not exist.\n".format(inputfile)
 
     else:
-        msg += "{0} mess partitition function executable does not exist.\n".format(messpf)
+        msg += "{0} mess partitition function executable does not exist.\n".format(
+            messpf)
     return msg
 
-def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.out', thermpexe='thermp'):
+
+def run_thermp(thermpinput, thermpfile='thermp.dat', pffile='pf.out', thermpexe='thermp'):
     """
     Runs thermp.exe
     Requires pffile and thermpfile to be present
@@ -747,7 +766,7 @@ def run_thermp(thermpinput,thermpfile='thermp.dat',pffile='pf.out', thermpexe='t
     return msg
 
 
-def run_pac99(formula,pac99='pac99'):
+def run_pac99(formula, pac99='pac99'):
     """
     Run pac99 for a given species name (formula)
     https://www.grc.nasa.gov/WWW/CEAWeb/readme_pac99.htm
@@ -759,9 +778,9 @@ def run_pac99(formula,pac99='pac99'):
     from subprocess import Popen, PIPE
     from . import iotools as io
     msg = ''
-    c97file = formula +'.c97'
-    i97file = formula +'.i97'
-    o97file = formula +'.o97'
+    c97file = formula + '.c97'
+    i97file = formula + '.i97'
+    o97file = formula + '.o97'
     if io.check_exe(pac99):
         if io.check_file(i97file):
             if io.check_file('new.groups'):
@@ -798,7 +817,7 @@ def run_pac99(formula,pac99='pac99'):
 #     msg += io.execute([parameters['messpf'],messpfinput])
 #     msg += 'Running thermp .\n'
 #     inp = get_thermp_input(mol.formula, deltaH)
-#     msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp']) 
+#     msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp'])
 #     msg += 'Running pac99.\n'
 #     msg += run_pac99(name)
 #     msg += 'Converting to chemkin format.\n'
@@ -823,19 +842,20 @@ def write_chemkin_polynomial(mol, parameters):
     formula = mol.formula
     qlabel = parameters['qlabel']
     slabel = parameters['slabel']
-    mid    = parameters['mol_index']
+    mid = parameters['mol_index']
     hof = parameters['results']['deltaH0']
     if parameters['skippf']:
         logging.debug('Skipping pf generation...')
     else:
         inp = get_messpf_input(mol, parameters)
         io.write_file(inp, messpfinput)
-        logging.debug('Running {0} to generate partition function...'.format(parameters['messpf']))
+        logging.debug('Running {0} to generate partition function...'.format(
+            parameters['messpf']))
         msg = io.execute([parameters['messpf'], messpfinput])
         logging.debug(msg)
     logging.debug('Running thermp...')
     inp = get_thermp_input(mol.formula, hof)
-    msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp']) 
+    msg = run_thermp(inp, 'thermp.dat', messpfoutput, parameters['thermp'])
     logging.debug(msg)
     logging.debug('Running pac99...')
     msg = run_pac99(formula)
@@ -851,15 +871,16 @@ def write_chemkin_polynomial(mol, parameters):
         logging.error('Failed to create thermp.out')
     c97file = formula + '.c97'
     if io.check_file(c97file):
-        c97text  = io.read_file(c97file)
+        c97text = io.read_file(c97file)
         las, has, msg = get_coefficients(c97text)
         if msg:
             logging.info(msg)
         logging.debug('Converting to chemkin format.')
         chemkinfile = formula + '.ckin'
-        logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))    
+        logging.debug('Writing chemkin file {0}.\n'.format(chemkinfile))
         try:
-            chemkininput = write_chemkin_file(slabel, qlabel, hof, hof298, formula, mid, las, has, chemkinfile)
+            chemkininput = write_chemkin_file(
+                slabel, qlabel, hof, hof298, formula, mid, las, has, chemkinfile)
             rmgpoly = get_rmg_polynomial(las, has)
         except:
             logging.error("Failed to write chemkin polynomials")
@@ -891,23 +912,23 @@ def get_heat_capacity(rmgpoly, T):
                                2.673718745e-14,
                                2658.216226,
                                2.95565086]}]}
-                               
+
     Formulas for calculation:
     Cp/R = a1 + a2 T + a3 T^2 + a4 T^3 + a5 T^4
     H/RT = a1 + a2 T /2 + a3 T^2 /3 + a4 T^3 /4 + a5 T^4 /5 + a6/T
     S/R  = a1 lnT + a2 T + a3 T^2 /2 + a4 T^3 /3 + a5 T^4 /4 + a7
-    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients 
-    supplied in NASA thermodynamic files. 
-    The first 7 numbers starting on the second line of each species entry 
-    (five of the second line and the first two of the third line) are the 
-    seven coefficients (a1 through a7, respectively) for the high-temperature 
-    range (above 1000 K, the upper boundary is specified on the first line of 
-    the species entry). The following seven numbers are the coefficients 
-    (a1 through a7, respectively) for the low-temperature range 
+    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients
+    supplied in NASA thermodynamic files.
+    The first 7 numbers starting on the second line of each species entry
+    (five of the second line and the first two of the third line) are the
+    seven coefficients (a1 through a7, respectively) for the high-temperature
+    range (above 1000 K, the upper boundary is specified on the first line of
+    the species entry). The following seven numbers are the coefficients
+    (a1 through a7, respectively) for the low-temperature range
     (below 1000 K, the lower boundary is specified on the first line of the species entry).
     H in the above equation is defined as
     H(T) = Delta Hf(298) + [ H(T) - H(298) ]
-    so that, in general, H(T) is not equal to 
+    so that, in general, H(T) is not equal to
     Delta Hf(T) and one needs to have the data for the reference elements to calculate Delta Hf(T).
     """
     alist = []
@@ -918,7 +939,8 @@ def get_heat_capacity(rmgpoly, T):
         if T >= Tmin and T <= Tmax:
             alist = poly['coeffs']
     if len(alist) > 4:
-        cp = alist[0] + alist[1]*T + alist[2]*T**2 + alist[3]*T**3 + alist[4]*T**4
+        cp = alist[0] + alist[1]*T + alist[2] * \
+            T**2 + alist[3]*T**3 + alist[4]*T**4
         cp = cp * ut.Rinkcal
     else:
         logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
@@ -949,23 +971,23 @@ def get_entropy(rmgpoly, T):
                                2.673718745e-14,
                                2658.216226,
                                2.95565086]}]}
-                               
+
     Formulas for calculation:
     Cp/R = a1 + a2 T + a3 T^2 + a4 T^3 + a5 T^4
     H/RT = a1 + a2 T /2 + a3 T^2 /3 + a4 T^3 /4 + a5 T^4 /5 + a6/T
     S/R  = a1 lnT + a2 T + a3 T^2 /2 + a4 T^3 /3 + a5 T^4 /4 + a7
-    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients 
-    supplied in NASA thermodynamic files. 
-    The first 7 numbers starting on the second line of each species entry 
-    (five of the second line and the first two of the third line) are the 
-    seven coefficients (a1 through a7, respectively) for the high-temperature 
-    range (above 1000 K, the upper boundary is specified on the first line of 
-    the species entry). The following seven numbers are the coefficients 
-    (a1 through a7, respectively) for the low-temperature range 
+    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients
+    supplied in NASA thermodynamic files.
+    The first 7 numbers starting on the second line of each species entry
+    (five of the second line and the first two of the third line) are the
+    seven coefficients (a1 through a7, respectively) for the high-temperature
+    range (above 1000 K, the upper boundary is specified on the first line of
+    the species entry). The following seven numbers are the coefficients
+    (a1 through a7, respectively) for the low-temperature range
     (below 1000 K, the lower boundary is specified on the first line of the species entry).
     H in the above equation is defined as
     H(T) = Delta Hf(298) + [ H(T) - H(298) ]
-    so that, in general, H(T) is not equal to 
+    so that, in general, H(T) is not equal to
     Delta Hf(T) and one needs to have the data for the reference elements to calculate Delta Hf(T).
     """
     alist = []
@@ -976,7 +998,8 @@ def get_entropy(rmgpoly, T):
         if T >= Tmin and T <= Tmax:
             alist = poly['coeffs']
     if len(alist) > 6:
-        S = alist[0] * math.log(T) + alist[1]*T + alist[2]*T**2/2. + alist[3]*T**3/3. + alist[4]*T**4/4 + alist[6]
+        S = alist[0] * math.log(T) + alist[1]*T + alist[2] * \
+            T**2/2. + alist[3]*T**3/3. + alist[4]*T**4/4 + alist[6]
         S = S * ut.Rinkcal
     else:
         logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
@@ -1007,14 +1030,14 @@ def get_enthalpy(rmgpoly, T):
                                2.673718745e-14,
                                2658.216226,
                                2.95565086]}]}
-                               
+
     Formulas for calculation:
     H/RT = a1 + a2 T /2 + a3 T^2 /3 + a4 T^3 /4 + a5 T^4 /5 + a6/T
-    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients 
-    supplied in NASA thermodynamic files. 
+    where a1, a2, a3, a4, a5, a6, and a7 are the numerical coefficients
+    supplied in NASA thermodynamic files.
     H in the above equation is defined as
     H(T) = Delta Hf(298) + [ H(T) - H(298) ]
-    so that, in general, H(T) is not equal to 
+    so that, in general, H(T) is not equal to
     Delta Hf(T) and one needs to have the data for the reference elements to calculate Delta Hf(T).
     """
     alist = []
@@ -1025,7 +1048,8 @@ def get_enthalpy(rmgpoly, T):
         if T >= Tmin and T <= Tmax:
             alist = poly['coeffs']
     if len(alist) > 6:
-        H = alist[0] + alist[1]*T/2 + alist[2]*T**2/3. + alist[3]*T**3/4. + alist[4]*T**4/5 + alist[5]/T
+        H = alist[0] + alist[1]*T/2 + alist[2]*T**2/3. + \
+            alist[3]*T**3/4. + alist[4]*T**4/5 + alist[5]/T
         H = H * ut.Rinkcal * T / 1000.
     else:
         logging.error['{} K is outside the temperature range of the given NASA polynomials [{},{}]'.format
@@ -1033,7 +1057,7 @@ def get_enthalpy(rmgpoly, T):
     return H
 
 
-def get_hindered_potential(s,report=False):
+def get_hindered_potential(s, report=False):
     """
  Rotor                             Hindered
  Group    4   5   6   7   8   9  10  11  12  13  14  15  16  17
@@ -1053,7 +1077,7 @@ def get_hindered_potential(s,report=False):
     lines = s.splitlines()
     pot = []
     for line in lines:
-        if line.islower(): #Check if line has any letter
+        if line.islower():  # Check if line has any letter
             pass
         elif line.strip():
             items = line.split()
@@ -1488,6 +1512,7 @@ C6H5O             PHENOXY RADICAL. NASA TM-83800, 1985.
   0.00000000d+00  0.00000000d+00  0.00000000d+00 -4.73010834d+02 -4.67113087d+01
 """
     return s
+
 
 if __name__ == "__main__":
     import doctest

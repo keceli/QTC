@@ -2,26 +2,26 @@ import os
 import sys
 import numpy as np
 
-sys.path.insert(0, '/home/elliott/Packages/QTC/')
-from . import iotools as io
-from . import qctools as qc
+sys.path.insert(0,os.path.realpath(os.path.dirname(__file__)))
+import iotools as io
+import qctools as qc
 
 def gauss_xmat(filename, natoms):
     """
-    Retrieves the anharmonic constant matrix from Gaussian logfile 
+    Retrieves the anharmonic constant matrix from Gaussian logfile
     INPUTS:
     filename - name of gaussian logfile
     natoms   - number of atoms in molecule
     OUTPUT:
     xmat     - anharmonic constant matrix (nmode by nmode)
-    """ 
+    """
     full = io.read_file(filename)
-    nmodes = 3*natoms-6 
+    nmodes = 3*natoms-6
     lines = full.split('X matrix')[1].split('Resonance')[0]
     lines = lines.split('\n')
     del lines[0]
     del lines[-1]
-    
+
     xmat = np.zeros((nmodes, nmodes))
     rangemod = 1
     if nmodes%5 == 0:
@@ -29,7 +29,7 @@ def gauss_xmat(filename, natoms):
     marker = 0
 
     for m in range(0, nmodes/5+rangemod):
-        length = nmodes - m * 5 
+        length = nmodes - m * 5
         a= np.array( lines[marker+1:marker+length+1])
         for i in range(length):
             for j in range(0, len(a[i].split())-1):
@@ -42,17 +42,17 @@ def gauss_xmat(filename, natoms):
 
 def get_freqs(filename):
     """
-    Pulls the frequencies out from EStokTP me output file 
+    Pulls the frequencies out from EStokTP me output file
     INPUT:
     filename - name of EStokTP output file (reac1_fr.me or reac1_unpfr.me)
     OUTPUT:
     freqs    - frequencies obtained from output file
-    order    - in case the frequencies were reordered when sorting, keeps 
+    order    - in case the frequencies were reordered when sorting, keeps
                track of which index of freqs corresponds to which normal mode
-    """ 
+    """
     full = io.read_file(filename)
     full = full.strip('\n')
-    full = full.split('[1/cm]')[1].split('Zero')[0] 
+    full = full.split('[1/cm]')[1].split('Zero')[0]
     full = full.split()
     nfreqs = full[0]
     freqs = full[1:]
@@ -70,7 +70,7 @@ def find_hinfreqs(proj, unproj, order):
     INPUTS:
     proj   -  frequencies after projection
     unproj -  unprojected frequencies
-    order  -  in case the frequencies were reordered when sorting, keeps track of 
+    order  -  in case the frequencies were reordered when sorting, keeps track of
               which index of unproj corresponds to which normal mode
     """
     diff = len(unproj) - len(proj)
@@ -126,7 +126,7 @@ def remove_vibrots(vibrot, modes):
 
 def gauss_anharm_inp(filename, anlevel):
     """
-    Forms the Gaussian input file for anharmonic frequency computation following an EStokTP 
+    Forms the Gaussian input file for anharmonic frequency computation following an EStokTP
     level 1 computation on a molecule
     INPUT:
     filename - EStokTP output file to read (reac1_l1.log)
@@ -157,7 +157,7 @@ def gauss_anharm_inp(filename, anlevel):
     return zmat
 
 def write_anharm_inp(readfile='reac1_l1.log',writefile='anharm.inp',anlevel='ignore'):
-    
+
     """
     Writes Guassian input to a file given an EStokTP G09 output file name
     INPUT:
@@ -170,21 +170,21 @@ def write_anharm_inp(readfile='reac1_l1.log',writefile='anharm.inp',anlevel='ign
 
 def run_gauss(filename, node):
     """
-    Executes Guassian 
+    Executes Guassian
     INPUT:
     filename - name of Guassian input file
     node     - node to run it on
     """
     if io.check_file(filename):
-        executea = 'soft add +gcc-5.3; soft add +g09; g09 ' + filename 
+        executea = 'soft add +gcc-5.3; soft add +g09; g09 ' + filename
         executeb = 'cd `pwd`; export PATH=$PATH:~/bin; '
         ssh ='/usr/bin/ssh'
         host =node
         if str(host) == '0':
             os.system(executea)
-        else: 
+        else:
             os.system('exec ' + ssh + ' -n ' + host +' \"' + executeb + executea + '\"')
-    
+
     return
 
 def anharm_freq(freqs, xmat):
@@ -210,7 +210,7 @@ def anharm_freq(freqs, xmat):
     return anharms
 
 def mess_x(xmat):
-    
+
     inp = ' Anharmonicities[1/cm]\n'
     for i in range( len(xmat)):
         for j in range(i+1):
@@ -230,8 +230,8 @@ def mess_fr(freqs):
     return inp
 
 def main(args, vibrots = None):
-    
-    extra = ' ZeroEnergy[kcal/mol]\t 0.\n ElectronicLevels[1/cm]\t\t1\n  0.0000000000000000\t\t1.0000000000000000\nEnd' 
+
+    extra = ' ZeroEnergy[kcal/mol]\t 0.\n ElectronicLevels[1/cm]\t\t1\n  0.0000000000000000\t\t1.0000000000000000\nEnd'
     if isinstance(args, dict):
         #natoms    = args['natoms']
         if 'writegauss' in args:
@@ -285,7 +285,7 @@ def main(args, vibrots = None):
             vibrots = remove_vibrots(vibrots, modes)
         return anfreq, mess_fr(anfreq),  xmat, mess_x(xmat), extra, vibrots
     ##########################
-    else: 
+    else:
         anharmlog = args.anharmlog
         natoms    = args.natoms
         eskfile   = args.logfile
@@ -306,7 +306,7 @@ def main(args, vibrots = None):
             proj, b   = get_freqs(eskproj)
             anfreq = anharm_freq(proj, xmat)
             return anfreq, mess_fr(anfreq), xmat, mess_x(xmat), extra, vibrots
-    return 
+    return
 
 if __name__ == '__main__':
 
@@ -315,12 +315,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
              description="""
        This module computes anharmonic corrections to the projected
-       frequencies produced during an EStokTP 1D or MD torsional scan.  
+       frequencies produced during an EStokTP 1D or MD torsional scan.
 
-       Requirements: 
-       In addition to both the projected frequency and unprojected frequency files that 
-       EStokTP puts in me_files, it requires EITHER a g09 anharmonic logfile OR for g09 
-       to be available so that this module can execute a g09 anharmonic computation 
+       Requirements:
+       In addition to both the projected frequency and unprojected frequency files that
+       EStokTP puts in me_files, it requires EITHER a g09 anharmonic logfile OR for g09
+       to be available so that this module can execute a g09 anharmonic computation
        written using an optimization logfile (usually taken from geoms/reac1_l1.log)
        """)
 
