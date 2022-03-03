@@ -60,7 +60,7 @@ def rm(fname):
     return
 
 
-#def rmrf(dname):
+# def rmrf(dname):
     """
     Deletes directories recursively including all of the contents.
     """
@@ -122,12 +122,13 @@ def read_xyzdir(slabel, xyzdir):
     """
     from . import obtools as ob
     xyz = ''
-    xyzfile = '{}{}{}.xyz'.format(xyzdir, os.path.sep, ob.get_smiles_filename(slabel))
+    xyzfile = '{}{}{}.xyz'.format(
+        xyzdir, os.path.sep, ob.get_smiles_filename(slabel))
     if check_file(xyzfile):
-       xyz = read_file(xyzfile)
+        xyz = read_file(xyzfile)
     elif check_file(xyzfile.split('_m')[0] + '_m1.xyz'):
 
-       xyz = read_file(xyzfile.split('_m')[0] + '_m1.xyz')
+        xyz = read_file(xyzfile.split('_m')[0] + '_m1.xyz')
     return xyz
 
 
@@ -136,7 +137,8 @@ def find_files_recursive(directory, pattern='*'):
     Return matched filenames list in a given directory (including subdirectories) for a given pattern
     https://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python
     """
-    import os, fnmatch
+    import os
+    import fnmatch
     matches = []
     for root, _, filenames in os.walk(directory):
         for filename in fnmatch.filter(filenames, pattern):
@@ -149,7 +151,8 @@ def yield_files_recursive(directory, pattern):
     Yields files in a directory (including subdirectories) with a given pattern
     https://stackoverflow.com/questions/2186525/use-a-glob-to-find-files-recursively-in-python
     """
-    import os, fnmatch
+    import os
+    import fnmatch
     for root, dirs, files in os.walk(directory):
         for basename in files:
             if fnmatch.fnmatch(basename, pattern):
@@ -183,9 +186,9 @@ def get_file_attributes(path):
     filestat = stat(path)
     owner = getpwuid(filestat.st_uid).pw_name
     group = getgrgid(filestat.st_gid).gr_name
-    size  = filestat.st_size
+    size = filestat.st_size
     date = str(datetime.fromtimestamp(filestat.st_mtime))
-    return {'path':path, 'owner': owner,'group':group,'size_byte':size,'modified':date}
+    return {'path': path, 'owner': owner, 'group': group, 'size_byte': size, 'modified': date}
 
 
 def join_path(*paths):
@@ -206,7 +209,6 @@ def write_file(s, filename='newfile'):
 
 
 def append_file(s, filename='newfile'):
-
     """
     Appends s string to a file with the given 'filename'.
     """
@@ -325,7 +327,8 @@ def symlink(source, linkname):
     Create a symbolic link. (works only on unix based systems)
     """
     if check_file(linkname):
-        logging.debug('Target link {} exists, not creating a new one'.format(linkname))
+        logging.debug(
+            'Target link {} exists, not creating a new one'.format(linkname))
     else:
         try:
             os.symlink(source, linkname)
@@ -348,14 +351,15 @@ def get_path(f, executable=False, directory=False):
         return os.path.abspath(f)
 
 
-def get_line_number(keyword, lines=None, filename=None,getlastone=False):
+def get_line_number(keyword, lines=None, filename=None, getlastone=False):
     """
     Returns the line number of a keyword found in given lines of string.
     Returns -1 if keyword is not found
     """
     num = -1
     if lines is None and filename is None:
-        logging.debug('List of lines or a filename to be read is required for get_line_number')
+        logging.debug(
+            'List of lines or a filename to be read is required for get_line_number')
     elif filename:
         lines = read_file(filename, aslines=True)
 
@@ -374,7 +378,8 @@ def get_line_numbers(keyword, lines=None, filename=None):
     Returns -1 if keyword is not found
     """
     if lines is None and filename is None:
-        logging.debug('List of lines or a filename to be read is required for get_line_numbers')
+        logging.debug(
+            'List of lines or a filename to be read is required for get_line_numbers')
     elif filename:
         lines = read_file(filename, aslines=True)
     nums = []
@@ -423,7 +428,7 @@ def read_list2(listfile):
     return lines
 
 
-def execute_old(exe,inp=None,out=None):
+def execute_old(exe, inp=None, out=None):
     """
     Executes a calculation for a given input file inp and executable exe.
     """
@@ -448,7 +453,8 @@ def execute_old(exe,inp=None,out=None):
         STDERR:\n{2}""".format(inp, stdout, stderr)
         errfile = inp + '.err'
         write_file(errstr, errfile)
-        msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(exe, inp, get_path(errfile))
+        msg = 'Run {0} {1}: Failed, see "{2}"\n'.format(
+            exe, inp, get_path(errfile))
     return msg
 
 
@@ -487,11 +493,11 @@ def get_mpi_size(default=1):
     elif os.getenv("OMPI_COMM_WORLD_SIZE") is not None:
         size = int(os.getenv("OMPI_COMM_WORLD_SIZE"))
     else:
-       try:
+        try:
             from mpi4py import MPI
             comm = MPI.COMM_WORLD
             size = comm.Get_size()
-       except:
+        except:
             size = default
     return size
 
@@ -523,14 +529,14 @@ def get_mpi_local_size(default=1):
     return size
 
 
-def get_ppn(includethreads=False):
+def get_ppn():
     """
     Return number of processors per node.
     For alternative solutions:
     https://stackoverflow.com/questions/1006289/how-to-find-out-the-number-of-cpus-using-python
     """
-    import psutil
-    return psutil.cpu_count(includethreads)
+    from os import cpu_count
+    return cpu_count()
 
 
 def get_total_memory():
@@ -539,13 +545,13 @@ def get_total_memory():
     """
     from psutil import virtual_memory
 
-    mem = virtual_memory() # In bytes
-    m = mem.total >> 20 # Using bit shift to get in MB
-    #m = mem.total >> 30 # Using bit shift to get in GB
+    mem = virtual_memory()  # In bytes
+    m = mem.total >> 20  # Using bit shift to get in MB
+    # m = mem.total >> 30 # Using bit shift to get in GB
     return m
 
 
-def get_env(var,default=None):
+def get_env(var, default=None):
     """
     Return the value of environment variable.
     """
@@ -586,7 +592,7 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False, wait=True):
         commandstr = ' '.join(command)
     msg = 'Running Popen with command: {0}\n'.format(commandstr)
     logging.debug(msg)
-    msg =''
+    msg = ''
     if wait:
         process = Popen(command, stdout=PIPE, stderr=PIPE)
         out, err = process.communicate()
@@ -645,11 +651,11 @@ def get_stdout_stderr(command):
     return out, err
 
 
-def get_split_value(text,keyword,last_match=False,split_opt=None,split_idx=0):
+def get_split_value(text, keyword, last_match=False, split_opt=None, split_idx=0):
     """
     Parse text to return the value corresponding to the keyword and other options.
     """
-    val =''
+    val = ''
     if last_match:
         i = text.rfind(keyword)
     else:
@@ -657,11 +663,13 @@ def get_split_value(text,keyword,last_match=False,split_opt=None,split_idx=0):
     if i > 0:
         try:
             line = text[i:].splitlines()[0]
-            val  = line.split(split_opt)[split_idx]
+            val = line.split(split_opt)[split_idx]
         except:
-            logging.error('Error in get_split_value: cannot parse "{}"'.format(keyword))
+            logging.error(
+                'Error in get_split_value: cannot parse "{}"'.format(keyword))
     else:
-        logging.error('Error in get_split_value: cannot find "{}"'.format(keyword))
+        logging.error(
+            'Error in get_split_value: cannot find "{}"'.format(keyword))
     return val
 
 
@@ -691,9 +699,9 @@ def zip_files(files, zipfilename, mode='a', compressed=True, fullpath=True):
     """
     import zipfile
     if compressed:
-        compression=zipfile.ZIP_DEFLATED
+        compression = zipfile.ZIP_DEFLATED
     else:
-        compression=zipfile.ZIP_STORED
+        compression = zipfile.ZIP_STORED
     with zipfile.ZipFile(zipfilename, mode=mode, compression=compression) as z:
         if fullpath:
             for f in files:
@@ -713,11 +721,11 @@ def get_zip_info(zipfilename):
     """
     import zipfile
     compress_size = 0
-    file_size     = 0
+    file_size = 0
     with zipfile.ZipFile(zipfilename, mode='r') as z:
         for info in z.infolist():
             compress_size += info.compress_size
-            file_size     += info.file_size
+            file_size += info.file_size
     return len(z.infolist()), file_size, compress_size
 
 
@@ -729,13 +737,13 @@ def db_head_path(db_location=None):
         return '/home/elliott/testdirectory/'
     if db_location == None:
         return '/lcrc/project/PACC/databases/qtc_database/'
-        #return '/lcrc/project/PACC/databases/torsscan_database/'
-        #return '/home/elliott/testdirectory/'
+        # return '/lcrc/project/PACC/databases/torsscan_database/'
+        # return '/home/elliott/testdirectory/'
     else:
         return fix_path(db_location)
 
 
-def db_smiles_path(smiles, db_location = None):
+def db_smiles_path(smiles, db_location=None):
     """
     Returns the path for a smiles molecule in a database
     """
@@ -796,13 +804,14 @@ def db_store_opt_prop(s, smiles, typ='zmat', db_location=None, prog=None, method
     Specify db_location and set smiles to None or even prog method and basis
     """
     if prog == None:
-        directory =  db_head_path(db_location)
+        directory = db_head_path(db_location)
     else:
-        directory =  db_opt_path(prog, method, basis, db_location, smiles)
+        directory = db_opt_path(prog, method, basis, db_location, smiles)
 
     mkdir(directory)
     write_file(s, join_path(directory, smiles + '.' + typ))
     return
+
 
 def db_get_opt_prop(smiles, typ='zmat', db_location=None, prog=None, method=None, basis=None):
     """
@@ -812,12 +821,13 @@ def db_get_opt_prop(smiles, typ='zmat', db_location=None, prog=None, method=None
     Specify db_location and set smiles to None or even prog method and basis
     """
     if prog == None:
-        directory =  db_head_path(db_location)
+        directory = db_head_path(db_location)
     else:
-        directory =  db_opt_path(prog, method, basis, db_location, smiles)
+        directory = db_opt_path(prog, method, basis, db_location, smiles)
     if check_file(join_path(directory, smiles + '.' + typ)):
         return read_file(join_path(directory, smiles + '.' + typ))
     return
+
 
 def db_store_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
     """
@@ -831,14 +841,17 @@ def db_store_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=N
     Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
     """
     if prog == None:
-        directory =  db_head_path(db_location)
+        directory = db_head_path(db_location)
     elif optprog == None:
-        directory = db_sp_path(prog, method, basis, db_location, smiles, prog, method, basis)
+        directory = db_sp_path(prog, method, basis,
+                               db_location, smiles, prog, method, basis)
     else:
-        directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+        directory = db_sp_path(
+            prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
     mkdir(directory)
     write_file(s, join_path(directory, smiles + '.' + typ))
     return
+
 
 def db_append_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=None, basis=None, optprog=None, optmethod=None, optbasis=None):
     """
@@ -851,11 +864,13 @@ def db_append_sp_prop(s, smiles, typ='ene', db_location=None, prog=None, method=
     Specify db_location and set smiles to None or even prog, optprog, method, optmethod, basis, and optbasis
     """
     if prog == None:
-        directory =  db_head_path(db_location)
+        directory = db_head_path(db_location)
     elif optprog == None:
-        directory = db_sp_path(prog, method, basis, db_location, smiles, prog, method, basis)
+        directory = db_sp_path(prog, method, basis,
+                               db_location, smiles, prog, method, basis)
     else:
-        directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+        directory = db_sp_path(
+            prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
 
     mkdir(directory)
     append_file(s, join_path(directory, smiles + '.' + typ))
@@ -874,9 +889,10 @@ def db_get_sp_prop(smiles, typ='ene', db_location=None, prog=None, method=None, 
     """
 
     if prog == None:
-        directory =  db_head_path(db_location)
+        directory = db_head_path(db_location)
     else:
-        directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+        directory = db_sp_path(
+            prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
     if check_file(join_path(directory, smiles + '.' + typ)):
         return read_file(join_path(directory, smiles + '.' + typ))
     return
@@ -886,9 +902,10 @@ def db_logfile_dir(db_location, smiles=None, prog=None, method=None, basis=None,
     """
     Returns the path where logfiles should be stored for a computation
     """
-    directory =  db_sp_path(prog, method, basis, db_location, smiles, optprog, optmethod, optbasis)
+    directory = db_sp_path(prog, method, basis, db_location,
+                           smiles, optprog, optmethod, optbasis)
     mkdir(join_path(directory, 'logfiles/'))
-    return  join_path(directory, 'logfiles/')
+    return join_path(directory, 'logfiles/')
 
 
 def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
@@ -899,42 +916,48 @@ def parse_all(species, lines, optprog=None, optmethod=None, optbasis=None):
     """
     from . import patools as pa
 
-    prog   =  pa.get_prog(lines)
-    method =  pa.method(  lines).lower().lstrip('r')
-    basis  =  pa.basisset(lines).lower()
-    energy =  pa.energy(lines) [1]
-    zpve   =  pa.zpve(lines)
-    anzpve   =  pa.anzpve(lines)
-    zmat   =  pa.zmat(    lines)
-    xyz    =  pa.xyz(     lines)
-    geo    =  pa.geo(     lines)
-    freqs  =  pa.freqs(lines)
+    prog = pa.get_prog(lines)
+    method = pa.method(lines).lower().lstrip('r')
+    basis = pa.basisset(lines).lower()
+    energy = pa.energy(lines)[1]
+    zpve = pa.zpve(lines)
+    anzpve = pa.anzpve(lines)
+    zmat = pa.zmat(lines)
+    xyz = pa.xyz(lines)
+    geo = pa.geo(lines)
+    freqs = pa.freqs(lines)
 
     if prog == None or method == None or basis == None:
         logging.debug('Parsing error, check lines')
         return
     if optprog == None:
-       optprog, optmethod, optbasis = prog, method, basis
+        optprog, optmethod, optbasis = prog, method, basis
     if zmat != None:
-       db_store_opt_prop(zmat, species, 'zmat', None, optprog, optmethod, optbasis)
+        db_store_opt_prop(zmat, species, 'zmat', None,
+                          optprog, optmethod, optbasis)
     if xyz != None:
-       db_store_opt_prop(xyz, species, 'xyz', None, optprog, optmethod, optbasis)
+        db_store_opt_prop(xyz, species, 'xyz', None,
+                          optprog, optmethod, optbasis)
     if geo != None:
-       db_store_opt_prop(geo, species, 'geo', None, optprog, optmethod, optbasis)
+        db_store_opt_prop(geo, species, 'geo', None,
+                          optprog, optmethod, optbasis)
 
     if energy != None:
-        db_store_sp_prop(str(energy), species, 'ene', None, prog, method, basis, optprog, optmethod, optbasis)
+        db_store_sp_prop(str(energy), species, 'ene', None,
+                         prog, method, basis, optprog, optmethod, optbasis)
     if freqs != None:
-        freqs  = ', '.join(freq for freq in freqs[::-1])
-        db_store_sp_prop(freqs,  species, 'hrm', None, prog, method, basis, optprog, optmethod, optbasis)
+        freqs = ', '.join(freq for freq in freqs[::-1])
+        db_store_sp_prop(freqs,  species, 'hrm', None, prog,
+                         method, basis, optprog, optmethod, optbasis)
     if zpve != None:
-        db_store_sp_prop(str( zpve),  species, 'zpve', None, prog, method, basis, optprog, optmethod, optbasis)
+        db_store_sp_prop(str(zpve),  species, 'zpve', None,
+                         prog, method, basis, optprog, optmethod, optbasis)
     if anzpve != None:
-        db_store_sp_prop(str(anzpve), species, 'anzpve', None, prog, method, basis, optprog, optmethod, optbasis)
+        db_store_sp_prop(str(anzpve), species, 'anzpve', None,
+                         prog, method, basis, optprog, optmethod, optbasis)
     return
+
 
 if __name__ == "__main__":
     import doctest
     doctest.testmod(verbose=True)
-
-

@@ -14,7 +14,6 @@ import logging
 import math
 import numpy as np
 import sys
-sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)))
 """
 Thermochemistry tools.
 Requires:
