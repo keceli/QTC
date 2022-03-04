@@ -58,7 +58,7 @@ def get_args():
     Provides a unified interface for different codes.
     """)
     parser.add_argument('-i', '--input', type=str,
-                        default='qclist.txt',
+                        default='O',
                         help='INPUT can be a text file containing a list of inchi or smiles strings, or it can be a single string containing inchi or smiles strings separated by commas')
     parser.add_argument('-j', '--jsoninput', type=str,
                         default='queue.json',

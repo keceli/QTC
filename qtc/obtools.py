@@ -170,7 +170,8 @@ def get_mult(s):
                 if '_s' in mult:
                     mult = int(mult.split('_s')[0])
             except:
-                logging.debug('Multiplicity format problem, get_mult failed in s.split for s= {}'.format(s))
+                logging.debug(
+                    'Multiplicity format problem, get_mult failed in s.split for s= {}'.format(s))
     if mult is None:
         mol = get_mol(s, make3D=False)
         mult = mol.spin
@@ -190,7 +191,8 @@ def get_symm(s):
                     sym, ene = sym.split('_e')
                 sym = float(sym)
             except:
-                logging.debug('Symmetry format problem, get_symm failed in s.split for s= {}'.format(s))
+                logging.debug(
+                    'Symmetry format problem, get_symm failed in s.split for s= {}'.format(s))
     return sym
 
 
@@ -205,11 +207,12 @@ def get_smileshof(s):
                 ene = s.split('_e')[-1]
                 ene = float(ene)
             except:
-                logging.debug('Energy format problem, get_smileshof failed in s.split for s= {}'.format(s))
+                logging.debug(
+                    'Energy format problem, get_smileshof failed in s.split for s= {}'.format(s))
     return ene
 
 
-def get_slabel(s,mult=None):
+def get_slabel(s, mult=None):
     """
     slabel is a unique smiles string for labeling species in QTC.
     Composed of two parts 'canonical smiles' and 'multiplicity'
@@ -238,13 +241,14 @@ def get_ent(s):
     sites = 0
 
     xyz = get_xyz(s)
-    s2  = get_smiles(xyz)
+    s2 = get_smiles(xyz)
     frags = s2.split('[')
     for frag in frags:
         if '@' in frag:
             sites += 1
     ent = 2.**sites
     return ent
+
 
 def get_isomers_old(s):
     """
@@ -257,10 +261,10 @@ def get_isomers_old(s):
     """
     import logging
     xyz = get_xyz(s)
-    s2  = get_smiles(xyz)
-    ndouble  = s2.count('=')
-    nslash   = s2.count('/') + s2.count('\\')
-    nchiral  = s2.count('@')
+    s2 = get_smiles(xyz)
+    ndouble = s2.count('=')
+    nslash = s2.count('/') + s2.count('\\')
+    nchiral = s2.count('@')
     mult = None
     if '_m' in s:
         mult = get_mult(s)
@@ -268,13 +272,15 @@ def get_isomers_old(s):
     if s.strip() == s2.strip():
         pass
     else:
-        logging.debug("SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s, s2))
+        logging.debug(
+            "SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s, s2))
     isomers = [s2]
     if ndouble > 1:
         logging.debug('{0} double bonds in {1}'.format(ndouble, s))
         logging.debug('Can only work with one double bond')
     elif ndouble == 1 and nslash > 1:
-        logging.debug('One double bond and a stereocenter found in {0}'.format(s))
+        logging.debug(
+            'One double bond and a stereocenter found in {0}'.format(s))
         if nslash > 3:
             logging.debug('More than 3 slashes {} --> {}'.format(s, s2))
         left, right = s2.split('=')
@@ -294,13 +300,14 @@ def get_isomers_old(s):
         isomers.append(news)
     if nchiral > 0:
         logging.debug('{0} chiral centers in {1}'.format(nchiral, s))
-    if len(isomers)==1:
+    if len(isomers) == 1:
         if '_m' in s:
             isomers = [s]
         else:
             mult = get_mult(s)
             slabel = get_slabel(s, mult)
-            logging.debug("Multiplicity {} assigned by open babel for {}".format(mult, s))
+            logging.debug(
+                "Multiplicity {} assigned by open babel for {}".format(mult, s))
             isomers = [slabel]
     return isomers
 
@@ -319,9 +326,9 @@ def get_isomers(s):
     import logging
     import re
     xyz = get_xyz(s)
-    s2  = get_smiles(xyz)
-    nslash   = s2.count('/') + s2.count('\\')
-    nchiral  = s2.count('@')
+    s2 = get_smiles(xyz)
+    nslash = s2.count('/') + s2.count('\\')
+    nchiral = s2.count('@')
     mult = None
     if nslash == 0 and nchiral == 0:
         s2 = s
@@ -332,858 +339,859 @@ def get_isomers(s):
     if s.strip() == s3.strip():
         pass
     else:
-        logging.debug("SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s, s2))
+        logging.debug(
+            "SMILES changed after open babel xyz is used (get_isomers) {} --> {}".format(s, s2))
     segments = re.split('\\\\|/', s2)
     if nslash == 1:
-       sp0 = ''
-       sp0 += segments[0]
-       sp0 += '/'
-       sp0 += segments[1]
+        sp0 = ''
+        sp0 += segments[0]
+        sp0 += '/'
+        sp0 += segments[1]
 
-       sp1 = ''
-       sp1 += segments[0]
-       sp1 += '\\'
-       sp1 += segments[1]
+        sp1 = ''
+        sp1 += segments[0]
+        sp1 += '\\'
+        sp1 += segments[1]
 
     elif nslash == 2:
-       sp0 = ''
-       sp0 += segments[0]
-       sp0 += '/'
-       sp0 += segments[1]
-       sp0 += '/'
-       sp0 += segments[2]
+        sp0 = ''
+        sp0 += segments[0]
+        sp0 += '/'
+        sp0 += segments[1]
+        sp0 += '/'
+        sp0 += segments[2]
 
-       sp1 = ''
-       sp1 += segments[0]
-       sp1 += '/'
-       sp1 += segments[1]
-       sp1 += '\\'
-       sp1 += segments[2]
+        sp1 = ''
+        sp1 += segments[0]
+        sp1 += '/'
+        sp1 += segments[1]
+        sp1 += '\\'
+        sp1 += segments[2]
 
     elif nslash == 3:
-       sp0 = ''
-       sp0 += segments[0]
-       sp0 += '/'
-       sp0 += segments[1]
-       sp0 += '/'
-       sp0 += segments[2]
-       sp0 += '/'
-       sp0 += segments[3]
+        sp0 = ''
+        sp0 += segments[0]
+        sp0 += '/'
+        sp0 += segments[1]
+        sp0 += '/'
+        sp0 += segments[2]
+        sp0 += '/'
+        sp0 += segments[3]
 
-       sp1 = ''
-       sp1 += segments[0]
-       sp1 += '/'
-       sp1 += segments[1]
-       sp1 += '/'
-       sp1 += segments[2]
-       sp1 += '\\'
-       sp1 += segments[3]
+        sp1 = ''
+        sp1 += segments[0]
+        sp1 += '/'
+        sp1 += segments[1]
+        sp1 += '/'
+        sp1 += segments[2]
+        sp1 += '\\'
+        sp1 += segments[3]
 
-       sp2 = ''
-       sp2 += segments[0]
-       sp2 += '/'
-       sp2 += segments[1]
-       sp2 += '\\'
-       sp2 += segments[2]
-       sp2 += '/'
-       sp2 += segments[3]
+        sp2 = ''
+        sp2 += segments[0]
+        sp2 += '/'
+        sp2 += segments[1]
+        sp2 += '\\'
+        sp2 += segments[2]
+        sp2 += '/'
+        sp2 += segments[3]
 
-       sp3 = ''
-       sp3 += segments[0]
-       sp3 += '/'
-       sp3 += segments[1]
-       sp3 += '\\'
-       sp3 += segments[2]
-       sp3 += '\\'
-       sp3 += segments[3]
+        sp3 = ''
+        sp3 += segments[0]
+        sp3 += '/'
+        sp3 += segments[1]
+        sp3 += '\\'
+        sp3 += segments[2]
+        sp3 += '\\'
+        sp3 += segments[3]
 
     elif nslash == 4:
-       sp0 = ''
-       sp0 += segments[0]
-       sp0 += '/'
-       sp0 += segments[1]
-       sp0 += '/'
-       sp0 += segments[2]
-       sp0 += '/'
-       sp0 += segments[3]
-       sp0 += '/'
-       sp0 += segments[4]
+        sp0 = ''
+        sp0 += segments[0]
+        sp0 += '/'
+        sp0 += segments[1]
+        sp0 += '/'
+        sp0 += segments[2]
+        sp0 += '/'
+        sp0 += segments[3]
+        sp0 += '/'
+        sp0 += segments[4]
 
-       sp1 = ''
-       sp1 += segments[0]
-       sp1 += '/'
-       sp1 += segments[1]
-       sp1 += '/'
-       sp1 += segments[2]
-       sp1 += '/'
-       sp1 += segments[3]
-       sp1 += '/'
-       sp1 += segments[4]
+        sp1 = ''
+        sp1 += segments[0]
+        sp1 += '/'
+        sp1 += segments[1]
+        sp1 += '/'
+        sp1 += segments[2]
+        sp1 += '/'
+        sp1 += segments[3]
+        sp1 += '/'
+        sp1 += segments[4]
 
-       sp2 = ''
-       sp2 += segments[0]
-       sp2 += '/'
-       sp2 += segments[1]
-       sp2 += '/'
-       sp2 += segments[2]
-       sp2 += '\\'
-       sp2 += segments[3]
-       sp2 += '/'
-       sp2 += segments[4]
+        sp2 = ''
+        sp2 += segments[0]
+        sp2 += '/'
+        sp2 += segments[1]
+        sp2 += '/'
+        sp2 += segments[2]
+        sp2 += '\\'
+        sp2 += segments[3]
+        sp2 += '/'
+        sp2 += segments[4]
 
-       sp3 = ''
-       sp3 += segments[0]
-       sp3 += '/'
-       sp3 += segments[1]
-       sp3 += '\\'
-       sp3 += segments[2]
-       sp3 += '/'
-       sp3 += segments[3]
-       sp3 += '/'
-       sp3 += segments[4]
+        sp3 = ''
+        sp3 += segments[0]
+        sp3 += '/'
+        sp3 += segments[1]
+        sp3 += '\\'
+        sp3 += segments[2]
+        sp3 += '/'
+        sp3 += segments[3]
+        sp3 += '/'
+        sp3 += segments[4]
 
-       sp4 = ''
-       sp4 += segments[0]
-       sp4 += '/'
-       sp4 += segments[1]
-       sp4 += '/'
-       sp4 += segments[2]
-       sp4 += '\\'
-       sp4 += segments[3]
-       sp4 += '\\'
-       sp4 += segments[4]
+        sp4 = ''
+        sp4 += segments[0]
+        sp4 += '/'
+        sp4 += segments[1]
+        sp4 += '/'
+        sp4 += segments[2]
+        sp4 += '\\'
+        sp4 += segments[3]
+        sp4 += '\\'
+        sp4 += segments[4]
 
-       sp5 = ''
-       sp5 += segments[0]
-       sp5 += '/'
-       sp5 += segments[1]
-       sp5 += '\\'
-       sp5 += segments[2]
-       sp5 += '/'
-       sp5 += segments[3]
-       sp5 += '\\'
-       sp5 += segments[4]
+        sp5 = ''
+        sp5 += segments[0]
+        sp5 += '/'
+        sp5 += segments[1]
+        sp5 += '\\'
+        sp5 += segments[2]
+        sp5 += '/'
+        sp5 += segments[3]
+        sp5 += '\\'
+        sp5 += segments[4]
 
-       sp6 = ''
-       sp6 += segments[0]
-       sp6 += '/'
-       sp6 += segments[1]
-       sp6 += '\\'
-       sp6 += segments[2]
-       sp6 += '\\'
-       sp6 += segments[3]
-       sp6 += '/'
-       sp6 += segments[4]
+        sp6 = ''
+        sp6 += segments[0]
+        sp6 += '/'
+        sp6 += segments[1]
+        sp6 += '\\'
+        sp6 += segments[2]
+        sp6 += '\\'
+        sp6 += segments[3]
+        sp6 += '/'
+        sp6 += segments[4]
 
-       sp7 = ''
-       sp7 += segments[0]
-       sp7 += '/'
-       sp7 += segments[1]
-       sp7 += '\\'
-       sp7 += segments[2]
-       sp7 += '\\'
-       sp7 += segments[3]
-       sp7 += '\\'
-       sp7 += segments[4]
+        sp7 = ''
+        sp7 += segments[0]
+        sp7 += '/'
+        sp7 += segments[1]
+        sp7 += '\\'
+        sp7 += segments[2]
+        sp7 += '\\'
+        sp7 += segments[3]
+        sp7 += '\\'
+        sp7 += segments[4]
 
     elif nslash == 5:
-       sp0 = ''
-       sp0 += segments[0]
-       sp0 += '/'
-       sp0 += segments[1]
-       sp0 += '/'
-       sp0 += segments[2]
-       sp0 += '/'
-       sp0 += segments[3]
-       sp0 += '/'
-       sp0 += segments[4]
-       sp0 += '/'
-       sp0 += segments[5]
+        sp0 = ''
+        sp0 += segments[0]
+        sp0 += '/'
+        sp0 += segments[1]
+        sp0 += '/'
+        sp0 += segments[2]
+        sp0 += '/'
+        sp0 += segments[3]
+        sp0 += '/'
+        sp0 += segments[4]
+        sp0 += '/'
+        sp0 += segments[5]
 
-       sp1 = ''
-       sp1 += segments[0]
-       sp1 += '/'
-       sp1 += segments[1]
-       sp1 += '/'
-       sp1 += segments[2]
-       sp1 += '/'
-       sp1 += segments[3]
-       sp1 += '/'
-       sp1 += segments[4]
-       sp1 += '\\'
-       sp1 += segments[5]
+        sp1 = ''
+        sp1 += segments[0]
+        sp1 += '/'
+        sp1 += segments[1]
+        sp1 += '/'
+        sp1 += segments[2]
+        sp1 += '/'
+        sp1 += segments[3]
+        sp1 += '/'
+        sp1 += segments[4]
+        sp1 += '\\'
+        sp1 += segments[5]
 
-       sp2 = ''
-       sp2 += segments[0]
-       sp2 += '/'
-       sp2 += segments[1]
-       sp2 += '/'
-       sp2 += segments[2]
-       sp2 += '/'
-       sp2 += segments[3]
-       sp2 += '\\'
-       sp2 += segments[4]
-       sp2 += '/'
-       sp2 += segments[5]
+        sp2 = ''
+        sp2 += segments[0]
+        sp2 += '/'
+        sp2 += segments[1]
+        sp2 += '/'
+        sp2 += segments[2]
+        sp2 += '/'
+        sp2 += segments[3]
+        sp2 += '\\'
+        sp2 += segments[4]
+        sp2 += '/'
+        sp2 += segments[5]
 
-       sp3 = ''
-       sp3 += segments[0]
-       sp3 += '/'
-       sp3 += segments[1]
-       sp3 += '/'
-       sp3 += segments[2]
-       sp3 += '\\'
-       sp3 += segments[3]
-       sp3 += '/'
-       sp3 += segments[4]
-       sp3 += '/'
-       sp3 += segments[5]
+        sp3 = ''
+        sp3 += segments[0]
+        sp3 += '/'
+        sp3 += segments[1]
+        sp3 += '/'
+        sp3 += segments[2]
+        sp3 += '\\'
+        sp3 += segments[3]
+        sp3 += '/'
+        sp3 += segments[4]
+        sp3 += '/'
+        sp3 += segments[5]
 
-       sp4 = ''
-       sp4 += segments[0]
-       sp4 += '/'
-       sp4 += segments[1]
-       sp4 += '\\'
-       sp4 += segments[2]
-       sp4 += '/'
-       sp4 += segments[3]
-       sp4 += '/'
-       sp4 += segments[4]
-       sp4 += '/'
-       sp4 += segments[5]
+        sp4 = ''
+        sp4 += segments[0]
+        sp4 += '/'
+        sp4 += segments[1]
+        sp4 += '\\'
+        sp4 += segments[2]
+        sp4 += '/'
+        sp4 += segments[3]
+        sp4 += '/'
+        sp4 += segments[4]
+        sp4 += '/'
+        sp4 += segments[5]
 
-       sp5 = ''
-       sp5 += segments[0]
-       sp5 += '/'
-       sp5 += segments[1]
-       sp5 += '/'
-       sp5 += segments[2]
-       sp5 += '/'
-       sp5 += segments[3]
-       sp5 += '\\'
-       sp5 += segments[4]
-       sp5 += '\\'
-       sp5 += segments[5]
+        sp5 = ''
+        sp5 += segments[0]
+        sp5 += '/'
+        sp5 += segments[1]
+        sp5 += '/'
+        sp5 += segments[2]
+        sp5 += '/'
+        sp5 += segments[3]
+        sp5 += '\\'
+        sp5 += segments[4]
+        sp5 += '\\'
+        sp5 += segments[5]
 
-       sp6 = ''
-       sp6 += segments[0]
-       sp6 += '/'
-       sp6 += segments[1]
-       sp6 += '/'
-       sp6 += segments[2]
-       sp6 += '\\'
-       sp6 += segments[3]
-       sp6 += '/'
-       sp6 += segments[4]
-       sp6 += '\\'
-       sp6 += segments[5]
+        sp6 = ''
+        sp6 += segments[0]
+        sp6 += '/'
+        sp6 += segments[1]
+        sp6 += '/'
+        sp6 += segments[2]
+        sp6 += '\\'
+        sp6 += segments[3]
+        sp6 += '/'
+        sp6 += segments[4]
+        sp6 += '\\'
+        sp6 += segments[5]
 
-       sp7 = ''
-       sp7 += segments[0]
-       sp7 += '/'
-       sp7 += segments[1]
-       sp7 += '\\'
-       sp7 += segments[2]
-       sp7 += '/'
-       sp7 += segments[3]
-       sp7 += '/'
-       sp7 += segments[4]
-       sp7 += '\\'
-       sp7 += segments[5]
+        sp7 = ''
+        sp7 += segments[0]
+        sp7 += '/'
+        sp7 += segments[1]
+        sp7 += '\\'
+        sp7 += segments[2]
+        sp7 += '/'
+        sp7 += segments[3]
+        sp7 += '/'
+        sp7 += segments[4]
+        sp7 += '\\'
+        sp7 += segments[5]
 
-       sp8 = ''
-       sp8 += segments[0]
-       sp8 += '/'
-       sp8 += segments[1]
-       sp8 += '/'
-       sp8 += segments[2]
-       sp8 += '\\'
-       sp8 += segments[3]
-       sp8 += '\\'
-       sp8 += segments[4]
-       sp8 += '/'
-       sp8 += segments[5]
+        sp8 = ''
+        sp8 += segments[0]
+        sp8 += '/'
+        sp8 += segments[1]
+        sp8 += '/'
+        sp8 += segments[2]
+        sp8 += '\\'
+        sp8 += segments[3]
+        sp8 += '\\'
+        sp8 += segments[4]
+        sp8 += '/'
+        sp8 += segments[5]
 
-       sp9 = ''
-       sp9 += segments[0]
-       sp9 += '/'
-       sp9 += segments[1]
-       sp9 += '\\'
-       sp9 += segments[2]
-       sp9 += '/'
-       sp9 += segments[3]
-       sp9 += '\\'
-       sp9 += segments[4]
-       sp9 += '/'
-       sp9 += segments[5]
+        sp9 = ''
+        sp9 += segments[0]
+        sp9 += '/'
+        sp9 += segments[1]
+        sp9 += '\\'
+        sp9 += segments[2]
+        sp9 += '/'
+        sp9 += segments[3]
+        sp9 += '\\'
+        sp9 += segments[4]
+        sp9 += '/'
+        sp9 += segments[5]
 
-       sp10 = ''
-       sp10 += segments[0]
-       sp10 += '/'
-       sp10 += segments[1]
-       sp10 += '\\'
-       sp10 += segments[2]
-       sp10 += '\\'
-       sp10 += segments[3]
-       sp10 += '/'
-       sp10 += segments[4]
-       sp10 += '/'
-       sp10 += segments[5]
+        sp10 = ''
+        sp10 += segments[0]
+        sp10 += '/'
+        sp10 += segments[1]
+        sp10 += '\\'
+        sp10 += segments[2]
+        sp10 += '\\'
+        sp10 += segments[3]
+        sp10 += '/'
+        sp10 += segments[4]
+        sp10 += '/'
+        sp10 += segments[5]
 
-       sp11 = ''
-       sp11 += segments[0]
-       sp11 += '/'
-       sp11 += segments[1]
-       sp11 += '/'
-       sp11 += segments[2]
-       sp11 += '\\'
-       sp11 += segments[3]
-       sp11 += '\\'
-       sp11 += segments[4]
-       sp11 += '\\'
-       sp11 += segments[5]
+        sp11 = ''
+        sp11 += segments[0]
+        sp11 += '/'
+        sp11 += segments[1]
+        sp11 += '/'
+        sp11 += segments[2]
+        sp11 += '\\'
+        sp11 += segments[3]
+        sp11 += '\\'
+        sp11 += segments[4]
+        sp11 += '\\'
+        sp11 += segments[5]
 
-       sp12 = ''
-       sp12 += segments[0]
-       sp12 += '/'
-       sp12 += segments[1]
-       sp12 += '\\'
-       sp12 += segments[2]
-       sp12 += '/'
-       sp12 += segments[3]
-       sp12 += '\\'
-       sp12 += segments[4]
-       sp12 += '\\'
-       sp12 += segments[5]
+        sp12 = ''
+        sp12 += segments[0]
+        sp12 += '/'
+        sp12 += segments[1]
+        sp12 += '\\'
+        sp12 += segments[2]
+        sp12 += '/'
+        sp12 += segments[3]
+        sp12 += '\\'
+        sp12 += segments[4]
+        sp12 += '\\'
+        sp12 += segments[5]
 
-       sp13 = ''
-       sp13 += segments[0]
-       sp13 += '/'
-       sp13 += segments[1]
-       sp13 += '\\'
-       sp13 += segments[2]
-       sp13 += '\\'
-       sp13 += segments[3]
-       sp13 += '/'
-       sp13 += segments[4]
-       sp13 += '\\'
-       sp13 += segments[5]
+        sp13 = ''
+        sp13 += segments[0]
+        sp13 += '/'
+        sp13 += segments[1]
+        sp13 += '\\'
+        sp13 += segments[2]
+        sp13 += '\\'
+        sp13 += segments[3]
+        sp13 += '/'
+        sp13 += segments[4]
+        sp13 += '\\'
+        sp13 += segments[5]
 
-       sp14 = ''
-       sp14 += segments[0]
-       sp14 += '/'
-       sp14 += segments[1]
-       sp14 += '\\'
-       sp14 += segments[2]
-       sp14 += '\\'
-       sp14 += segments[3]
-       sp14 += '\\'
-       sp14 += segments[4]
-       sp14 += '/'
-       sp14 += segments[5]
+        sp14 = ''
+        sp14 += segments[0]
+        sp14 += '/'
+        sp14 += segments[1]
+        sp14 += '\\'
+        sp14 += segments[2]
+        sp14 += '\\'
+        sp14 += segments[3]
+        sp14 += '\\'
+        sp14 += segments[4]
+        sp14 += '/'
+        sp14 += segments[5]
 
-       sp15 = ''
-       sp15 += segments[0]
-       sp15 += '/'
-       sp15 += segments[1]
-       sp15 += '\\'
-       sp15 += segments[2]
-       sp15 += '\\'
-       sp15 += segments[3]
-       sp15 += '\\'
-       sp15 += segments[4]
-       sp15 += '\\'
-       sp15 += segments[5]
+        sp15 = ''
+        sp15 += segments[0]
+        sp15 += '/'
+        sp15 += segments[1]
+        sp15 += '\\'
+        sp15 += segments[2]
+        sp15 += '\\'
+        sp15 += segments[3]
+        sp15 += '\\'
+        sp15 += segments[4]
+        sp15 += '\\'
+        sp15 += segments[5]
 
     elif nslash == 6:
-       sp0 = ''
-       sp0 += segments[0]
-       sp0 += '/'
-       sp0 += segments[1]
-       sp0 += '/'
-       sp0 += segments[2]
-       sp0 += '/'
-       sp0 += segments[3]
-       sp0 += '/'
-       sp0 += segments[4]
-       sp0 += '/'
-       sp0 += segments[5]
-       sp0 += '/'
-       sp0 += segments[6]
+        sp0 = ''
+        sp0 += segments[0]
+        sp0 += '/'
+        sp0 += segments[1]
+        sp0 += '/'
+        sp0 += segments[2]
+        sp0 += '/'
+        sp0 += segments[3]
+        sp0 += '/'
+        sp0 += segments[4]
+        sp0 += '/'
+        sp0 += segments[5]
+        sp0 += '/'
+        sp0 += segments[6]
 
-       sp1 = ''
-       sp1 += segments[0]
-       sp1 += '/'
-       sp1 += segments[1]
-       sp1 += '/'
-       sp1 += segments[2]
-       sp1 += '/'
-       sp1 += segments[3]
-       sp1 += '/'
-       sp1 += segments[4]
-       sp1 += '/'
-       sp1 += segments[5]
-       sp1 += '\\'
-       sp1 += segments[6]
+        sp1 = ''
+        sp1 += segments[0]
+        sp1 += '/'
+        sp1 += segments[1]
+        sp1 += '/'
+        sp1 += segments[2]
+        sp1 += '/'
+        sp1 += segments[3]
+        sp1 += '/'
+        sp1 += segments[4]
+        sp1 += '/'
+        sp1 += segments[5]
+        sp1 += '\\'
+        sp1 += segments[6]
 
-       sp2 = ''
-       sp2 += segments[0]
-       sp2 += '/'
-       sp2 += segments[1]
-       sp2 += '/'
-       sp2 += segments[2]
-       sp2 += '/'
-       sp2 += segments[3]
-       sp2 += '/'
-       sp2 += segments[4]
-       sp2 += '\\'
-       sp2 += segments[5]
-       sp2 += '/'
-       sp2 += segments[6]
+        sp2 = ''
+        sp2 += segments[0]
+        sp2 += '/'
+        sp2 += segments[1]
+        sp2 += '/'
+        sp2 += segments[2]
+        sp2 += '/'
+        sp2 += segments[3]
+        sp2 += '/'
+        sp2 += segments[4]
+        sp2 += '\\'
+        sp2 += segments[5]
+        sp2 += '/'
+        sp2 += segments[6]
 
-       sp3 = ''
-       sp3 += segments[0]
-       sp3 += '/'
-       sp3 += segments[1]
-       sp3 += '/'
-       sp3 += segments[2]
-       sp3 += '/'
-       sp3 += segments[3]
-       sp3 += '\\'
-       sp3 += segments[4]
-       sp3 += '/'
-       sp3 += segments[5]
-       sp3 += '/'
-       sp3 += segments[6]
+        sp3 = ''
+        sp3 += segments[0]
+        sp3 += '/'
+        sp3 += segments[1]
+        sp3 += '/'
+        sp3 += segments[2]
+        sp3 += '/'
+        sp3 += segments[3]
+        sp3 += '\\'
+        sp3 += segments[4]
+        sp3 += '/'
+        sp3 += segments[5]
+        sp3 += '/'
+        sp3 += segments[6]
 
-       sp4 = ''
-       sp4 += segments[0]
-       sp4 += '/'
-       sp4 += segments[1]
-       sp4 += '/'
-       sp4 += segments[2]
-       sp4 += '\\'
-       sp4 += segments[3]
-       sp4 += '/'
-       sp4 += segments[4]
-       sp4 += '/'
-       sp4 += segments[5]
-       sp4 += '/'
-       sp4 += segments[6]
+        sp4 = ''
+        sp4 += segments[0]
+        sp4 += '/'
+        sp4 += segments[1]
+        sp4 += '/'
+        sp4 += segments[2]
+        sp4 += '\\'
+        sp4 += segments[3]
+        sp4 += '/'
+        sp4 += segments[4]
+        sp4 += '/'
+        sp4 += segments[5]
+        sp4 += '/'
+        sp4 += segments[6]
 
-       sp5 = ''
-       sp5 += segments[0]
-       sp5 += '/'
-       sp5 += segments[1]
-       sp5 += '\\'
-       sp5 += segments[2]
-       sp5 += '/'
-       sp5 += segments[3]
-       sp5 += '/'
-       sp5 += segments[4]
-       sp5 += '/'
-       sp5 += segments[5]
-       sp5 += '/'
-       sp5 += segments[6]
+        sp5 = ''
+        sp5 += segments[0]
+        sp5 += '/'
+        sp5 += segments[1]
+        sp5 += '\\'
+        sp5 += segments[2]
+        sp5 += '/'
+        sp5 += segments[3]
+        sp5 += '/'
+        sp5 += segments[4]
+        sp5 += '/'
+        sp5 += segments[5]
+        sp5 += '/'
+        sp5 += segments[6]
 
-       sp6 = ''
-       sp6 += segments[0]
-       sp6 += '/'
-       sp6 += segments[1]
-       sp6 += '/'
-       sp6 += segments[2]
-       sp6 += '/'
-       sp6 += segments[3]
-       sp6 += '/'
-       sp6 += segments[4]
-       sp6 += '\\'
-       sp6 += segments[5]
-       sp6 += '\\'
-       sp6 += segments[6]
+        sp6 = ''
+        sp6 += segments[0]
+        sp6 += '/'
+        sp6 += segments[1]
+        sp6 += '/'
+        sp6 += segments[2]
+        sp6 += '/'
+        sp6 += segments[3]
+        sp6 += '/'
+        sp6 += segments[4]
+        sp6 += '\\'
+        sp6 += segments[5]
+        sp6 += '\\'
+        sp6 += segments[6]
 
-       sp7 = ''
-       sp7 += segments[0]
-       sp7 += '/'
-       sp7 += segments[1]
-       sp7 += '/'
-       sp7 += segments[2]
-       sp7 += '/'
-       sp7 += segments[3]
-       sp7 += '\\'
-       sp7 += segments[4]
-       sp7 += '/'
-       sp7 += segments[5]
-       sp7 += '\\'
-       sp7 += segments[6]
+        sp7 = ''
+        sp7 += segments[0]
+        sp7 += '/'
+        sp7 += segments[1]
+        sp7 += '/'
+        sp7 += segments[2]
+        sp7 += '/'
+        sp7 += segments[3]
+        sp7 += '\\'
+        sp7 += segments[4]
+        sp7 += '/'
+        sp7 += segments[5]
+        sp7 += '\\'
+        sp7 += segments[6]
 
-       sp8 = ''
-       sp8 += segments[0]
-       sp8 += '/'
-       sp8 += segments[1]
-       sp8 += '/'
-       sp8 += segments[2]
-       sp8 += '\\'
-       sp8 += segments[3]
-       sp8 += '/'
-       sp8 += segments[4]
-       sp8 += '/'
-       sp8 += segments[5]
-       sp8 += '\\'
-       sp8 += segments[6]
+        sp8 = ''
+        sp8 += segments[0]
+        sp8 += '/'
+        sp8 += segments[1]
+        sp8 += '/'
+        sp8 += segments[2]
+        sp8 += '\\'
+        sp8 += segments[3]
+        sp8 += '/'
+        sp8 += segments[4]
+        sp8 += '/'
+        sp8 += segments[5]
+        sp8 += '\\'
+        sp8 += segments[6]
 
-       sp9 = ''
-       sp9 += segments[0]
-       sp9 += '/'
-       sp9 += segments[1]
-       sp9 += '\\'
-       sp9 += segments[2]
-       sp9 += '/'
-       sp9 += segments[3]
-       sp9 += '/'
-       sp9 += segments[4]
-       sp9 += '/'
-       sp9 += segments[5]
-       sp9 += '\\'
-       sp9 += segments[6]
+        sp9 = ''
+        sp9 += segments[0]
+        sp9 += '/'
+        sp9 += segments[1]
+        sp9 += '\\'
+        sp9 += segments[2]
+        sp9 += '/'
+        sp9 += segments[3]
+        sp9 += '/'
+        sp9 += segments[4]
+        sp9 += '/'
+        sp9 += segments[5]
+        sp9 += '\\'
+        sp9 += segments[6]
 
-       sp10 = ''
-       sp10 += segments[0]
-       sp10 += '/'
-       sp10 += segments[1]
-       sp10 += '/'
-       sp10 += segments[2]
-       sp10 += '/'
-       sp10 += segments[3]
-       sp10 += '\\'
-       sp10 += segments[4]
-       sp10 += '\\'
-       sp10 += segments[5]
-       sp10 += '/'
-       sp10 += segments[6]
+        sp10 = ''
+        sp10 += segments[0]
+        sp10 += '/'
+        sp10 += segments[1]
+        sp10 += '/'
+        sp10 += segments[2]
+        sp10 += '/'
+        sp10 += segments[3]
+        sp10 += '\\'
+        sp10 += segments[4]
+        sp10 += '\\'
+        sp10 += segments[5]
+        sp10 += '/'
+        sp10 += segments[6]
 
-       sp11 = ''
-       sp11 += segments[0]
-       sp11 += '/'
-       sp11 += segments[1]
-       sp11 += '/'
-       sp11 += segments[2]
-       sp11 += '\\'
-       sp11 += segments[3]
-       sp11 += '/'
-       sp11 += segments[4]
-       sp11 += '\\'
-       sp11 += segments[5]
-       sp11 += '/'
-       sp11 += segments[6]
+        sp11 = ''
+        sp11 += segments[0]
+        sp11 += '/'
+        sp11 += segments[1]
+        sp11 += '/'
+        sp11 += segments[2]
+        sp11 += '\\'
+        sp11 += segments[3]
+        sp11 += '/'
+        sp11 += segments[4]
+        sp11 += '\\'
+        sp11 += segments[5]
+        sp11 += '/'
+        sp11 += segments[6]
 
-       sp12 = ''
-       sp12 += segments[0]
-       sp12 += '/'
-       sp12 += segments[1]
-       sp12 += '\\'
-       sp12 += segments[2]
-       sp12 += '/'
-       sp12 += segments[3]
-       sp12 += '/'
-       sp12 += segments[4]
-       sp12 += '\\'
-       sp12 += segments[5]
-       sp12 += '/'
-       sp12 += segments[6]
+        sp12 = ''
+        sp12 += segments[0]
+        sp12 += '/'
+        sp12 += segments[1]
+        sp12 += '\\'
+        sp12 += segments[2]
+        sp12 += '/'
+        sp12 += segments[3]
+        sp12 += '/'
+        sp12 += segments[4]
+        sp12 += '\\'
+        sp12 += segments[5]
+        sp12 += '/'
+        sp12 += segments[6]
 
-       sp13 = ''
-       sp13 += segments[0]
-       sp13 += '/'
-       sp13 += segments[1]
-       sp13 += '/'
-       sp13 += segments[2]
-       sp13 += '\\'
-       sp13 += segments[3]
-       sp13 += '\\'
-       sp13 += segments[4]
-       sp13 += '/'
-       sp13 += segments[5]
-       sp13 += '/'
-       sp13 += segments[6]
+        sp13 = ''
+        sp13 += segments[0]
+        sp13 += '/'
+        sp13 += segments[1]
+        sp13 += '/'
+        sp13 += segments[2]
+        sp13 += '\\'
+        sp13 += segments[3]
+        sp13 += '\\'
+        sp13 += segments[4]
+        sp13 += '/'
+        sp13 += segments[5]
+        sp13 += '/'
+        sp13 += segments[6]
 
-       sp14 = ''
-       sp14 += segments[0]
-       sp14 += '/'
-       sp14 += segments[1]
-       sp14 += '\\'
-       sp14 += segments[2]
-       sp14 += '/'
-       sp14 += segments[3]
-       sp14 += '\\'
-       sp14 += segments[4]
-       sp14 += '/'
-       sp14 += segments[5]
-       sp14 += '/'
-       sp14 += segments[6]
+        sp14 = ''
+        sp14 += segments[0]
+        sp14 += '/'
+        sp14 += segments[1]
+        sp14 += '\\'
+        sp14 += segments[2]
+        sp14 += '/'
+        sp14 += segments[3]
+        sp14 += '\\'
+        sp14 += segments[4]
+        sp14 += '/'
+        sp14 += segments[5]
+        sp14 += '/'
+        sp14 += segments[6]
 
-       sp15 = ''
-       sp15 += segments[0]
-       sp15 += '/'
-       sp15 += segments[1]
-       sp15 += '\\'
-       sp15 += segments[2]
-       sp15 += '\\'
-       sp15 += segments[3]
-       sp15 += '/'
-       sp15 += segments[4]
-       sp15 += '/'
-       sp15 += segments[5]
-       sp15 += '/'
-       sp15 += segments[6]
+        sp15 = ''
+        sp15 += segments[0]
+        sp15 += '/'
+        sp15 += segments[1]
+        sp15 += '\\'
+        sp15 += segments[2]
+        sp15 += '\\'
+        sp15 += segments[3]
+        sp15 += '/'
+        sp15 += segments[4]
+        sp15 += '/'
+        sp15 += segments[5]
+        sp15 += '/'
+        sp15 += segments[6]
 
-       sp16 = ''
-       sp16 += segments[0]
-       sp16 += '/'
-       sp16 += segments[1]
-       sp16 += '/'
-       sp16 += segments[2]
-       sp16 += '/'
-       sp16 += segments[3]
-       sp16 += '\\'
-       sp16 += segments[4]
-       sp16 += '\\'
-       sp16 += segments[5]
-       sp16 += '\\'
-       sp16 += segments[6]
+        sp16 = ''
+        sp16 += segments[0]
+        sp16 += '/'
+        sp16 += segments[1]
+        sp16 += '/'
+        sp16 += segments[2]
+        sp16 += '/'
+        sp16 += segments[3]
+        sp16 += '\\'
+        sp16 += segments[4]
+        sp16 += '\\'
+        sp16 += segments[5]
+        sp16 += '\\'
+        sp16 += segments[6]
 
-       sp17 = ''
-       sp17 += segments[0]
-       sp17 += '/'
-       sp17 += segments[1]
-       sp17 += '/'
-       sp17 += segments[2]
-       sp17 += '\\'
-       sp17 += segments[3]
-       sp17 += '/'
-       sp17 += segments[4]
-       sp17 += '\\'
-       sp17 += segments[5]
-       sp17 += '\\'
-       sp17 += segments[6]
+        sp17 = ''
+        sp17 += segments[0]
+        sp17 += '/'
+        sp17 += segments[1]
+        sp17 += '/'
+        sp17 += segments[2]
+        sp17 += '\\'
+        sp17 += segments[3]
+        sp17 += '/'
+        sp17 += segments[4]
+        sp17 += '\\'
+        sp17 += segments[5]
+        sp17 += '\\'
+        sp17 += segments[6]
 
-       sp18 = ''
-       sp18 += segments[0]
-       sp18 += '/'
-       sp18 += segments[1]
-       sp18 += '\\'
-       sp18 += segments[2]
-       sp18 += '/'
-       sp18 += segments[3]
-       sp18 += '/'
-       sp18 += segments[4]
-       sp18 += '\\'
-       sp18 += segments[5]
-       sp18 += '\\'
-       sp18 += segments[6]
+        sp18 = ''
+        sp18 += segments[0]
+        sp18 += '/'
+        sp18 += segments[1]
+        sp18 += '\\'
+        sp18 += segments[2]
+        sp18 += '/'
+        sp18 += segments[3]
+        sp18 += '/'
+        sp18 += segments[4]
+        sp18 += '\\'
+        sp18 += segments[5]
+        sp18 += '\\'
+        sp18 += segments[6]
 
-       sp19 = ''
-       sp19 += segments[0]
-       sp19 += '/'
-       sp19 += segments[1]
-       sp19 += '/'
-       sp19 += segments[2]
-       sp19 += '\\'
-       sp19 += segments[3]
-       sp19 += '\\'
-       sp19 += segments[4]
-       sp19 += '/'
-       sp19 += segments[5]
-       sp19 += '\\'
-       sp19 += segments[6]
+        sp19 = ''
+        sp19 += segments[0]
+        sp19 += '/'
+        sp19 += segments[1]
+        sp19 += '/'
+        sp19 += segments[2]
+        sp19 += '\\'
+        sp19 += segments[3]
+        sp19 += '\\'
+        sp19 += segments[4]
+        sp19 += '/'
+        sp19 += segments[5]
+        sp19 += '\\'
+        sp19 += segments[6]
 
-       sp20 = ''
-       sp20 += segments[0]
-       sp20 += '/'
-       sp20 += segments[1]
-       sp20 += '\\'
-       sp20 += segments[2]
-       sp20 += '/'
-       sp20 += segments[3]
-       sp20 += '\\'
-       sp20 += segments[4]
-       sp20 += '/'
-       sp20 += segments[5]
-       sp20 += '\\'
-       sp20 += segments[6]
+        sp20 = ''
+        sp20 += segments[0]
+        sp20 += '/'
+        sp20 += segments[1]
+        sp20 += '\\'
+        sp20 += segments[2]
+        sp20 += '/'
+        sp20 += segments[3]
+        sp20 += '\\'
+        sp20 += segments[4]
+        sp20 += '/'
+        sp20 += segments[5]
+        sp20 += '\\'
+        sp20 += segments[6]
 
-       sp21 = ''
-       sp21 += segments[0]
-       sp21 += '/'
-       sp21 += segments[1]
-       sp21 += '\\'
-       sp21 += segments[2]
-       sp21 += '\\'
-       sp21 += segments[3]
-       sp21 += '/'
-       sp21 += segments[4]
-       sp21 += '/'
-       sp21 += segments[5]
-       sp21 += '\\'
-       sp21 += segments[6]
+        sp21 = ''
+        sp21 += segments[0]
+        sp21 += '/'
+        sp21 += segments[1]
+        sp21 += '\\'
+        sp21 += segments[2]
+        sp21 += '\\'
+        sp21 += segments[3]
+        sp21 += '/'
+        sp21 += segments[4]
+        sp21 += '/'
+        sp21 += segments[5]
+        sp21 += '\\'
+        sp21 += segments[6]
 
-       sp22 = ''
-       sp22 += segments[0]
-       sp22 += '/'
-       sp22 += segments[1]
-       sp22 += '/'
-       sp22 += segments[2]
-       sp22 += '\\'
-       sp22 += segments[3]
-       sp22 += '\\'
-       sp22 += segments[4]
-       sp22 += '\\'
-       sp22 += segments[5]
-       sp22 += '/'
-       sp22 += segments[6]
+        sp22 = ''
+        sp22 += segments[0]
+        sp22 += '/'
+        sp22 += segments[1]
+        sp22 += '/'
+        sp22 += segments[2]
+        sp22 += '\\'
+        sp22 += segments[3]
+        sp22 += '\\'
+        sp22 += segments[4]
+        sp22 += '\\'
+        sp22 += segments[5]
+        sp22 += '/'
+        sp22 += segments[6]
 
-       sp23 = ''
-       sp23 += segments[0]
-       sp23 += '/'
-       sp23 += segments[1]
-       sp23 += '\\'
-       sp23 += segments[2]
-       sp23 += '/'
-       sp23 += segments[3]
-       sp23 += '\\'
-       sp23 += segments[4]
-       sp23 += '\\'
-       sp23 += segments[5]
-       sp23 += '/'
-       sp23 += segments[6]
+        sp23 = ''
+        sp23 += segments[0]
+        sp23 += '/'
+        sp23 += segments[1]
+        sp23 += '\\'
+        sp23 += segments[2]
+        sp23 += '/'
+        sp23 += segments[3]
+        sp23 += '\\'
+        sp23 += segments[4]
+        sp23 += '\\'
+        sp23 += segments[5]
+        sp23 += '/'
+        sp23 += segments[6]
 
-       sp24 = ''
-       sp24 += segments[0]
-       sp24 += '/'
-       sp24 += segments[1]
-       sp24 += '\\'
-       sp24 += segments[2]
-       sp24 += '\\'
-       sp24 += segments[3]
-       sp24 += '/'
-       sp24 += segments[4]
-       sp24 += '\\'
-       sp24 += segments[5]
-       sp24 += '/'
-       sp24 += segments[6]
+        sp24 = ''
+        sp24 += segments[0]
+        sp24 += '/'
+        sp24 += segments[1]
+        sp24 += '\\'
+        sp24 += segments[2]
+        sp24 += '\\'
+        sp24 += segments[3]
+        sp24 += '/'
+        sp24 += segments[4]
+        sp24 += '\\'
+        sp24 += segments[5]
+        sp24 += '/'
+        sp24 += segments[6]
 
-       sp25 = ''
-       sp25 += segments[0]
-       sp25 += '/'
-       sp25 += segments[1]
-       sp25 += '\\'
-       sp25 += segments[2]
-       sp25 += '\\'
-       sp25 += segments[3]
-       sp25 += '\\'
-       sp25 += segments[4]
-       sp25 += '/'
-       sp25 += segments[5]
-       sp25 += '/'
-       sp25 += segments[6]
+        sp25 = ''
+        sp25 += segments[0]
+        sp25 += '/'
+        sp25 += segments[1]
+        sp25 += '\\'
+        sp25 += segments[2]
+        sp25 += '\\'
+        sp25 += segments[3]
+        sp25 += '\\'
+        sp25 += segments[4]
+        sp25 += '/'
+        sp25 += segments[5]
+        sp25 += '/'
+        sp25 += segments[6]
 
-       sp26 = ''
-       sp26 += segments[0]
-       sp26 += '/'
-       sp26 += segments[1]
-       sp26 += '/'
-       sp26 += segments[2]
-       sp26 += '\\'
-       sp26 += segments[3]
-       sp26 += '\\'
-       sp26 += segments[4]
-       sp26 += '\\'
-       sp26 += segments[5]
-       sp26 += '\\'
-       sp26 += segments[6]
+        sp26 = ''
+        sp26 += segments[0]
+        sp26 += '/'
+        sp26 += segments[1]
+        sp26 += '/'
+        sp26 += segments[2]
+        sp26 += '\\'
+        sp26 += segments[3]
+        sp26 += '\\'
+        sp26 += segments[4]
+        sp26 += '\\'
+        sp26 += segments[5]
+        sp26 += '\\'
+        sp26 += segments[6]
 
-       sp27 = ''
-       sp27 += segments[0]
-       sp27 += '/'
-       sp27 += segments[1]
-       sp27 += '\\'
-       sp27 += segments[2]
-       sp27 += '/'
-       sp27 += segments[3]
-       sp27 += '\\'
-       sp27 += segments[4]
-       sp27 += '\\'
-       sp27 += segments[5]
-       sp27 += '\\'
-       sp27 += segments[6]
+        sp27 = ''
+        sp27 += segments[0]
+        sp27 += '/'
+        sp27 += segments[1]
+        sp27 += '\\'
+        sp27 += segments[2]
+        sp27 += '/'
+        sp27 += segments[3]
+        sp27 += '\\'
+        sp27 += segments[4]
+        sp27 += '\\'
+        sp27 += segments[5]
+        sp27 += '\\'
+        sp27 += segments[6]
 
-       sp28 = ''
-       sp28 += segments[0]
-       sp28 += '/'
-       sp28 += segments[1]
-       sp28 += '\\'
-       sp28 += segments[2]
-       sp28 += '\\'
-       sp28 += segments[3]
-       sp28 += '/'
-       sp28 += segments[4]
-       sp28 += '\\'
-       sp28 += segments[5]
-       sp28 += '\\'
-       sp28 += segments[6]
+        sp28 = ''
+        sp28 += segments[0]
+        sp28 += '/'
+        sp28 += segments[1]
+        sp28 += '\\'
+        sp28 += segments[2]
+        sp28 += '\\'
+        sp28 += segments[3]
+        sp28 += '/'
+        sp28 += segments[4]
+        sp28 += '\\'
+        sp28 += segments[5]
+        sp28 += '\\'
+        sp28 += segments[6]
 
-       sp29 = ''
-       sp29 += segments[0]
-       sp29 += '/'
-       sp29 += segments[1]
-       sp29 += '\\'
-       sp29 += segments[2]
-       sp29 += '\\'
-       sp29 += segments[3]
-       sp29 += '\\'
-       sp29 += segments[4]
-       sp29 += '/'
-       sp29 += segments[5]
-       sp29 += '\\'
-       sp29 += segments[6]
+        sp29 = ''
+        sp29 += segments[0]
+        sp29 += '/'
+        sp29 += segments[1]
+        sp29 += '\\'
+        sp29 += segments[2]
+        sp29 += '\\'
+        sp29 += segments[3]
+        sp29 += '\\'
+        sp29 += segments[4]
+        sp29 += '/'
+        sp29 += segments[5]
+        sp29 += '\\'
+        sp29 += segments[6]
 
-       sp30 = ''
-       sp30 += segments[0]
-       sp30 += '\\'
-       sp30 += segments[1]
-       sp30 += '\\'
-       sp30 += segments[2]
-       sp30 += '\\'
-       sp30 += segments[3]
-       sp30 += '\\'
-       sp30 += segments[4]
-       sp30 += '\\'
-       sp30 += segments[5]
-       sp30 += '/'
-       sp30 += segments[6]
+        sp30 = ''
+        sp30 += segments[0]
+        sp30 += '\\'
+        sp30 += segments[1]
+        sp30 += '\\'
+        sp30 += segments[2]
+        sp30 += '\\'
+        sp30 += segments[3]
+        sp30 += '\\'
+        sp30 += segments[4]
+        sp30 += '\\'
+        sp30 += segments[5]
+        sp30 += '/'
+        sp30 += segments[6]
 
-       sp31 = ''
-       sp31 += segments[0]
-       sp31 += '/'
-       sp31 += segments[1]
-       sp31 += '\\'
-       sp31 += segments[2]
-       sp31 += '\\'
-       sp31 += segments[3]
-       sp31 += '\\'
-       sp31 += segments[4]
-       sp31 += '\\'
-       sp31 += segments[5]
-       sp31 += '\\'
-       sp31 += segments[6]
+        sp31 = ''
+        sp31 += segments[0]
+        sp31 += '/'
+        sp31 += segments[1]
+        sp31 += '\\'
+        sp31 += segments[2]
+        sp31 += '\\'
+        sp31 += segments[3]
+        sp31 += '\\'
+        sp31 += segments[4]
+        sp31 += '\\'
+        sp31 += segments[5]
+        sp31 += '\\'
+        sp31 += segments[6]
     if nslash > 6:
         logging.debug('{0} slashes in {1}'.format(nslash, s))
         logging.debug('Can only work with 6 or fewer slashes')
     if '_m' in s:
         mult = get_mult(s)
         s3 = get_slabel(s2, mult)
-    if nslash  == 0:
+    if nslash == 0:
         isomers = [s3]
-    if nslash  > 0:
+    if nslash > 0:
         xyz0 = get_xyz(sp0)
         spp0 = get_smiles(xyz0)
         if mult:
@@ -1490,7 +1498,7 @@ def get_isomers(s):
 
     if nchiral > 0:
         logging.debug('{0} chiral centers in {1}'.format(nchiral, s))
-    if len(isomers)==1:
+    if len(isomers) == 1:
         if '_m' in s:
             #isomers = [s]
             isomers = [get_slabel(isomers[0])]
@@ -1498,7 +1506,8 @@ def get_isomers(s):
             mult = get_mult(s)
             slabel = get_slabel(isomer[0], mult)
             #slabel = get_slabel(s,mult)
-            logging.debug("Multiplicity {} assigned by open babel for {}".format(mult, s))
+            logging.debug(
+                "Multiplicity {} assigned by open babel for {}".format(mult, s))
             isomers = [slabel]
     return isomers
 
@@ -1682,7 +1691,7 @@ def get_xyz_dictionary(x):
     d['coordinates_unit'] = 'Angstrom'
     d['atom_symbols'] = symbols
     d['atom_numbers'] = get_atomic_numbers(xyz)
-    d['atom_masses']  = get_atomic_masses(xyz)
+    d['atom_masses'] = get_atomic_masses(xyz)
     d['atom_masses_unit'] = 'amu'
     return d
 
@@ -1788,7 +1797,7 @@ def get_zmat(x, qchem=False):
         zmat[0] = zmat[0].split()[0]
         zmat = '\n'.join(zmat)
     else:
-        zmat =  '\n'.join(mol.write('gzmat').splitlines()[5:])
+        zmat = '\n'.join(mol.write('gzmat').splitlines()[5:])
     return zmat
 
 
@@ -1899,7 +1908,7 @@ def get_smiles_mult(slabel):
     return smi, int(mult)
 
 
-def get_smiles_path(x, mult=0, db= 'database'):
+def get_smiles_path(x, mult=0, db='database'):
     """
     Returns a smiles based path for database directory.
     Note that smiles strings are not unique. Even the
@@ -1960,9 +1969,9 @@ def get_smiles_filename(x):
         s = x.write(format='can').strip().split()[0]
     elif isinstance(x, str):
         if '_e' in x:
-           x, ene = x.split('_e')
+            x, ene = x.split('_e')
         if '_s' in x:
-           x, sym = x.split('_s')
+            x, sym = x.split('_s')
         s = x
     else:
         s = ''
@@ -2031,11 +2040,12 @@ def set_xyz(x, coords):
     mol.OBMol.SetCoordinates(openbabel.double_array(coords))
     return mol
 
+
 try:
     import cirpy
 except:
     r = 'cirpy module not installed, see http://cirpy.readthedocs.io/'
-    cirpy=None
+    cirpy = None
     pass
 if cirpy:
     def fetch_smiles(s):
@@ -2047,7 +2057,6 @@ if cirpy:
         """
         return cirpy.resolve(s, 'smiles')
 
-
     def fetch_inchi(s):
         """
         Returns the smiles string for a given chemical name.
@@ -2055,8 +2064,7 @@ if cirpy:
         >>> fetch_inchi('methane')
         'InChI=1/CH4/h1H4'
         """
-        return  cirpy.resolve(s, 'inchi')
-
+        return cirpy.resolve(s, 'inchi')
 
     def fetch_IUPAC_name(s):
         """
@@ -2072,10 +2080,12 @@ if cirpy:
             name = cirpy.resolve(s, 'iupac_name', resolvers=['inchi'])
         elif frm == 'xyz':
             mol = get_mol(s)
-            name = cirpy.resolve(mol.write('inchi').strip(), 'iupac_name', resolvers=['inchi'])
+            name = cirpy.resolve(mol.write('inchi').strip(),
+                                 'iupac_name', resolvers=['inchi'])
         else:
             name = None
         return name
+
 
 def get_ase_atoms_input(x):
     """
@@ -2102,8 +2112,7 @@ def get_ase_atoms_input(x):
         coords[i] = [float(c) for c in items[1:4]]
     return symbols, coords
 
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod(verbose=True)
-
-

@@ -1,10 +1,11 @@
+import qctools as qc
+import iotools as io
 import os
 import sys
 import numpy as np
 
-sys.path.insert(0,os.path.realpath(os.path.dirname(__file__)))
-import iotools as io
-import qctools as qc
+sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)))
+
 
 def gauss_xmat(filename, natoms):
     """
@@ -24,13 +25,13 @@ def gauss_xmat(filename, natoms):
 
     xmat = np.zeros((nmodes, nmodes))
     rangemod = 1
-    if nmodes%5 == 0:
-       rangemod = 0
+    if nmodes % 5 == 0:
+        rangemod = 0
     marker = 0
 
     for m in range(0, nmodes/5+rangemod):
         length = nmodes - m * 5
-        a= np.array( lines[marker+1:marker+length+1])
+        a = np.array(lines[marker+1:marker+length+1])
         for i in range(length):
             for j in range(0, len(a[i].split())-1):
                 xmat[m*5 + i, m*5 + j] = a[i].split()[j+1]
@@ -56,9 +57,9 @@ def get_freqs(filename):
     full = full.split()
     nfreqs = full[0]
     freqs = full[1:]
-    #[freq=float(freq) for freq in freqs]
+    # [freq=float(freq) for freq in freqs]
     freqs = np.array(list(map(float, freqs)))
-    a= freqs.argsort()[::-1]
+    a = freqs.argsort()[::-1]
     freqs = np.sort(freqs)[::-1]
     return freqs.tolist(), a.tolist()
 
@@ -90,6 +91,7 @@ def find_hinfreqs(proj, unproj, order):
     modes = [mode+1 for mode in order]
     return modes
 
+
 def remove_modes(xmat, modes):
     """
     Removes specified modes from anharmonic constant matrix
@@ -99,12 +101,13 @@ def remove_modes(xmat, modes):
     OUTPUTS:
     xmat  - anharmonic constant matrix with columns and rows deleted for specified modes
     """
-    modes.sort()#reverse=True)
+    modes.sort()  # reverse=True)
     modeindex = [mode-1 for mode in modes]
     for index in modeindex[::-1]:
         xmat = np.delete(xmat, index, 0)
         xmat = np.delete(xmat, index, 1)
     return xmat
+
 
 def remove_vibrots(vibrot, modes):
     """
@@ -115,7 +118,7 @@ def remove_vibrots(vibrot, modes):
     OUTPUTS:
     xmat  - anharmonic constant matrix with columns and rows deleted for specified modes
     """
-    modes.sort()#reverse=True)
+    modes.sort()  # reverse=True)
     vibrot = vibrot.splitlines()
     modeindex = [mode-1 for mode in modes]
     vibrots = []
@@ -123,6 +126,7 @@ def remove_vibrots(vibrot, modes):
         if index not in modeindex:
             vibrots.append(vibrot[index])
     return '\n'.join(vibrots)
+
 
 def gauss_anharm_inp(filename, anlevel):
     """
@@ -138,26 +142,29 @@ def gauss_anharm_inp(filename, anlevel):
     zmat = full[0].split('***************************')[2].replace('*', '')
     zmat = zmat.split('Will')[0]
     zmat = ' ' + zmat.lstrip()
-    zmat += full[0].split('-------------------------------------------')[3].replace('-', '').replace('-', '').replace('-', '').replace('\n ', '')
+    zmat += full[0].split('-------------------------------------------')[3].replace(
+        '-', '').replace('-', '').replace('-', '').replace('\n ', '')
     if not anlevel == 'ignore':
-        zmat =  zmat.split('#')[0] + ' # ' + anlevel + ' opt = internal ' + zmat.split('#')[2]
+        zmat = zmat.split('#')[0] + ' # ' + anlevel + \
+            ' opt = internal ' + zmat.split('#')[2]
     zmat += '# scf=verytight nosym Freq=Anharmonic Freq=Vibrot\n'
     zmat += '\nAnharmonic computation\n'
     zmat += full[1].split('       Variables:')[0]
     zmat += 'Variables:\n'
     zmat = zmat.replace('Charge = ', '')
     zmat = zmat.replace('Multiplicity =', '')
-    varis = full[1].split('Optimized Parameters')[1].split('--------------------------------------')[1]
+    varis = full[1].split('Optimized Parameters')[1].split(
+        '--------------------------------------')[1]
     varis = varis.split('\n')
     del varis[0]
     del varis[-1]
     for var in varis:
         var = var.split()
-        zmat += ' '+  var[1] + '\t' + var[2] + '\n'
+        zmat += ' ' + var[1] + '\t' + var[2] + '\n'
     return zmat
 
-def write_anharm_inp(readfile='reac1_l1.log',writefile='anharm.inp',anlevel='ignore'):
 
+def write_anharm_inp(readfile='reac1_l1.log', writefile='anharm.inp', anlevel='ignore'):
     """
     Writes Guassian input to a file given an EStokTP G09 output file name
     INPUT:
@@ -167,6 +174,7 @@ def write_anharm_inp(readfile='reac1_l1.log',writefile='anharm.inp',anlevel='ign
     zmat = gauss_anharm_inp(readfile, anlevel)
     io.write_file(zmat, writefile)
     return
+
 
 def run_gauss(filename, node):
     """
@@ -178,14 +186,16 @@ def run_gauss(filename, node):
     if io.check_file(filename):
         executea = 'soft add +gcc-5.3; soft add +g09; g09 ' + filename
         executeb = 'cd `pwd`; export PATH=$PATH:~/bin; '
-        ssh ='/usr/bin/ssh'
-        host =node
+        ssh = '/usr/bin/ssh'
+        host = node
         if str(host) == '0':
             os.system(executea)
         else:
-            os.system('exec ' + ssh + ' -n ' + host +' \"' + executeb + executea + '\"')
+            os.system('exec ' + ssh + ' -n ' + host +
+                      ' \"' + executeb + executea + '\"')
 
     return
+
 
 def anharm_freq(freqs, xmat):
     """
@@ -198,7 +208,7 @@ def anharm_freq(freqs, xmat):
     """
     anharms = np.zeros(len(freqs))
     for i, freq in enumerate(freqs):
-        anharms[i]  = freq
+        anharms[i] = freq
         anharms[i] += 2. * xmat[i][i]
         tmp = 0
         for j in range(len(freqs)):
@@ -209,40 +219,44 @@ def anharm_freq(freqs, xmat):
 
     return anharms
 
+
 def mess_x(xmat):
 
     inp = ' Anharmonicities[1/cm]\n'
-    for i in range( len(xmat)):
+    for i in range(len(xmat)):
         for j in range(i+1):
-             inp += '   {:.3f}'.format(xmat[i][j])
+            inp += '   {:.3f}'.format(xmat[i][j])
         inp += '\n'
     inp += ' End\n'
     return inp
+
 
 def mess_fr(freqs):
 
     inp = '    Frequencies[1/cm]           ' + str(len(freqs)) + '\n     '
     for i, freq in enumerate(freqs):
-       inp += '%4.1f\t'%freq
-       if (i+1)%10 == 0:
-           inp += '\n     '
+        inp += '%4.1f\t' % freq
+        if (i+1) % 10 == 0:
+            inp += '\n     '
     inp += '\n'
     return inp
 
-def main(args, vibrots = None):
+
+def main(args, vibrots=None):
 
     extra = ' ZeroEnergy[kcal/mol]\t 0.\n ElectronicLevels[1/cm]\t\t1\n  0.0000000000000000\t\t1.0000000000000000\nEnd'
     if isinstance(args, dict):
         #natoms    = args['natoms']
         if 'writegauss' in args:
             if args['writegauss'] == 'true':
-                anharminp = args['anharmlog' ] + '.inp'
+                anharminp = args['anharmlog'] + '.inp'
                 anlevel = args['anlevel'].replace('g09', 'gaussian')
-                write_anharm_inp(args['logfile'], anharminp, '{}/{}'.format(anlevel.split('/')[1], anlevel.split('/')[2]))
+                write_anharm_inp(
+                    args['logfile'], anharminp, '{}/{}'.format(anlevel.split('/')[1], anlevel.split('/')[2]))
         if 'rungauss' in args:
             if args['rungauss'] == 'true':
-                anharminp = args['anharmlog' ] + '.inp'
-                node = args['node' ]
+                anharminp = args['anharmlog'] + '.inp'
+                node = args['node']
                 run_gauss(anharminp, node)
         if 'pfreqs' in args:
             proj = np.array(args['pfreqs']).astype(np.float)
@@ -251,34 +265,35 @@ def main(args, vibrots = None):
             unproj = np.sort(unproj)
             a = np.arange(len(proj)+1)
             b = np.arange(len(unproj)+1)
-            #a = nargs['pfreqs']).argsort()[::-1]
+            # a = nargs['pfreqs']).argsort()[::-1]
             #b = args['freqs'].argsort()[::-1]
         else:
-            proj, b   = get_freqs(args['freqfile'])
+            proj, b = get_freqs(args['freqfile'])
             unproj, a = get_freqs(args['unprojfreq'])
         #xmat = gauss_xmat(anharmlog,natoms)
         if 'xmat' in args:
             xmat = args['xmat']
         else:
-            smiles    = args['smiles']
-            anlevel   = args['theory' ]
-            optlevel  = args['optlevel']
-            anharmlog = args['anharmlog' ] + '.log'
+            smiles = args['smiles']
+            anlevel = args['theory']
+            optlevel = args['optlevel']
+            anharmlog = args['anharmlog'] + '.log'
             andire = io.db_sp_path(anlevel.split('/')[0], anlevel.split('/')[1], anlevel.split('/')[2], None, smiles,
-                  optlevel[0], optlevel[1], optlevel[2])
+                                   optlevel[0], optlevel[1], optlevel[2])
             if io.check_file(andire + '/' + smiles + '.xmat'):
                 xmat = io.db_get_sp_prop(smiles, 'xmat', andire).split('\n')
                 for i in range(len(xmat)):
                     xmat[i] = xmat[i].split(',')
             elif io.check_file(anharmlog):
-                xmat = qc.get_gaussian_xmatrix(io.read_file(anharmlog), len(unproj))
+                xmat = qc.get_gaussian_xmatrix(
+                    io.read_file(anharmlog), len(unproj))
         for i in range(len(xmat)):
             xmat[i][i] = float(xmat[i][i])
             for j in range(i):
                 xmat[i][j] = float(xmat[i][j])
                 xmat[j][i] = xmat[i][j]
-        modes     = find_hinfreqs(proj, unproj, b)
-        xmat      = remove_modes(xmat, modes)
+        modes = find_hinfreqs(proj, unproj, b)
+        xmat = remove_modes(xmat, modes)
         #proj, b   = get_freqs(eskproj)
         anfreq = anharm_freq(proj, xmat)
         if vibrots:
@@ -287,33 +302,34 @@ def main(args, vibrots = None):
     ##########################
     else:
         anharmlog = args.anharmlog
-        natoms    = args.natoms
-        eskfile   = args.logfile
-        eskproj   = args.freqfile
+        natoms = args.natoms
+        eskfile = args.logfile
+        eskproj = args.freqfile
         eskunproj = args.unprojfreq
         anharmlog = args.anharmlog
-        node      = args.node
+        node = args.node
         if args.writegauss.lower() == 'true':
             write_anharm_inp(eskfile, 'anharm.inp')
         if args.rungauss.lower() == 'true':
             run_gauss('anharm.inp', node)
         if args.computeanharm.lower() == 'true':
             xmat = gauss_xmat(anharmlog, natoms)
-            proj, b   = get_freqs(eskproj)
+            proj, b = get_freqs(eskproj)
             unproj, a = get_freqs(eskunproj)
-            modes     = find_hinfreqs(proj, unproj, a)
-            xmat      = remove_modes(xmat, modes)
-            proj, b   = get_freqs(eskproj)
+            modes = find_hinfreqs(proj, unproj, a)
+            xmat = remove_modes(xmat, modes)
+            proj, b = get_freqs(eskproj)
             anfreq = anharm_freq(proj, xmat)
             return anfreq, mess_fr(anfreq), xmat, mess_x(xmat), extra, vibrots
     return
+
 
 if __name__ == '__main__':
 
     #SET PARAMETERS############
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-             description="""
+                                     description="""
        This module computes anharmonic corrections to the projected
        frequencies produced during an EStokTP 1D or MD torsional scan.
 
@@ -324,17 +340,25 @@ if __name__ == '__main__':
        written using an optimization logfile (usually taken from geoms/reac1_l1.log)
        """)
 
-    parser.add_argument('-n',         '--natoms', type=int, help = 'number of atoms in the molecule. Required.',                              required=True)
-    parser.add_argument('-a',      '--anharmlog', type=str, help = 'location of g09 anharmonic logfile IF unavailable, use next 3 options',   default='anharm.log')
-    parser.add_argument('-l',        '--logfile', type=str, help = 'path to  optimization logfile (required if no g09 anharmfile available)', default='geoms/reac1_l1.log')
-    parser.add_argument('-w',     '--writegauss', type=str, help = 'if true will write gaussian anharmonic input file',                       default='false')
-    parser.add_argument('-r',       '--rungauss', type=str, help = 'if true will execute guassian anharmonic computation',                    default='false')
-    parser.add_argument('-freq',    '--freqfile', type=str, help = 'path to estoktp UNprojected frequency file found in me_files',            default='me_files/reac1_fr.me')
-    parser.add_argument('-unfreq', '--unprojfreq', type=str, help = 'path to estoktp   projected frequency file foudn in me_files',            default='me_files/reac1_unprfr.me')
-    parser.add_argument('-x',  '--computeanharm', type=str, help = 'specify false to avoid computing anharmonic correction',                  default='true')
-    parser.add_argument('-N',           '--node', type=str, help = 'which blues node to run on (e.g. b447). Required.',                       required=True)
+    parser.add_argument('-n',         '--natoms', type=int,
+                        help='number of atoms in the molecule. Required.',                              required=True)
+    parser.add_argument('-a',      '--anharmlog', type=str,
+                        help='location of g09 anharmonic logfile IF unavailable, use next 3 options',   default='anharm.log')
+    parser.add_argument('-l',        '--logfile', type=str,
+                        help='path to  optimization logfile (required if no g09 anharmfile available)', default='geoms/reac1_l1.log')
+    parser.add_argument('-w',     '--writegauss', type=str,
+                        help='if true will write gaussian anharmonic input file',                       default='false')
+    parser.add_argument('-r',       '--rungauss', type=str,
+                        help='if true will execute guassian anharmonic computation',                    default='false')
+    parser.add_argument('-freq',    '--freqfile', type=str,
+                        help='path to estoktp UNprojected frequency file found in me_files',            default='me_files/reac1_fr.me')
+    parser.add_argument('-unfreq', '--unprojfreq', type=str,
+                        help='path to estoktp   projected frequency file foudn in me_files',            default='me_files/reac1_unprfr.me')
+    parser.add_argument('-x',  '--computeanharm', type=str,
+                        help='specify false to avoid computing anharmonic correction',                  default='true')
+    parser.add_argument('-N',           '--node', type=str,
+                        help='which blues node to run on (e.g. b447). Required.',                       required=True)
     ##########################
 
-    args      = parser.parse_args()
+    args = parser.parse_args()
     main(args)
-

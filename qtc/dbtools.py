@@ -16,12 +16,14 @@ import logging
 import sys
 import os
 
-def start_mongo(dbpath,logpath,mongoexe='mongod'):
+
+def start_mongo(dbpath, logpath, mongoexe='mongod'):
     """
     Starts a mongo session.
     """
     import subprocess
-    subprocess.call([mongoexe, '--logpath', logpath, '--fork', '--dbpath', dbpath])
+    subprocess.call([mongoexe, '--logpath', logpath,
+                    '--fork', '--dbpath', dbpath])
     return
 
 
@@ -31,11 +33,11 @@ def get_database(db='mydatabase'):
     return client[db]
 
 
-def get_collection(db='mydatabase',collection='mycollection'):
+def get_collection(db='mydatabase', collection='mycollection'):
     return db[collection]
 
 
-def insert_entry(db,entry,efilter=None,upsert=True):
+def insert_entry(db, entry, efilter=None, upsert=True):
     if efilter is None:
         efilter = entry
     return db.replace_one(efilter, entry, upsert=upsert)
@@ -62,7 +64,8 @@ def dump_json(d, filename):
         logging.error('Error in dumping json file')
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        logging.error('Exception {}: {}, {}, {} '.format(e, exc_type, fname, exc_tb.tb_lineno))       
+        logging.error('Exception {}: {}, {}, {} '.format(
+            e, exc_type, fname, exc_tb.tb_lineno))
     return
 
 
@@ -83,11 +86,11 @@ def gen_dict_extract(key, var):
                         yield result
 
 
-def visualise_dict(d,lvl=0):
+def visualise_dict(d, lvl=0):
     """
     https://stackoverflow.com/questions/15023333/simple-tool-library-to-visualize-huge-python-dict
     """
-    # go through the dictionary alphabetically 
+    # go through the dictionary alphabetically
     for k in sorted(d):
         form = '{:<45} {:<15} {:<10}'
         # print the table header if we're at the beginning
@@ -95,7 +98,7 @@ def visualise_dict(d,lvl=0):
             logging.info(form.format('KEY', 'LEVEL', 'TYPE'))
             logging.info('-'*79)
 
-        indent = '  '*lvl # indent the table to visualise hierarchy
+        indent = '  '*lvl  # indent the table to visualise hierarchy
         t = str(type(d[k]))
 
         # print details of each entry
@@ -105,6 +108,7 @@ def visualise_dict(d,lvl=0):
         if isinstance(d[k], dict):
             # visualise THAT dictionary with +1 indent
             visualise_dict(d[k], lvl+1)
+
 
 def merge_dicts(*dict_args):
     """
@@ -116,7 +120,6 @@ def merge_dicts(*dict_args):
     for dictionary in dict_args:
         result.update(dictionary)
     return result
-  
 
 
 if __name__ == "__main__":
