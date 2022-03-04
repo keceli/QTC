@@ -60,7 +60,7 @@ def rm(fname):
     return
 
 
-# def rmrf(dname):
+def rmrf(dname):
     """
     Deletes directories recursively including all of the contents.
     """
@@ -199,11 +199,14 @@ def join_path(*paths):
     return os.path.join(*paths)
 
 
-def write_file(s, filename='newfile'):
+def write_file(s, filename='newfile', binary=False):
     """
     Writes s string to a file with the given'filename'.
     """
-    with open(filename, 'w') as f:
+    mode = 'w'
+    if binary:
+        mode = 'wb'
+    with open(filename, mode) as f:
         f.write(s)
     return
 
@@ -543,11 +546,15 @@ def get_total_memory():
     """
     Return totol physical memory in MB as an integer.
     """
-    from psutil import virtual_memory
-
-    mem = virtual_memory()  # In bytes
-    m = mem.total >> 20  # Using bit shift to get in MB
-    # m = mem.total >> 30 # Using bit shift to get in GB
+    m = 0
+    try:
+        from psutil import virtual_memory
+        mem = virtual_memory()  # In bytes
+        m = mem.total >> 20  # Using bit shift to get in MB
+        # m = mem.total >> 30 # Using bit shift to get in GB
+    except:
+        logging.debug(
+            'psutil not found! Cannot get memory information. You can install psutil with: \n pip install psutil')
     return m
 
 
@@ -606,7 +613,7 @@ def execute(command, stdoutfile=None, stderrfile=None, merge=False, wait=True):
         pass
     else:
         if stdoutfile:
-            write_file(out, stdoutfile)
+            write_file(out, stdoutfile, binary=True)
             msg += 'STDOUT is appended to {0}\n'.format(stdoutfile)
         else:
             msg += 'STDOUT:\n{0}\n'.format(out)

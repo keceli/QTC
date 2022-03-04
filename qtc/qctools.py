@@ -133,7 +133,8 @@ def add_species_info(s, parameters):
             parameters['nrotor'] = nrotor - nmethyl
             parameters['nmethyl'] = nmethyl
         except:
-            logging.error('x2z failed for {}'.format(s))
+            logging.error(
+                'x2z failed for {} , using number of rotors computed by open babel'.format(s))
             parameters['nrotor'] = ob.get_nrotor(mol)
 
     else:
@@ -208,12 +209,14 @@ def get_input(x, template, parameters):
     formula = parameters['formula']
     natom = parameters['natom']
     geo = '\n'.join(xyz.splitlines()[2:natom+2])
-    #zmat = ob.get_zmat(mol)
-    x2zout = run_x2z(xyz, parameters['x2z'])
-    if len(x2zout.splitlines()) > 6:
-        zmat = get_x2z_zmat(x2zout)
-    else:
-        logging.debug(x2zout)
+    try:
+        x2zout = run_x2z(xyz, parameters['x2z'])
+        if len(x2zout.splitlines()) > 6:
+            zmat = get_x2z_zmat(x2zout)
+        else:
+            logging.debug('x2z failed with the output:\n', x2zout)
+    except:
+        logging.debug('x2z failed')
         zmat = ob.get_zmat(mol)
     uniquename = ob.get_inchi_key(mol, mult)
     smilesname = ob.get_smiles_filename(mol)
@@ -842,7 +845,7 @@ def parse_output(s, formula, write=False):
                 fname = formula + '.anzpve'
                 io.write_file(str(azpve), fname)
             if len(freqs) > 0:
-                if any(freq < 0 for freq in freqs):
+                if any(float(freq) < 0 for freq in freqs):
                     logging.error('Imaginary frequency detected: {}'.format(
                         ['{:6.1f}'.format(freq) for freq in freqs]))
                 fname = formula + '.hrm'
@@ -933,7 +936,7 @@ def get_output_data(out, package=None):
                 xmat = []
         else:
             afreqs = []
-        if energy:
+        if data['energy_hartree']:
             parsed = True
     elif package == 'mopac':
         data['method'] = 'SEMO'
@@ -1224,12 +1227,15 @@ def run(s, parameters, mult=None, trial=0):
         if package in ['nwchem', 'molpro', 'mopac', 'gaussian', 'torsscan', 'torsopt', 'qchem', 'md']:
             if package.startswith('nwc'):
                 io.mkdir(tmpdir)
-                if parameters['machinefile']:
-                    parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(
-                        parameters['machinefile'])
+                if io.check_exe('mpirun'):
+                    if parameters['machinefile']:
+                        parameters['qcexe'] = 'mpirun -machinefile {0} nwchem'.format(
+                            parameters['machinefile'])
+                    else:
+                        parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(
+                            qcnproc)
                 else:
-                    parameters['qcexe'] = 'mpirun -n {0} nwchem'.format(
-                        qcnproc)
+                    parameters['qcexe'] = 'nwchem'
             elif package.startswith('molp'):
                 parameters['qcexe'] = '{0} -n {1} -d {2}'.format(
                     parameters['molpro'], qcnproc, parameters['tmpdir'])
@@ -2587,6 +2593,7 @@ def get_nwchem_frequencies(inp, filename=False, minfreq=10):
                 freq = item.strip()
                 if float(freq) > minfreq:
                     freqs.append(freq)
+    print('freqs', freqs)
     return freqs
 
 

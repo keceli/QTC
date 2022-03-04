@@ -64,7 +64,7 @@ def get_args():
                         default='queue.json',
                         help='Input file in  json format, i.e. RMG queue.json files')
     parser.add_argument('-p', '--qcnproc', type=int,
-                        default=io.get_ppn(),
+                        default=1,
                         help='Number of processors for quantum chemistry calculations. Default is total number of cores on a node.')
     parser.add_argument('-n', '--nproc', type=int,
                         default=1,
@@ -76,7 +76,7 @@ def get_args():
                         default='',
                         help='Keyword string that defines quantum chemistry calculations i.e.: "opt/ccsd/cc-pvdz/gaussian,energy/ccsd/cc-pvtz/nwchem,extrapolation/cbs/energy=0.3*E0+0.7*E1" Note that each calculation is separated by a comma (,) and calculations are defined by TASK/METHOD/BASIS/PACKAGE. TASK can be opt, freq, anharm,extrapolation.METHOD and BASIS are simply copied into quantum chemistry input file as defined in the templates folder. PACKAGE can be gaussian, molpro or nwchem')
     parser.add_argument('-t', '--qctemplate', type=str,
-                        default='/home/elliott/Packages/QTC/templates',
+                        default='../templates',
                         help='Path for the templates directory. Templates have a specific format for filenames. See qtc/templates.')
     parser.add_argument('-l', '--loglevel', type=int,
                         default=-1,
