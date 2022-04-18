@@ -1,4 +1,4 @@
-name: C_C++_CI
+name: test
 
 on:
   pull_request:
