@@ -8,9 +8,10 @@ toolchain_file=$(pwd)/toolchain.cmake
 
 #test1:
 echo command test
-if command -v ninja &> /dev/null
+if command -v ninja 
 then
   echo "Ninja found"
+  echo $(command -v ninja)
 else
   echo "Ninja not found"  
 fi
