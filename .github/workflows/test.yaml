@@ -24,4 +24,4 @@ jobs:
           cmake_version: ${{ matrix.cmake_version }}
           gcc_version: ${{ matrix.gcc_version }}
           CPP_GITHUB_TOKEN: ${{ secrets.CPP_GITHUB_TOKEN }}
-        run: .github/workflows/check_ninja.sh
+        run: .github/workflows/build.sh
